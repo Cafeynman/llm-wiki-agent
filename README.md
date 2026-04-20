@@ -1,6 +1,6 @@
 # LLM Wiki Agent Best Practices
 
-[中文说明](README.zh-CN.md)
+[Chinese version](README.zh-CN.md)
 
 LLM Wiki Agent is a best-practice workflow package for building and maintaining a persistent, traceable Obsidian-style Markdown knowledge base with an LLM agent.
 
@@ -22,20 +22,32 @@ The core idea is simple:
 
 Clone or download this repository, then enter the package directory:
 
-```powershell
+```sh
 cd llm-wiki-agent
 ```
 
-Initialize the Python environment and create the wiki folder structure:
+Install or make available [uv](https://docs.astral.sh/uv/) first. The initialization scripts use `uv sync` to create the local Python environment.
+
+Initialize the Python environment and create the wiki folder structure on Windows:
 
 ```powershell
 .\scripts\init.ps1 -VaultRoot .
+```
+
+On macOS or Linux:
+
+```sh
+./scripts/init.sh -VaultRoot .
 ```
 
 For a separate Obsidian vault, pass the vault path:
 
 ```powershell
 .\scripts\init.ps1 -VaultRoot "C:\path\to\your\vault"
+```
+
+```sh
+./scripts/init.sh -VaultRoot "/path/to/your/vault"
 ```
 
 Then open the folder or vault with your agent and ask it to use [AGENTS.md](AGENTS.md) as the instruction entrypoint. For wiki tasks, the agent should read [WIKI.md](WIKI.md) before acting.
@@ -97,7 +109,8 @@ The agent should choose the shortest workflow that fully satisfies the current r
 ├── LICENSE
 ├── pyproject.toml
 ├── scripts/
-│   └── init.ps1
+│   ├── init.ps1
+│   └── init.sh
 ├── skills/
 └── docs/
     ├── usage.md
@@ -118,15 +131,11 @@ The agent should choose the shortest workflow that fully satisfies the current r
 
 ## Documentation
 
-- [README.zh-CN.md](README.zh-CN.md): Chinese overview.
 - [docs/usage.md](docs/usage.md): English usage guide.
-- [docs/usage.zh-CN.md](docs/usage.zh-CN.md): Chinese usage guide.
 - [AGENTS.md](AGENTS.md): Agent entrypoint and workflow routing.
 - [WIKI.md](WIKI.md): Canonical agent operating guide.
 - [docs/references.md](docs/references.md): English references.
-- [docs/references.zh-CN.md](docs/references.zh-CN.md): Chinese references.
 - [docs/acknowledgements.md](docs/acknowledgements.md): English acknowledgements.
-- [docs/acknowledgements.zh-CN.md](docs/acknowledgements.zh-CN.md): Chinese acknowledgements.
 
 ## References and Credits
 

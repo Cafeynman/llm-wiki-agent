@@ -17,10 +17,11 @@ It is not meant to replace one-off chat. The value of this package is durable ac
 
 ## 2. Requirements
 
-The current package expects:
+The current package depends on:
 
-- PowerShell for [scripts/init.ps1](../scripts/init.ps1).
-- Python managed by `uv`.
+- [uv](https://docs.astral.sh/uv/) for Python environment management. The init scripts run `uv sync`.
+- PowerShell for [scripts/init.ps1](../scripts/init.ps1) on Windows.
+- Bash for [scripts/init.sh](../scripts/init.sh) on macOS or Linux.
 - Obsidian, or any editor that can browse Markdown files.
 - An agent that can read repository instruction files, such as Codex, Claude Code, Gemini CLI, OpenCode, or a similar tool.
 
@@ -34,16 +35,26 @@ Enter the repository directory:
 cd llm-wiki-agent
 ```
 
-Initialize the current directory:
+Initialize the current directory on Windows:
 
 ```powershell
 .\scripts\init.ps1 -VaultRoot .
+```
+
+On macOS or Linux:
+
+```sh
+./scripts/init.sh -VaultRoot .
 ```
 
 Or create the wiki structure inside a separate Obsidian vault:
 
 ```powershell
 .\scripts\init.ps1 -VaultRoot "C:\path\to\your\vault"
+```
+
+```sh
+./scripts/init.sh -VaultRoot "/path/to/your/vault"
 ```
 
 The script does two things:

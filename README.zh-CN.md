@@ -1,6 +1,6 @@
 # LLM Wiki Agent 最佳实践
 
-[English](README.md)
+[英文版](README.md)
 
 LLM Wiki Agent 是一个面向 LLM agent 的最佳实践工作流包，用于构建和维护一个持久、可追溯、Obsidian 风格的 Markdown 知识库。
 
@@ -22,20 +22,32 @@ LLM Wiki Agent 是一个面向 LLM agent 的最佳实践工作流包，用于构
 
 克隆或下载仓库后进入目录：
 
-```powershell
+```sh
 cd llm-wiki-agent
 ```
 
-初始化 Python 环境并创建 wiki 目录结构：
+先安装或确保可以使用 [uv](https://docs.astral.sh/uv/)。初始化脚本会使用 `uv sync` 创建本地 Python 环境。
+
+在 Windows 初始化 Python 环境并创建 wiki 目录结构：
 
 ```powershell
 .\scripts\init.ps1 -VaultRoot .
+```
+
+在 macOS 或 Linux：
+
+```sh
+./scripts/init.sh -VaultRoot .
 ```
 
 如果要把 wiki 结构创建到单独的 Obsidian vault：
 
 ```powershell
 .\scripts\init.ps1 -VaultRoot "C:\path\to\your\vault"
+```
+
+```sh
+./scripts/init.sh -VaultRoot "/path/to/your/vault"
 ```
 
 然后用你的 agent 打开该目录或 vault，并让它以 [AGENTS.md](AGENTS.md) 作为入口。执行 wiki 任务前，agent 应读取 [WIKI.md](WIKI.md)。
@@ -97,7 +109,8 @@ agent 应选择能够完整满足当前请求的最短工作流。
 ├── LICENSE
 ├── pyproject.toml
 ├── scripts/
-│   └── init.ps1
+│   ├── init.ps1
+│   └── init.sh
 ├── skills/
 └── docs/
     ├── usage.md
@@ -118,14 +131,10 @@ agent 应选择能够完整满足当前请求的最短工作流。
 
 ## 文档
 
-- [README.md](README.md)：英文首页。
-- [docs/usage.md](docs/usage.md)：英文使用手册。
 - [docs/usage.zh-CN.md](docs/usage.zh-CN.md)：中文使用手册。
 - [AGENTS.md](AGENTS.md)：agent 入口和工作流路由。
 - [WIKI.md](WIKI.md)：agent 执行时的主规则。
-- [docs/references.md](docs/references.md)：英文引用。
 - [docs/references.zh-CN.md](docs/references.zh-CN.md)：中文引用。
-- [docs/acknowledgements.md](docs/acknowledgements.md)：英文感谢。
 - [docs/acknowledgements.zh-CN.md](docs/acknowledgements.zh-CN.md)：中文感谢。
 
 ## 引用与感谢
