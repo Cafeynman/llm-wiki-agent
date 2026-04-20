@@ -1,5 +1,7 @@
 # LLM Wiki Agent Best Practices
 
+[中文说明](README.zh-CN.md)
+
 LLM Wiki Agent is a best-practice workflow package for building and maintaining a persistent, traceable Obsidian-style Markdown knowledge base with an LLM agent.
 
 The package gives the agent a clear operating contract: source files enter through `inbox/`, original files are preserved under `raw/`, reviewable Markdown is produced under `intake/`, durable knowledge is written into `wiki/`, and user-facing deliverables are saved under `artifacts/`.
@@ -11,27 +13,10 @@ This repository is not a full application server or a replacement for Obsidian. 
 The core idea is simple:
 
 1. Put source material into `inbox/`.
-2. Ask your agent to process the source according to `AGENTS.md` and `WIKI.md`.
+2. Ask your agent to process the source according to [AGENTS.md](AGENTS.md) and [WIKI.md](WIKI.md).
 3. The agent converts useful source material into reviewable Markdown.
 4. The agent reviews the converted material before writing wiki knowledge.
 5. Accepted knowledge becomes linked Markdown pages under `wiki/`.
-
-## Package Contents
-
-```text
-.
-├── AGENTS.md        Agent entrypoint and workflow routing rules.
-├── WIKI.md          Complete operating guide for the LLM Wiki workflow.
-├── USAGE.md         Installation, first run, and daily operating guide.
-├── pyproject.toml   uv-managed Python dependencies for conversion workflows.
-├── scripts/
-│   └── init.ps1     PowerShell initializer for dependencies and wiki folders.
-├── skills/          Local skills used by the agent package.
-├── docs/
-│   ├── references.md
-│   └── acknowledgements.md
-└── LICENSE
-```
 
 ## Quick Start
 
@@ -53,7 +38,9 @@ For a separate Obsidian vault, pass the vault path:
 .\scripts\init.ps1 -VaultRoot "C:\path\to\your\vault"
 ```
 
-Then open the folder or vault with your agent and ask it to use `AGENTS.md` as the instruction entrypoint. For wiki tasks, the agent should read `WIKI.md` before acting.
+Then open the folder or vault with your agent and ask it to use [AGENTS.md](AGENTS.md) as the instruction entrypoint. For wiki tasks, the agent should read [WIKI.md](WIKI.md) before acting.
+
+For full setup and operating details, read [docs/usage.md](docs/usage.md).
 
 ## Minimal First Run
 
@@ -87,7 +74,7 @@ raw/unsupported/
 
 Only `digested` sources are promoted into `intake/processed/` and used to update `wiki/`.
 
-## Core Workflow
+## Core Workflows
 
 The package keeps the agent on three workflows:
 
@@ -99,6 +86,28 @@ The package keeps the agent on three workflows:
 
 The agent should choose the shortest workflow that fully satisfies the current request.
 
+## Package Contents
+
+```text
+.
+├── README.md
+├── README.zh-CN.md
+├── AGENTS.md
+├── WIKI.md
+├── LICENSE
+├── pyproject.toml
+├── scripts/
+│   └── init.ps1
+├── skills/
+└── docs/
+    ├── usage.md
+    ├── usage.zh-CN.md
+    ├── references.md
+    ├── references.zh-CN.md
+    ├── acknowledgements.md
+    └── acknowledgements.zh-CN.md
+```
+
 ## Design Boundaries
 
 - The workflow is text-first. Attachments, scans, screenshots, images, and audio may remain part of preserved original sources, but they are not first-class wiki content unless you explicitly add image or audio handling.
@@ -109,19 +118,20 @@ The agent should choose the shortest workflow that fully satisfies the current r
 
 ## Documentation
 
-Read these files in order:
-
-1. `README.md` for the project overview.
-2. `USAGE.md` for installation and daily operation.
-3. `AGENTS.md` for agent routing behavior.
-4. `WIKI.md` for the full operating contract.
-5. `docs/references.md` for idea references.
-6. `docs/acknowledgements.md` for credits and thanks.
+- [README.zh-CN.md](README.zh-CN.md): Chinese overview.
+- [docs/usage.md](docs/usage.md): English usage guide.
+- [docs/usage.zh-CN.md](docs/usage.zh-CN.md): Chinese usage guide.
+- [AGENTS.md](AGENTS.md): Agent entrypoint and workflow routing.
+- [WIKI.md](WIKI.md): Canonical agent operating guide.
+- [docs/references.md](docs/references.md): English references.
+- [docs/references.zh-CN.md](docs/references.zh-CN.md): Chinese references.
+- [docs/acknowledgements.md](docs/acknowledgements.md): English acknowledgements.
+- [docs/acknowledgements.zh-CN.md](docs/acknowledgements.zh-CN.md): Chinese acknowledgements.
 
 ## References and Credits
 
-This package builds on the LLM Wiki pattern and related public work. See `docs/references.md` for the reference list and `docs/acknowledgements.md` for acknowledgements.
+This package builds on the LLM Wiki pattern and related public work. See [docs/references.md](docs/references.md) and [docs/acknowledgements.md](docs/acknowledgements.md).
 
 ## License
 
-MIT License. See `LICENSE`.
+MIT License. See [LICENSE](LICENSE).
