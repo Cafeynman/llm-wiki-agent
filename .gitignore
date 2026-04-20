@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Local wiki runtime content when using this package directory as VaultRoot.
+inbox/
+raw/
+intake/
+reviews/
+logs/
+questions/
+artifacts/
+wiki/
