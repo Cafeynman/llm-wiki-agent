@@ -20,8 +20,8 @@ LLM Wiki Agent 适合把长期积累的资料整理成一个可持续维护的 M
 当前包依赖：
 
 - [uv](https://docs.astral.sh/uv/)，用于 Python 环境管理。初始化脚本会运行 `uv sync`。
-- PowerShell，用于在 Windows 运行 [scripts/init.ps1](../scripts/init.ps1)。
-- Bash，用于在 macOS 或 Linux 运行 [scripts/init.sh](../scripts/init.sh)。
+- PowerShell，用于在 Windows 运行初始化脚本 [scripts/init.ps1](../scripts/init.ps1)。
+- Bash，用于在 macOS 或 Linux 运行初始化脚本 [scripts/init.sh](../scripts/init.sh)。
 - Obsidian 或任意可以浏览 Markdown 文件的编辑器。
 - 一个能读取项目说明文件的 agent，例如 Codex、Claude Code、Gemini CLI、OpenCode 或类似工具。
 

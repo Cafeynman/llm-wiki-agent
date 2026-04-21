@@ -50,9 +50,12 @@ For a separate Obsidian vault, pass the vault path:
 ./scripts/init.sh -VaultRoot "/path/to/your/vault"
 ```
 
-Then open the folder or vault with your agent and ask it to use [AGENTS.md](AGENTS.md) as the instruction entrypoint. For wiki tasks, the agent should read [WIKI.md](WIKI.md) before acting.
-
 For full setup and operating details, read [docs/usage.md](docs/usage.md).
+
+## Recommended Setup
+
+- [Claudian](https://github.com/YishenTu/claudian): recommended if you want an Obsidian-oriented local agent environment.
+- [Obsidian Web Clipper](https://github.com/obsidianmd/obsidian-clipper): recommended for collecting web pages into Markdown source material.
 
 ## Minimal First Run
 

@@ -50,9 +50,12 @@ cd llm-wiki-agent
 ./scripts/init.sh -VaultRoot "/path/to/your/vault"
 ```
 
-然后用你的 agent 打开该目录或 vault，并让它以 [AGENTS.md](AGENTS.md) 作为入口。执行 wiki 任务前，agent 应读取 [WIKI.md](WIKI.md)。
-
 完整使用说明见 [docs/usage.zh-CN.md](docs/usage.zh-CN.md)。
+
+## 推荐环境
+
+- Claude Code：可以参考这篇安装教程：[Claude Code 安装教程](https://mp.weixin.qq.com/s/MXIJzFJA8cAhUhmeVOdmSw)。
+- Obsidian 相关插件安装：可以参考 B 站视频 [保姆级教程 搭建出karpathy同款AI知识库](https://www.bilibili.com/video/BV1p4DeB8ECi/?spm_id_from=333.337.search-card.all.click)。感谢 UP 主“栗氪聊AI”的 Obsidian 全套插件配置说明；可通过后台私信UP主获取飞书文档说明。
 
 ## 第一次最小运行
 

@@ -16,7 +16,7 @@
 
 ## 环境配置帮助
 
-感谢 Bilibili UP 主发布的 [BV1p4DeB8ECi](https://www.bilibili.com/video/BV1p4DeB8ECi/?spm_id_from=333.337.search-card.all.click&vd_source=e20a6657f2470585a51d91d941648630) 对 Obsidian + Claudian 环境配置的帮助。该配置内容让这个工作流更容易在真实本地知识库环境中运行。
+感谢 Bilibili UP 主“栗氪聊AI”发布的 [保姆级教程 搭建出karpathy同款AI知识库](https://www.bilibili.com/video/BV1p4DeB8ECi/?spm_id_from=333.337.search-card.all.click) 对 Obsidian + Claudian 环境配置的帮助。可通过后台私信UP主获取飞书文档说明。
 
 ## 工具和生态
 
