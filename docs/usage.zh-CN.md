@@ -123,7 +123,7 @@ inbox/
 向 agent 发出请求：
 
 ```text
-Process the files in inbox/ according to AGENTS.md and WIKI.md.
+请按照 AGENTS.md 和 WIKI.md 处理 inbox/ 中的文件。
 ```
 
 agent 应按以下顺序处理：
@@ -164,7 +164,7 @@ Source Review Gate 决定一个 source 是否值得进入 wiki。
 当你想从 wiki 中获得答案时，向 agent 提问：
 
 ```text
-What does the wiki say about <topic>?
+wiki 里关于 <主题> 是怎么说的？
 ```
 
 agent 应先读：
@@ -193,11 +193,11 @@ agent 应先读：
 可以使用这些自然语言请求：
 
 ```text
-health-check the wiki
-find broken links
-find stale claims
-clean up duplicates
-check claims without sources
+检查 wiki 健康状态
+查找断开的链接
+查找过期的 claim
+清理重复页面
+检查没有来源的 claim
 ```
 
 agent 可以直接修复机械问题。涉及解释、合并、删除、来源判断变化的问题，应先给出方案并等待确认。

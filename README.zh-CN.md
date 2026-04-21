@@ -69,7 +69,7 @@ inbox/
 向 agent 发送：
 
 ```text
-Process the files in inbox/ according to AGENTS.md and WIKI.md.
+请按照 AGENTS.md 和 WIKI.md 处理 inbox/ 中的文件。
 ```
 
 预期生命周期是：
