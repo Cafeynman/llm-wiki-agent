@@ -107,9 +107,12 @@ cd llm-wiki-agent
 | `intake/tmp/` | 转换后、审查前的临时 Markdown。 |
 | `intake/processed/` | 已通过审查、可用于 wiki ingest 的 Markdown。 |
 | `reviews/` | source review 和 discussion reflection 记录。 |
+| `logs/` | 单文件高层 wiki 操作历史，在 `logs/wiki.md` 中按日期标题追加。 |
 | `wiki/` | 可持续维护的知识页面。 |
 | `questions/` | 未解决问题和调查线索。 |
 | `artifacts/` | 面向用户的报告、brief、草稿、模板等交付物。 |
+
+`intake/logs/YYYY-MM-DD.md` 和 `reviews/source-review/YYYY-MM-DD.md` 按天拆分。`logs/wiki.md` 是单文件追加式操作历史，按日期标题分组；内容应保持简洁，不重复每日 intake 明细。
 
 ## 5. 第一次处理文件
 
@@ -131,11 +134,13 @@ agent 应按以下顺序处理：
 1. 读取 [AGENTS.md](../AGENTS.md)，确认任务属于 Add Knowledge。
 2. 读取 [WIKI.md](../WIKI.md)，使用其中的 intake 和 source review 规则。
 3. 检查 `inbox/` 中的完整文件名、类型、大小和可读性。
-4. 将可处理内容转换或规范化到 `intake/tmp/YYYY-MM-DD/source-slug/source.md`。
+4. 将可处理内容转换或规范化到 `intake/tmp/YYYY-MM-DD/原始文件基础名/source.md`。
 5. 基于临时 Markdown 运行 Source Review Gate。
 6. 将原始文件移动到 `raw/digested/`、`raw/needs-review/`、`raw/ignored/` 或 `raw/unsupported/`。
 7. 只有 `digested` 内容进入 `intake/processed/` 并继续更新 `wiki/`。
 8. 更新 `reviews/source-review/`、`intake/logs/`、`wiki/index.md` 和 `logs/wiki.md`。
+
+`原始文件基础名` 保留源文件原本的语言和字符，只去掉扩展名。如果重复或不明确的基础名会和已有路径冲突，将该 source 移到 `raw/needs-review/` 并记录命名问题，不要自行追加后缀。
 
 ## 6. Source Review Gate
 
@@ -149,6 +154,12 @@ Source Review Gate 决定一个 source 是否值得进入 wiki。
 | `unsupported` | `raw/unsupported/` | 记录无法处理的原因，暂不更新 wiki。 |
 
 转换命令成功不代表 source 可用。乱码、空内容、明显截断、结构破碎、缺失关键文本、依赖图片或扫描页的信息，都应进入 `needs-review` 或 `unsupported`。
+
+`intake/processed/` 下每个已接受 source 文件夹都必须包含 `source.md`、`summary.md` 和 `manifest.md`。任何生成已接受 Markdown 的转换或规范化路径都必须满足这个要求。
+
+已接受的 intake 输出进入 `wiki/` 前，应检查 Obsidian Markdown：内部 wikilink 是否有效，表格中的 wikilink alias 是否写成 `[[路径\|别名]]`，frontmatter 是否有效，加粗标记是否闭合，traceability 是否链接到存在的 vault 文件。
+
+如果曾经进入 `unsupported`、`ignored` 或 `needs-review` 的 source 后来被接受为 `digested`，必须在同一轮关闭旧状态。不能让同一个原始文件名同时留在两个 raw 状态目录中，intake 日志、source review 记录、manifest、source card、`wiki/index.md` 和 `logs/wiki.md` 也应反映最新状态。
 
 ## 7. 文本优先边界
 

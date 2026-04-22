@@ -107,9 +107,12 @@ Core responsibilities:
 | `intake/tmp/` | Temporary Markdown after conversion and before source review. |
 | `intake/processed/` | Accepted Markdown ready for wiki ingestion. |
 | `reviews/` | Source review and discussion reflection records. |
+| `logs/` | Single high-level wiki operation history, grouped by date in `logs/wiki.md`. |
 | `wiki/` | Durable knowledge pages. |
 | `questions/` | Open questions and investigation trails. |
 | `artifacts/` | Reports, briefs, drafts, templates, and other user-facing deliverables. |
+
+`intake/logs/YYYY-MM-DD.md` and `reviews/source-review/YYYY-MM-DD.md` are daily files. `logs/wiki.md` is a single append-only operation history grouped by date headings; keep it concise and avoid duplicating daily intake details there.
 
 ## 5. First File Intake
 
@@ -131,11 +134,13 @@ The agent should:
 1. Read [AGENTS.md](../AGENTS.md) and route the task to Add Knowledge.
 2. Read [WIKI.md](../WIKI.md) and follow the intake and source review rules.
 3. Inspect complete filenames, file types, sizes, and readability.
-4. Convert or normalize processable content into `intake/tmp/YYYY-MM-DD/source-slug/source.md`.
+4. Convert or normalize processable content into `intake/tmp/YYYY-MM-DD/original-source-base-filename/source.md`.
 5. Run Source Review Gate on the temporary Markdown.
 6. Move the original file to `raw/digested/`, `raw/needs-review/`, `raw/ignored/`, or `raw/unsupported/`.
 7. Promote only `digested` content into `intake/processed/` and update `wiki/`.
 8. Update `reviews/source-review/`, `intake/logs/`, `wiki/index.md`, and `logs/wiki.md`.
+
+The source base filename keeps the original source language and characters, except for removing the extension. If a duplicate or ambiguous base filename would collide with an existing path, move the duplicate source to `raw/needs-review/` and record the naming question instead of inventing a suffix.
 
 ## 6. Source Review Gate
 
@@ -149,6 +154,12 @@ Source Review Gate decides whether a source deserves to enter the wiki.
 | `unsupported` | `raw/unsupported/` | Record the blocker. Do not update the wiki. |
 
 A successful converter run does not mean the source is accepted. Empty, garbled, truncated, structurally broken, or image-dependent content should become `needs-review` or `unsupported`.
+
+Every accepted folder under `intake/processed/` must include `source.md`, `summary.md`, and `manifest.md`. This applies to every conversion or normalization path that produces accepted Markdown.
+
+Before accepted intake output updates `wiki/`, the agent should verify Obsidian Markdown: wikilinks resolve, table wikilinks escape alias separators, frontmatter is valid, bold markers are balanced, and traceability links point to existing vault files.
+
+If a source previously marked `unsupported`, `ignored`, or `needs-review` is later accepted, the old state must be closed in the same pass. The same original filename should not remain in two raw state directories, and intake logs, source review records, manifests, source cards, `wiki/index.md`, and `logs/wiki.md` should reflect the latest state.
 
 ## 7. Text-First Boundary
 

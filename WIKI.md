@@ -47,7 +47,7 @@ Create only the directories required for the current task. Do not add exports, d
 For each digested raw source, write intake outputs under:
 
 ```text
-intake/processed/YYYY-MM-DD/source-slug/
+intake/processed/YYYY-MM-DD/original-source-base-filename/
 ├── source.md
 ├── summary.md
 ├── manifest.md
@@ -57,7 +57,15 @@ intake/processed/YYYY-MM-DD/source-slug/
     └── 01.md
 ```
 
+The `original-source-base-filename` directory must preserve the original source file's base filename and source language. Except for removing the extension, do not translate, romanize, slugify, lowercase, URL encode, or simplify it. Use the same source-language naming rule for source cards under `wiki/sources/`.
+
+If preserving the original base filename would collide with an existing path for a distinct source, do not invent a suffix or choose a new title by assumption. Move the duplicate or ambiguous source to `raw/needs-review/`, record the naming collision question, and wait for user judgment.
+
 Use `digest.md` only when it helps review. Use `chunks/` only when the source is too large or structurally complex to handle as one file.
+
+## Log Structure
+
+Use `intake/logs/YYYY-MM-DD.md` for daily source handling logs. Use `reviews/source-review/YYYY-MM-DD.md` for daily review decisions. Use `logs/wiki.md` as one append-only high-level operation history grouped by date headings. `logs/wiki.md` may grow over time, so entries should stay concise and should not duplicate detailed intake or source review records. Do not split, summarize, or archive `logs/wiki.md` unless the user explicitly changes the package contract.
 
 ## Source and Traceability Rules
 
@@ -77,6 +85,8 @@ Use `digest.md` only when it helps review. Use `chunks/` only when the source is
 
 Use Obsidian-compatible Markdown. Prefer `[[wikilinks]]` for internal wiki pages and normal Markdown links for external URLs. Keep filenames human-readable and stable.
 
+In normal Markdown text, traceability links to vault-internal files and notes must use Obsidian wikilinks. Keep raw paths in frontmatter `sources:` as plain strings because YAML frontmatter is metadata, not normal Markdown link text.
+
 Recommended wiki frontmatter:
 
 ```yaml
@@ -89,7 +99,7 @@ created: YYYY-MM-DD
 updated: YYYY-MM-DD
 sources:
   - raw/digested/example.pdf
-  - intake/processed/YYYY-MM-DD/example/source.md
+  - intake/processed/YYYY-MM-DD/original-source-base-filename/source.md
 tags:
   - llm-wiki
 ---
@@ -121,7 +131,7 @@ created: YYYY-MM-DD
 updated: YYYY-MM-DD
 sources:
   - raw/digested/original-filename.ext
-  - intake/processed/YYYY-MM-DD/source-slug/source.md
+  - intake/processed/YYYY-MM-DD/original-source-base-filename/source.md
   - reviews/source-review/YYYY-MM-DD.md
 tags:
   - llm-wiki
@@ -152,10 +162,10 @@ State missing context, weak extraction, image-only material, uncertain claims, a
 
 ## Traceability
 
-- Original file: `raw/digested/original-filename.ext`
-- Processed Markdown: `intake/processed/YYYY-MM-DD/source-slug/source.md`
-- Source review: `reviews/source-review/YYYY-MM-DD.md`
-- Manifest: `intake/processed/YYYY-MM-DD/source-slug/manifest.md`
+- Original file: [[raw/digested/original-filename.ext]]
+- Processed Markdown: [[intake/processed/YYYY-MM-DD/original-source-base-filename/source]]
+- Source review: [[reviews/source-review/YYYY-MM-DD]]
+- Manifest: [[intake/processed/YYYY-MM-DD/original-source-base-filename/manifest]]
 ```
 
 ## Core Workflows
@@ -205,7 +215,7 @@ Use the shortest reliable conversion path available in the environment.
 
 | File type                   | Temporary conversion handling                                      |
 | --------------------------- | ------------------------------------------------------------------ |
-| Markdown                    | Normalize into `intake/tmp/YYYY-MM-DD/source-slug/source.md` before review |
+| Markdown                    | Normalize into `intake/tmp/YYYY-MM-DD/original-source-base-filename/source.md` before review |
 | PDF                         | Convert readable content to Markdown; scanned or image-heavy PDFs become `needs-review` when important content is not processed |
 | Word                        | Convert text, headings, tables, captions, and any supported document content; unprocessed important embedded material becomes `needs-review` |
 | PowerPoint                  | Convert to Markdown and preserve slide structure                   |
@@ -219,19 +229,23 @@ Use the shortest reliable conversion path available in the environment.
 
 The intake order is:
 
+`intake/tmp/` is the first Markdown landing area after conversion or normalization. `intake/processed/` is not a conversion scratch area; it is only for Markdown accepted by Source Review Gate and ready for ingest. Any conversion or normalization path that produces accepted Markdown must follow the same lifecycle and output requirements.
+
 1. Take original files from `inbox/`.
 2. Inspect and record the complete raw file path, exact filename, file type, size, and basic readability.
-3. Convert or normalize the file to temporary Markdown under `intake/tmp/YYYY-MM-DD/source-slug/`.
+3. Convert or normalize the file to temporary Markdown under `intake/tmp/YYYY-MM-DD/original-source-base-filename/`.
 4. For archives, create a member listing first. Record each useful member's archive path, filename, detected type, and conversion result. Convert only members that are useful for review.
 5. If conversion fails, move the original file to `raw/unsupported/`, record the blocker in `intake/logs/YYYY-MM-DD.md`, delete the temporary folder, and stop.
 6. If conversion technically succeeds but the Markdown is garbled, empty, too thin to judge, obviously truncated, structurally broken, or missing important text, move the original to `raw/needs-review/`, record the conversion-quality question, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and stop.
 7. If the source is too large, ambiguous, encrypted, noisy, multimodal, or requires user selection before a final decision, move the original to `raw/needs-review/`, record the question, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and stop.
 8. Optionally write `digest.md` in the temporary intake folder when a short digest would make review easier; do not make digest mandatory.
 9. Run Source Review Gate on the temporary Markdown and optional digest, not on the raw filename alone.
-10. If the outcome is `digested`, promote the temporary Markdown to `intake/processed/YYYY-MM-DD/source-slug/`, write `source.md`, `summary.md`, `manifest.md`, include `digest.md` only if it was useful, move the original to `raw/digested/`, delete the temporary folder, then ingest.
+10. If the outcome is `digested`, promote the temporary Markdown to `intake/processed/YYYY-MM-DD/original-source-base-filename/`, write `source.md`, `summary.md`, `manifest.md`, include `digest.md` only if it was useful, move the original to `raw/digested/`, delete the temporary folder, then ingest.
 11. If the outcome is `ignored`, move the original to `raw/ignored/`, log the reason, delete the temporary folder, and stop.
 12. If the outcome is `unsupported`, move the original to `raw/unsupported/`, log the blocker, delete the temporary folder, and stop.
 13. If the outcome is `needs-review`, move the original to `raw/needs-review/`, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and record the question.
+
+After a final outcome is reached for a source, no temporary folder for that source may remain under `intake/tmp/`.
 
 ### 4. Source Review Gate
 
@@ -268,11 +282,25 @@ summary.md     Short processing summary and value judgment.
 manifest.md    Traceability record from original file to wiki updates.
 ```
 
+These files are required for every accepted source, including later reprocessing, repaired document extraction, manual normalization, and any other approved text extraction path. A `source.md` without `summary.md` and `manifest.md` is incomplete and must not be treated as fully ingested.
+
 It may also include `digest.md` when a short digest was useful for review, and `chunks/` when the source required chunking.
 
 After intake, move each original file from `inbox/` into exactly one state directory: `raw/digested/`, `raw/needs-review/`, `raw/ignored/`, or `raw/unsupported/`. `inbox/` must not retain files that were already handled once. Record every move in `intake/logs/YYYY-MM-DD.md` with complete filenames, file types, source paths, and final destinations.
 
 Treat `raw/needs-review/` as a queue, not a final archive. Each file moved there must have a recorded review question in `reviews/source-review/YYYY-MM-DD.md` or `intake/logs/YYYY-MM-DD.md`. When the user or a later agent resolves the question, restart intake from that original file, convert again to `intake/tmp/` if needed, then finish with `digested`, `ignored`, or `unsupported`. Do not leave a file in `raw/needs-review/` after a final decision exists.
+
+### Reprocessing and State Correction
+
+When a source previously marked `ignored`, `unsupported`, or `needs-review` is later resolved and accepted as `digested`, close the old state in the same pass:
+
+1. Move or remove the old raw state entry so the same original filename does not remain in two raw state directories.
+2. Update `intake/logs/YYYY-MM-DD.md` for the new handling pass.
+3. Update or append `reviews/source-review/YYYY-MM-DD.md` so the latest decision is visible.
+4. Write or update the accepted folder's `source.md`, `summary.md`, and `manifest.md`.
+5. Update the source card, `wiki/index.md`, and `logs/wiki.md`.
+
+Do not leave a final accepted source represented as both `raw/digested/` and `raw/unsupported/`, or as both `raw/digested/` and `raw/ignored/`.
 
 ### 5. Large File and Context Budget Policy
 
@@ -294,12 +322,13 @@ When a source is ready to become wiki knowledge:
 2. Read `summary.md`, `manifest.md`, and `chunks/index.md` first when available.
 3. Read the original source only when accuracy or conversion quality needs verification.
 4. Extract durable knowledge: main thesis, key claims, evidence, counterevidence, named entities, important concepts, decisions, recommendations, contradictions, and open questions.
-5. Create or update exactly one content-rich source card under `wiki/sources/`.
-6. Create or update relevant pages in `wiki/entities/`, `wiki/concepts/`, `wiki/claims/`, or `wiki/syntheses/` only when useful.
-7. Create or update `questions/` only when an unresolved investigation thread is worth tracking separately.
-8. Update `wiki/overview.md` only when the source changes the overall synthesis.
-9. Update `wiki/index.md`, `wiki/home.md` when needed, and `logs/wiki.md`.
-10. Update the intake `manifest.md` when intake outputs led to wiki, question, or artifact changes.
+5. Verify Obsidian Markdown before writing wiki pages: internal links must be wikilinks, wikilink aliases inside tables must escape `|` as `\|`, frontmatter must parse as valid Obsidian properties, bold markers must be balanced, and traceability links must point to existing vault files.
+6. Create or update exactly one content-rich source card under `wiki/sources/`.
+7. Create or update relevant pages in `wiki/entities/`, `wiki/concepts/`, `wiki/claims/`, or `wiki/syntheses/` only when useful.
+8. Create or update `questions/` only when an unresolved investigation thread is worth tracking separately.
+9. Update `wiki/overview.md` only when the source changes the overall synthesis.
+10. Update `wiki/index.md`, `wiki/home.md` when needed, and `logs/wiki.md`.
+11. Update the intake `manifest.md` when intake outputs led to wiki, question, or artifact changes.
 
 Do not flatten disagreement into false consensus. If sources conflict, preserve the disagreement and cite both sides.
 
@@ -531,7 +560,7 @@ what should I ingest next?
 intake
 process raw files
 convert raw files to markdown
-ingest intake/processed/YYYY-MM-DD/source-slug/source.md
+ingest intake/processed/YYYY-MM-DD/original-source-base-filename/source.md
 process this source
 extract claims
 reflect

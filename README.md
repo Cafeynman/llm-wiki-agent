@@ -129,6 +129,7 @@ The agent should choose the shortest workflow that fully satisfies the current r
 - The workflow is text-first. Attachments, scans, screenshots, images, and audio may remain part of preserved original sources, but they are not first-class wiki content unless you explicitly add image or audio handling.
 - Source review happens before wiki updates. A successful file conversion is not enough to accept a source.
 - Original source files are preserved. Generated Markdown belongs under `intake/`, not `raw/`.
+- Intake and source-card names preserve the original source filename language and characters. Converted Markdown first lands in `intake/tmp/`; only reviewed `digested` material moves to complete `intake/processed/` folders and then through Obsidian-format validation before wiki updates.
 - User-facing reports, briefs, outlines, drafts, and templates belong under `artifacts/`, not `wiki/`.
 - The package favors explicit traceability over hidden memory. Durable claims should cite source cards, intake output, raw files, or confirmed discussion records.
 

@@ -129,6 +129,7 @@ agent 应选择能够完整满足当前请求的最短工作流。
 - 当前工作流是文本优先。附件、扫描件、截图、图片和音频可以作为原始 source 保存，但默认不是 wiki 的一等内容，除非你明确添加图片或音频处理。
 - wiki 更新前必须先做 source review。转换命令成功不代表 source 被接受。
 - 原始 source 文件应保持可追溯。agent 生成的 Markdown 属于 `intake/`，不属于 `raw/`。
+- intake 和 source card 命名保留原始 source 文件语言和字符。转换后的 Markdown 先进入 `intake/tmp/`；只有通过审查的 `digested` 内容才进入完整的 `intake/processed/` 文件夹，并在更新 wiki 前通过 Obsidian 格式检查。
 - 报告、brief、outline、draft、模板等面向用户的交付物应写入 `artifacts/`，不要写入 `wiki/`。
 - 本包优先使用显式 traceability，而不是隐藏 memory。长期 claim 应引用 source card、intake output、raw 文件或已确认的讨论记录。
 

@@ -35,13 +35,17 @@ When a user gives a new direction that replaces a prior plan, replace the old pl
 
 Use Obsidian wikilinks for internal pages. In normal Markdown text, use `[[path/to/page|Alias]]`. Inside Markdown table cells, escape the alias separator so the table parser does not split the cell: `[[path/to/page\|Alias]]`. Keep the whole wikilink inside one cell, close it with `]]` before the next table delimiter, and verify each table row has the same number of unescaped `|` separators.
 
+Traceability sections in Markdown must use Obsidian wikilinks for vault-internal files and notes. Plain code-formatted paths may be used in YAML frontmatter or command examples, but not as the primary traceability links in normal Markdown text.
+
 ## Obsidian Frontmatter Properties
 
 When writing Obsidian frontmatter property values, wrap strings containing `"` in `'`, or wrap strings containing `'` in `"`, and escape required special characters to avoid Obsidian `Invalid properties` errors.
 
-## MarkItDown Output Names
+## Intake Output Names
 
-When using MarkItDown to generate Markdown from an original file, the output directory name and `.md` filename must preserve the original file's base filename. Except for changing the extension to `.md`, do not replace, delete, transcode, URL encode, change case, or slugify any character.
+When generating intake Markdown from an original file, including MarkItDown, manual normalization, repaired document extraction, or any other converter, the intake directory name must preserve the original file's base filename and source language. Except for removing the extension, do not replace, delete, transcode, URL encode, change case, translate, romanize, or slugify any character.
+
+Use the same source-language naming rule for `wiki/sources/` source cards. Do not translate a source title into another language or slug unless the user explicitly asks for that naming scheme.
 
 ## Current Tool Limits
 
