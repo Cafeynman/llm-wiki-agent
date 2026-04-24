@@ -1,5 +1,7 @@
 # 引用
 
+[ENGLISH VERSION](references.md)
+
 本项目基于公开的 LLM Wiki pattern 及相关社区实现整理而成。以下内容是思想来源和先行实践，不是本仓库打包的源文件。
 
 ## 核心思想来源

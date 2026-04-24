@@ -1,5 +1,7 @@
 # 致谢
 
+[ENGLISH VERSION](acknowledgements.md)
+
 本项目来自公开的 LLM Wiki 思想空间，也受益于那些记录、实现和解释这一模式的人。
 
 ## 思想和先行实践

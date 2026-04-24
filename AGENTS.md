@@ -10,12 +10,19 @@ WIKI.md
 
 Use `uv run` for Python commands from the project root.
 Do not call `python` or `pip` directly for project tasks unless the user explicitly asks. Python version is defined in `pyproject.toml`.
+When a task depends on project-local environment variables, prefer `uv run --env-file .env` from the project root, or set `UV_ENV_FILE=.env` in the current shell for repeated `uv run` commands.
 
 Before handling any wiki task, read and follow `WIKI.md`.
 
 ## Replacement Rule
 
 When a user gives a new direction that replaces a prior plan, replace the old plan completely instead of patching around it: define the single new source of truth, remove old wording and workflows, scan the target files for stale terms, and finish only when the old terms are gone.
+
+## Document Ownership
+
+Keep `WIKI.md` focused on wiki operating rules, knowledge workflows, intake, ingest, traceability, and maintenance.
+
+Repository-level workflow instructions, agent behavior rules, runtime usage guidance, setup guidance, and usage-document routing belong in `AGENTS.md` or the relevant docs under `docs/`, not in `WIKI.md`, unless they are part of the wiki operating contract itself.
 
 ## Package Rules
 
@@ -49,7 +56,7 @@ Use the same source-language naming rule for `wiki/sources/` source cards. Do no
 
 ## Current Tool Limits
 
-This package currently uses MarkItDown as a text-first converter. Remove inline `data:image/...;base64,...` image links from converted Markdown; they are dead links for this wiki. Do not OCR, describe images, copy attachments into wiki pages, or transcribe audio by default. If Word/PDF/PPT/image/audio content depends on figures, scans, screenshots, attachments, or audio, move the original to `raw/needs-review/` and record the missing non-text processing step. Keep `WIKI.md` tool-agnostic; record current converter limitations here.
+This package currently uses MarkItDown as a text-first converter. Remove inline `data:image/...;base64,...` image links from converted Markdown; they are dead links for this wiki. Do not OCR, describe images, copy attachments into wiki pages, or transcribe audio by default. If Word/PDF/PPT/image/audio content depends on figures, scans, screenshots, attachments, or audio, move the original to `raw/needs-review/` and record the missing non-text processing step. If OCR is explicitly enabled for a task, read `docs/markitdown-ocr.md` before invoking OCR-related commands. When `.env` defines `MARKITDOWN_OCR_MODEL`, use that value as the default OCR model and pass it explicitly as `--llm-model`; if it is missing, ask the user before proceeding with OCR. Keep `WIKI.md` tool-agnostic; record current converter limitations here.
 
 ## Workflow Router
 

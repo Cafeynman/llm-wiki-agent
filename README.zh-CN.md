@@ -1,6 +1,6 @@
 # LLM Wiki Agent 最佳实践
 
-[英文版](README.md)
+[ENGLISH VERSION](README.md)
 
 LLM Wiki Agent 是一个面向 LLM agent 的最佳实践工作流包，用于构建和维护一个持久、可追溯、Obsidian 风格的 Markdown 知识库。
 
@@ -50,7 +50,7 @@ cd llm-wiki-agent
 ./scripts/init.sh -VaultRoot "/path/to/your/vault"
 ```
 
-完整使用说明见 [docs/usage.zh-CN.md](docs/usage.zh-CN.md)。
+完整使用说明见 [docs/usage.zh-CN.md](docs/usage.zh-CN.md)。OCR 相关说明见 [docs/markitdown-ocr.zh-CN.md](docs/markitdown-ocr.zh-CN.md)。
 
 ## 推荐环境
 

@@ -1,6 +1,6 @@
 # LLM Wiki Agent Best Practices
 
-[Chinese version](README.zh-CN.md)
+[中文版](README.zh-CN.md)
 
 LLM Wiki Agent is a best-practice workflow package for building and maintaining a persistent, traceable Obsidian-style Markdown knowledge base with an LLM agent.
 
@@ -50,7 +50,7 @@ For a separate Obsidian vault, pass the vault path:
 ./scripts/init.sh -VaultRoot "/path/to/your/vault"
 ```
 
-For full setup and operating details, read [docs/usage.md](docs/usage.md).
+For full setup and operating details, read [docs/usage.md](docs/usage.md). For OCR-specific setup, see [docs/markitdown-ocr.md](docs/markitdown-ocr.md).
 
 ## Recommended Setup
 

@@ -211,6 +211,8 @@ Intake is the entry path for raw files. Its job is to produce reviewable Markdow
 
 For raw files, use the most reliable Markdown conversion path available in the environment. The converter must produce reviewable Markdown and identify important content it could not process.
 
+Before conversion, check whether a batch or file appears likely to benefit from OCR, such as scan-heavy PDFs or image-heavy Word, PowerPoint, and Excel files. If OCR appears available in the current environment, do not enable it automatically. First group the files into `recommend OCR`, `do not recommend OCR`, or `unclear`, then ask the user once whether to enable OCR for the recommended group and how to handle any unclear files.
+
 Use the shortest reliable conversion path available in the environment.
 
 | File type                   | Temporary conversion handling                                      |
@@ -233,17 +235,18 @@ The intake order is:
 
 1. Take original files from `inbox/`.
 2. Inspect and record the complete raw file path, exact filename, file type, size, and basic readability.
-3. Convert or normalize the file to temporary Markdown under `intake/tmp/YYYY-MM-DD/original-source-base-filename/`.
-4. For archives, create a member listing first. Record each useful member's archive path, filename, detected type, and conversion result. Convert only members that are useful for review.
-5. If conversion fails, move the original file to `raw/unsupported/`, record the blocker in `intake/logs/YYYY-MM-DD.md`, delete the temporary folder, and stop.
-6. If conversion technically succeeds but the Markdown is garbled, empty, too thin to judge, obviously truncated, structurally broken, or missing important text, move the original to `raw/needs-review/`, record the conversion-quality question, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and stop.
-7. If the source is too large, ambiguous, encrypted, noisy, multimodal, or requires user selection before a final decision, move the original to `raw/needs-review/`, record the question, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and stop.
-8. Optionally write `digest.md` in the temporary intake folder when a short digest would make review easier; do not make digest mandatory.
-9. Run Source Review Gate on the temporary Markdown and optional digest, not on the raw filename alone.
-10. If the outcome is `digested`, promote the temporary Markdown to `intake/processed/YYYY-MM-DD/original-source-base-filename/`, write `source.md`, `summary.md`, `manifest.md`, include `digest.md` only if it was useful, move the original to `raw/digested/`, delete the temporary folder, then ingest.
-11. If the outcome is `ignored`, move the original to `raw/ignored/`, log the reason, delete the temporary folder, and stop.
-12. If the outcome is `unsupported`, move the original to `raw/unsupported/`, log the blocker, delete the temporary folder, and stop.
-13. If the outcome is `needs-review`, move the original to `raw/needs-review/`, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and record the question.
+3. For batch intake and other multi-file requests, perform OCR precheck before conversion when any file appears likely to benefit from OCR. Present the grouped recommendation once and wait for the user's decision before enabling OCR.
+4. Convert or normalize the file to temporary Markdown under `intake/tmp/YYYY-MM-DD/original-source-base-filename/`.
+5. For archives, create a member listing first. Record each useful member's archive path, filename, detected type, and conversion result. Convert only members that are useful for review.
+6. If conversion fails, move the original file to `raw/unsupported/`, record the blocker in `intake/logs/YYYY-MM-DD.md`, delete the temporary folder, and stop.
+7. If conversion technically succeeds but the Markdown is garbled, empty, too thin to judge, obviously truncated, structurally broken, or missing important text, move the original to `raw/needs-review/`, record the conversion-quality question, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and stop.
+8. If the source is too large, ambiguous, encrypted, noisy, multimodal, or requires user selection before a final decision, move the original to `raw/needs-review/`, record the question, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and stop.
+9. Optionally write `digest.md` in the temporary intake folder when a short digest would make review easier; do not make digest mandatory.
+10. Run Source Review Gate on the temporary Markdown and optional digest, not on the raw filename alone.
+11. If the outcome is `digested`, promote the temporary Markdown to `intake/processed/YYYY-MM-DD/original-source-base-filename/`, write `source.md`, `summary.md`, `manifest.md`, include `digest.md` only if it was useful, move the original to `raw/digested/`, delete the temporary folder, then ingest.
+12. If the outcome is `ignored`, move the original to `raw/ignored/`, log the reason, delete the temporary folder, and stop.
+13. If the outcome is `unsupported`, move the original to `raw/unsupported/`, log the blocker, delete the temporary folder, and stop.
+14. If the outcome is `needs-review`, move the original to `raw/needs-review/`, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and record the question.
 
 After a final outcome is reached for a source, no temporary folder for that source may remain under `intake/tmp/`.
 
@@ -277,7 +280,7 @@ Do not update wiki knowledge pages during source review.
 Each accepted intake folder under `intake/processed/` must include:
 
 ```text
-source.md      Clean Markdown converted or normalized from the original file.
+source.md      Reviewable source Markdown from the original file.
 summary.md     Short processing summary and value judgment.
 manifest.md    Traceability record from original file to wiki updates.
 ```
@@ -285,6 +288,20 @@ manifest.md    Traceability record from original file to wiki updates.
 These files are required for every accepted source, including later reprocessing, repaired document extraction, manual normalization, and any other approved text extraction path. A `source.md` without `summary.md` and `manifest.md` is incomplete and must not be treated as fully ingested.
 
 It may also include `digest.md` when a short digest was useful for review, and `chunks/` when the source required chunking.
+
+#### Excerpt-Type `source.md`
+
+Use excerpt-type `source.md` only when the full converted source is not the right ingest surface. Every excerpt block must still stand on its own. Do not promote naked keyword hits, isolated table rows, or reordered snippets into `intake/processed/`.
+
+Each excerpt block must include:
+
+1. Source document title.
+2. Original source path and converted Markdown path.
+3. Full heading context.
+4. For tables: table title, full header, relevant full row or rows, and any notes or footnotes needed to read them correctly.
+5. A short note saying why the block was kept.
+
+Missing heading context or required table context means the excerpt is incomplete and must not be ingested.
 
 After intake, move each original file from `inbox/` into exactly one state directory: `raw/digested/`, `raw/needs-review/`, `raw/ignored/`, or `raw/unsupported/`. `inbox/` must not retain files that were already handled once. Record every move in `intake/logs/YYYY-MM-DD.md` with complete filenames, file types, source paths, and final destinations.
 
@@ -464,7 +481,7 @@ Use reflect for user-confirmed, discussion-derived knowledge. User ideas, prefer
 4. Write the confirmed discussion source record to `reviews/reflection/YYYY-MM-DD.md`, including the confirmed idea, date, scope, affected pages, and any open follow-up.
 5. Add confirmed insights to relevant pages in a `> [!reflect] YYYY-MM-DD` callout.
 6. Add `reviews/reflection/YYYY-MM-DD.md` to the page's `sources` list and update the `updated` field when frontmatter exists.
-7. Route the update by content: workflow rules update `WIKI.md` or usage docs, knowledge judgments update `wiki/concepts/`, `wiki/claims/`, or `wiki/syntheses/`, and unresolved research threads update `questions/`.
+7. Route the update by content: knowledge judgments update `wiki/concepts/`, `wiki/claims/`, or `wiki/syntheses/`, and unresolved research threads update `questions/`.
 8. Create a new synthesis page only when the discussion produced a standalone argument worth preserving.
 9. Update `wiki/index.md` and `logs/wiki.md` when pages change.
 

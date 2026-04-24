@@ -1,5 +1,7 @@
 # Acknowledgements
 
+[中文版](acknowledgements.zh-CN.md)
+
 This project exists because of the public LLM Wiki idea space and the people who documented, implemented, and explained it.
 
 ## Idea and Prior Art

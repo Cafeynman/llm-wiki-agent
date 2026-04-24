@@ -2,7 +2,7 @@
 
 This guide explains how to install, initialize, and operate LLM Wiki Agent. [AGENTS.md](../AGENTS.md) is the agent entrypoint. [WIKI.md](../WIKI.md) is the canonical operating guide.
 
-For Chinese, see [usage.zh-CN.md](usage.zh-CN.md).
+[中文版](usage.zh-CN.md)
 
 ## 1. Use Cases
 
@@ -169,6 +169,8 @@ This package is text-first:
 - Images, scans, screenshots, and audio may remain preserved original sources, but they are not first-class wiki content by default.
 - If important information depends on unprocessed images, scans, screenshots, or audio, move the original to `raw/needs-review/` and record the missing processing step.
 - Do not create attachment asset directories, copy images into wiki pages, or add image-reference schemes unless image handling is explicitly added.
+
+For scan-heavy or image-heavy PDF, Word, PowerPoint, or Excel files, OCR is optional and should not be enabled by default. Use it only when plain `markitdown` misses critical text. For setup, prefer environment variables with `.env` plus `uv run --env-file .env ...`, then see [markitdown-ocr.md](markitdown-ocr.md) for the short OCR-specific steps.
 
 ## 8. Use Existing Knowledge
 

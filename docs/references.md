@@ -1,5 +1,7 @@
 # References
 
+[中文版](references.zh-CN.md)
+
 This project is based on the public LLM Wiki pattern and related community implementations. The references below are idea sources and prior art, not bundled source material.
 
 ## Core Idea Sources

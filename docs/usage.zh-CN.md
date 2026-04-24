@@ -2,7 +2,7 @@
 
 本文说明如何安装、初始化和日常使用 LLM Wiki Agent。[AGENTS.md](../AGENTS.md) 是 agent 入口，[WIKI.md](../WIKI.md) 是主工作规则。
 
-英文版见 [usage.md](usage.md)。
+[ENGLISH VERSION](usage.md)
 
 ## 1. 适用场景
 
@@ -169,6 +169,8 @@ Source Review Gate 决定一个 source 是否值得进入 wiki。
 - 图片、扫描件、截图和音频可以作为原始来源保存，但默认不是 wiki 的一等内容。
 - 如果某个文件的重要信息依赖未处理的图片、扫描页、截图或音频，移动到 `raw/needs-review/` 并记录缺失处理步骤。
 - 不要默认创建附件资源目录、复制图片到 wiki 页面，或添加图片引用方案。
+
+如果是扫描页很多、截图很多、图片里才有关键内容的 PDF、Word、PowerPoint、Excel，OCR 只是可选能力，不应默认开启。只有普通 `markitdown` 提不出关键文本时才用。配置时优先用 `.env` 加 `uv run --env-file .env ...`，具体最短步骤见 [markitdown-ocr.zh-CN.md](markitdown-ocr.zh-CN.md)。
 
 ## 8. 使用已有知识
 
