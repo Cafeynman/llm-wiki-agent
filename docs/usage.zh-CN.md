@@ -1,6 +1,6 @@
 # 使用手册
 
-本文说明如何安装、初始化和日常使用 LLM Wiki Agent。[AGENTS.md](../AGENTS.md) 是 agent 入口，[WIKI.md](../WIKI.md) 是主工作规则。
+本文说明如何安装、初始化和日常使用 LLM Wiki Agent。[AGENTS.md](../AGENTS.md) 是 agent 入口和仓库级规则文件，[PROJECT.md](../PROJECT.md) 保存当前工作区的可变项目上下文，[WIKI.md](../WIKI.md) 是主工作规则。
 
 [ENGLISH VERSION](usage.md)
 
@@ -126,19 +126,20 @@ inbox/
 向 agent 发出请求：
 
 ```text
-请按照 AGENTS.md 和 WIKI.md 处理 inbox/ 中的文件。
+请按照 AGENTS.md、PROJECT.md 和 WIKI.md 处理 inbox/ 中的文件。
 ```
 
 agent 应按以下顺序处理：
 
 1. 读取 [AGENTS.md](../AGENTS.md)，确认任务属于 Add Knowledge。
-2. 读取 [WIKI.md](../WIKI.md)，使用其中的 intake 和 source review 规则。
-3. 检查 `inbox/` 中的完整文件名、类型、大小和可读性。
-4. 将可处理内容转换或规范化到 `intake/tmp/YYYY-MM-DD/原始文件基础名/source.md`。
-5. 基于临时 Markdown 运行 Source Review Gate。
-6. 将原始文件移动到 `raw/digested/`、`raw/needs-review/`、`raw/ignored/` 或 `raw/unsupported/`。
-7. 只有 `digested` 内容进入 `intake/processed/` 并继续更新 `wiki/`。
-8. 更新 `reviews/source-review/`、`intake/logs/`、`wiki/index.md` 和 `logs/wiki.md`。
+2. 读取 [PROJECT.md](../PROJECT.md)，确认当前主题、目标、范围、术语和约束。如果它缺失、为空或还只是模板，先与用户确认项目上下文，再写入 `PROJECT.md`，然后才做项目相关假设。
+3. 读取 [WIKI.md](../WIKI.md)，使用其中的 intake 和 source review 规则。
+4. 检查 `inbox/` 中的完整文件名、类型、大小和可读性。
+5. 将可处理内容转换或规范化到 `intake/tmp/YYYY-MM-DD/原始文件基础名/source.md`。
+6. 基于临时 Markdown 运行 Source Review Gate。
+7. 将原始文件移动到 `raw/digested/`、`raw/needs-review/`、`raw/ignored/` 或 `raw/unsupported/`。
+8. 只有 `digested` 内容进入 `intake/processed/` 并继续更新 `wiki/`。
+9. 更新 `reviews/source-review/`、`intake/logs/`、`wiki/index.md` 和 `logs/wiki.md`。
 
 `原始文件基础名` 保留源文件原本的语言和字符，只去掉扩展名。如果重复或不明确的基础名会和已有路径冲突，将该 source 移到 `raw/needs-review/` 并记录命名问题，不要自行追加后缀。
 

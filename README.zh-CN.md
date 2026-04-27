@@ -13,7 +13,7 @@ LLM Wiki Agent 是一个面向 LLM agent 的最佳实践工作流包，用于构
 核心流程很简单：
 
 1. 把 source 文件放进 `inbox/`。
-2. 要求 agent 按 [AGENTS.md](AGENTS.md) 和 [WIKI.md](WIKI.md) 处理。
+2. 要求 agent 按 [AGENTS.md](AGENTS.md)、[PROJECT.md](PROJECT.md) 和 [WIKI.md](WIKI.md) 处理。
 3. agent 把有价值的 source 转成可审查 Markdown。
 4. agent 在写入 wiki 前先做 source review。
 5. 被接受的知识会变成 `wiki/` 下的互链 Markdown 页面。
@@ -69,7 +69,7 @@ inbox/
 向 agent 发送：
 
 ```text
-请按照 AGENTS.md 和 WIKI.md 处理 inbox/ 中的文件。
+请按照 AGENTS.md、PROJECT.md 和 WIKI.md 处理 inbox/ 中的文件。
 ```
 
 预期生命周期是：
@@ -108,6 +108,7 @@ agent 应选择能够完整满足当前请求的最短工作流。
 ├── README.md
 ├── README.zh-CN.md
 ├── AGENTS.md
+├── PROJECT.md
 ├── WIKI.md
 ├── LICENSE
 ├── pyproject.toml
@@ -136,7 +137,8 @@ agent 应选择能够完整满足当前请求的最短工作流。
 ## 文档
 
 - [docs/usage.zh-CN.md](docs/usage.zh-CN.md)：中文使用手册。
-- [AGENTS.md](AGENTS.md)：agent 入口和工作流路由。
+- [AGENTS.md](AGENTS.md)：agent 入口和仓库级工作流规则。
+- [PROJECT.md](PROJECT.md)：当前工作区的可变项目上下文。
 - [WIKI.md](WIKI.md)：agent 执行时的主规则。
 - [docs/references.zh-CN.md](docs/references.zh-CN.md)：中文引用。
 - [docs/acknowledgements.zh-CN.md](docs/acknowledgements.zh-CN.md)：中文感谢。

@@ -1,11 +1,12 @@
 .venv/
-.env
+**/.env
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
 .obsidian/
+tmp/
 
 # Local wiki runtime content when using this package directory as VaultRoot.
 inbox/

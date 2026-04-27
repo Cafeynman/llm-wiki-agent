@@ -6,6 +6,14 @@ This package uses one shared wiki operating guide:
 WIKI.md
 ```
 
+## Project Profile
+
+Read `PROJECT.md` for the configurable project context: current subject, goal, audience, scope, terminology, constraints, and open questions.
+
+On the first project-context interaction, if `PROJECT.md` is missing, blank, or still only a template, clarify the current project context with the user and write the confirmed context to `PROJECT.md` before making project-specific assumptions.
+
+Treat `PROJECT.md` as a changeable context layer. Do not use it for stable wiki operating rules, runtime commands, repository workflow rules, or the stable wiki contract in `WIKI.md`.
+
 ## Runtime Requirement
 
 Use `uv run` for Python commands from the project root.
@@ -28,15 +36,16 @@ Repository-level workflow instructions, agent behavior rules, runtime usage guid
 
 1. Keep package files, runtime configuration, helper scripts, and local skills inside the project root.
 2. Keep the local uv virtual environment at `.venv/` when used, and do not commit it.
-3. Prefer existing package skills under `skills/` before creating any new skill.
-4. Use `wiki/home.md` as the human-facing wiki home.
-5. Use `wiki/index.md` as the structured catalog.
-6. Use `logs/wiki.md` as the operation history.
-7. Put user-facing deliverables in `artifacts/`.
-8. Track open investigation questions in `questions/`.
-9. Use `inbox/` as the entry point for user-submitted original files.
-10. Preserve raw source traceability and do not edit original files under `raw/` unless the user explicitly asks.
-11. Treat the package as text-first: source material must become reviewable Markdown before it enters `intake/processed/` or `wiki/`. Attachments and images may remain part of the preserved original source, but they are not first-class wiki content unless the user explicitly asks for image handling.
+3. Put all temporary files and one-off working scripts under `tmp/` to keep the project workspace clean.
+4. Prefer existing package skills under `skills/` before creating any new skill.
+5. Use `wiki/home.md` as the human-facing wiki home.
+6. Use `wiki/index.md` as the structured catalog.
+7. Use `logs/wiki.md` as the operation history.
+8. Put user-facing deliverables in `artifacts/`.
+9. Track open investigation questions in `questions/`.
+10. Use `inbox/` as the entry point for user-submitted original files.
+11. Preserve raw source traceability and do not edit original files under `raw/` unless the user explicitly asks.
+12. Treat the package as text-first: source material must become reviewable Markdown before it enters `intake/processed/` or `wiki/`. Attachments and images may remain part of the preserved original source, but they are not first-class wiki content unless the user explicitly asks for image handling.
 
 ## Obsidian Markdown
 

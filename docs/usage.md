@@ -1,6 +1,6 @@
 # Usage Guide
 
-This guide explains how to install, initialize, and operate LLM Wiki Agent. [AGENTS.md](../AGENTS.md) is the agent entrypoint. [WIKI.md](../WIKI.md) is the canonical operating guide.
+This guide explains how to install, initialize, and operate LLM Wiki Agent. [AGENTS.md](../AGENTS.md) is the agent entrypoint and repository-level rule file. [PROJECT.md](../PROJECT.md) holds the current workspace's configurable project context. [WIKI.md](../WIKI.md) is the canonical operating guide.
 
 [中文版](usage.zh-CN.md)
 
@@ -126,19 +126,20 @@ inbox/
 Ask the agent:
 
 ```text
-Process the files in inbox/ according to AGENTS.md and WIKI.md.
+Process the files in inbox/ according to AGENTS.md, PROJECT.md, and WIKI.md.
 ```
 
 The agent should:
 
 1. Read [AGENTS.md](../AGENTS.md) and route the task to Add Knowledge.
-2. Read [WIKI.md](../WIKI.md) and follow the intake and source review rules.
-3. Inspect complete filenames, file types, sizes, and readability.
-4. Convert or normalize processable content into `intake/tmp/YYYY-MM-DD/original-source-base-filename/source.md`.
-5. Run Source Review Gate on the temporary Markdown.
-6. Move the original file to `raw/digested/`, `raw/needs-review/`, `raw/ignored/`, or `raw/unsupported/`.
-7. Promote only `digested` content into `intake/processed/` and update `wiki/`.
-8. Update `reviews/source-review/`, `intake/logs/`, `wiki/index.md`, and `logs/wiki.md`.
+2. Read [PROJECT.md](../PROJECT.md) for the current subject, goal, scope, terms, and constraints. If it is missing, blank, or still only a template, confirm the project context with the user and write it before making project-specific assumptions.
+3. Read [WIKI.md](../WIKI.md) and follow the intake and source review rules.
+4. Inspect complete filenames, file types, sizes, and readability.
+5. Convert or normalize processable content into `intake/tmp/YYYY-MM-DD/original-source-base-filename/source.md`.
+6. Run Source Review Gate on the temporary Markdown.
+7. Move the original file to `raw/digested/`, `raw/needs-review/`, `raw/ignored/`, or `raw/unsupported/`.
+8. Promote only `digested` content into `intake/processed/` and update `wiki/`.
+9. Update `reviews/source-review/`, `intake/logs/`, `wiki/index.md`, and `logs/wiki.md`.
 
 The source base filename keeps the original source language and characters, except for removing the extension. If a duplicate or ambiguous base filename would collide with an existing path, move the duplicate source to `raw/needs-review/` and record the naming question instead of inventing a suffix.
 

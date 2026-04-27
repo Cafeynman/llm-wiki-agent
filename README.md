@@ -13,7 +13,7 @@ This repository is not a full application server or a replacement for Obsidian. 
 The core idea is simple:
 
 1. Put source material into `inbox/`.
-2. Ask your agent to process the source according to [AGENTS.md](AGENTS.md) and [WIKI.md](WIKI.md).
+2. Ask your agent to process the source according to [AGENTS.md](AGENTS.md), [PROJECT.md](PROJECT.md), and [WIKI.md](WIKI.md).
 3. The agent converts useful source material into reviewable Markdown.
 4. The agent reviews the converted material before writing wiki knowledge.
 5. Accepted knowledge becomes linked Markdown pages under `wiki/`.
@@ -69,7 +69,7 @@ inbox/
 Ask the agent:
 
 ```text
-Process the files in inbox/ according to AGENTS.md and WIKI.md.
+Process the files in inbox/ according to AGENTS.md, PROJECT.md, and WIKI.md.
 ```
 
 The expected lifecycle is:
@@ -108,6 +108,7 @@ The agent should choose the shortest workflow that fully satisfies the current r
 ├── README.md
 ├── README.zh-CN.md
 ├── AGENTS.md
+├── PROJECT.md
 ├── WIKI.md
 ├── LICENSE
 ├── pyproject.toml
@@ -136,7 +137,8 @@ The agent should choose the shortest workflow that fully satisfies the current r
 ## Documentation
 
 - [docs/usage.md](docs/usage.md): English usage guide.
-- [AGENTS.md](AGENTS.md): Agent entrypoint and workflow routing.
+- [AGENTS.md](AGENTS.md): Agent entrypoint and repository-level workflow rules.
+- [PROJECT.md](PROJECT.md): Configurable project context for the current workspace.
 - [WIKI.md](WIKI.md): Canonical agent operating guide.
 - [docs/references.md](docs/references.md): English references.
 - [docs/acknowledgements.md](docs/acknowledgements.md): English acknowledgements.
