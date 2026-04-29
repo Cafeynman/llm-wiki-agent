@@ -1,0 +1,3 @@
+interface:
+  display_name: "Obsidian Wiki Lint"
+  short_description: "Check and repair Obsidian wiki links with Python scripts"
