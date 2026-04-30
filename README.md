@@ -127,6 +127,7 @@ The agent should choose the shortest workflow that fully satisfies the current r
 
 ## Design Boundaries
 
+- Project-specific preferences and requirements belong in `PROJECT.md`. Keep `WIKI.md` and agent entrypoint files such as `AGENTS.md` stable and replaceable unless you are changing the package-level workflow itself.
 - The workflow is text-first. Attachments, scans, screenshots, images, and audio may remain part of preserved original sources, but they are not first-class wiki content unless you explicitly add image or audio handling.
 - Source review happens before wiki updates. A successful file conversion is not enough to accept a source.
 - Original source files are preserved. Generated Markdown belongs under `intake/`, not `raw/`.
@@ -138,7 +139,7 @@ The agent should choose the shortest workflow that fully satisfies the current r
 
 - [docs/usage.md](docs/usage.md): English usage guide.
 - [AGENTS.md](AGENTS.md): Agent entrypoint and repository-level workflow rules.
-- [PROJECT.md](PROJECT.md): Configurable project context for the current workspace.
+- [PROJECT.md](PROJECT.md): Configurable project context for the current workspace, including project-specific wiki structure requirements, classification preferences, naming preferences, and project-specific rules.
 - [WIKI.md](WIKI.md): Canonical agent operating guide.
 - [docs/references.md](docs/references.md): English references.
 - [docs/acknowledgements.md](docs/acknowledgements.md): English acknowledgements.

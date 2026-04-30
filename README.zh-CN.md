@@ -127,6 +127,7 @@ agent 应选择能够完整满足当前请求的最短工作流。
 
 ## 设计边界
 
+- 项目特定的偏好和要求应写入 `PROJECT.md`。除非要改变包级工作流本身，否则应保持 `WIKI.md` 和 `AGENTS.md` 等 agent 入口文件稳定、可替换。
 - 当前工作流是文本优先。附件、扫描件、截图、图片和音频可以作为原始 source 保存，但默认不是 wiki 的一等内容，除非你明确添加图片或音频处理。
 - wiki 更新前必须先做 source review。转换命令成功不代表 source 被接受。
 - 原始 source 文件应保持可追溯。agent 生成的 Markdown 属于 `intake/`，不属于 `raw/`。
@@ -138,7 +139,7 @@ agent 应选择能够完整满足当前请求的最短工作流。
 
 - [docs/usage.zh-CN.md](docs/usage.zh-CN.md)：中文使用手册。
 - [AGENTS.md](AGENTS.md)：agent 入口和仓库级工作流规则。
-- [PROJECT.md](PROJECT.md)：当前工作区的可变项目上下文。
+- [PROJECT.md](PROJECT.md)：当前工作区的可变项目上下文，包括项目特定的 wiki 结构要求、分类偏好、命名偏好和项目规则。
 - [WIKI.md](WIKI.md)：agent 执行时的主规则。
 - [docs/references.zh-CN.md](docs/references.zh-CN.md)：中文引用。
 - [docs/acknowledgements.zh-CN.md](docs/acknowledgements.zh-CN.md)：中文感谢。

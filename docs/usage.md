@@ -1,6 +1,8 @@
 # Usage Guide
 
-This guide explains how to install, initialize, and operate LLM Wiki Agent. [AGENTS.md](../AGENTS.md) is the agent entrypoint and repository-level rule file. [PROJECT.md](../PROJECT.md) holds the current workspace's configurable project context. [WIKI.md](../WIKI.md) is the canonical operating guide.
+This guide explains how to install, initialize, and operate LLM Wiki Agent. [AGENTS.md](../AGENTS.md) is the agent entrypoint and repository-level rule file. [PROJECT.md](../PROJECT.md) holds the current workspace's configurable project context, including project-specific wiki structure requirements, classification preferences, naming preferences, and project-specific rules. [WIKI.md](../WIKI.md) is the canonical operating guide.
+
+For day-to-day personalization, edit `PROJECT.md`. Keep `WIKI.md` and agent entrypoint files such as `AGENTS.md` replaceable unless you are changing the package-level workflow itself.
 
 [中文版](usage.zh-CN.md)
 
@@ -132,7 +134,7 @@ Process the files in inbox/ according to AGENTS.md, PROJECT.md, and WIKI.md.
 The agent should:
 
 1. Read [AGENTS.md](../AGENTS.md) and route the task to Add Knowledge.
-2. Read [PROJECT.md](../PROJECT.md) for the current subject, goal, scope, terms, and constraints. If it is missing, blank, or still only a template, confirm the project context with the user and write it before making project-specific assumptions.
+2. Read [PROJECT.md](../PROJECT.md) for the current subject, goal, scope, terms, wiki structure requirements, classification preferences, naming preferences, project-specific rules, and constraints. If it is missing, blank, or still only a template with no confirmed project context, confirm the project context with the user and write it before making project-specific assumptions. Blank optional fields are allowed; ask only when the current task depends on a missing value.
 3. Read [WIKI.md](../WIKI.md) and follow the intake and source review rules.
 4. Inspect complete filenames, file types, sizes, and readability.
 5. Convert or normalize processable content into `intake/tmp/YYYY-MM-DD/original-source-base-filename/source.md`.

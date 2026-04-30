@@ -1,6 +1,8 @@
 # 使用手册
 
-本文说明如何安装、初始化和日常使用 LLM Wiki Agent。[AGENTS.md](../AGENTS.md) 是 agent 入口和仓库级规则文件，[PROJECT.md](../PROJECT.md) 保存当前工作区的可变项目上下文，[WIKI.md](../WIKI.md) 是主工作规则。
+本文说明如何安装、初始化和日常使用 LLM Wiki Agent。[AGENTS.md](../AGENTS.md) 是 agent 入口和仓库级规则文件，[PROJECT.md](../PROJECT.md) 保存当前工作区的可变项目上下文，包括项目特定的 wiki 结构要求、分类偏好、命名偏好和项目规则；[WIKI.md](../WIKI.md) 是主工作规则。
+
+日常个性化配置应修改 `PROJECT.md`。除非要改变包级工作流本身，否则应保持 `WIKI.md` 和 `AGENTS.md` 等 agent 入口文件可替换。
 
 [ENGLISH VERSION](usage.md)
 
@@ -132,7 +134,7 @@ inbox/
 agent 应按以下顺序处理：
 
 1. 读取 [AGENTS.md](../AGENTS.md)，确认任务属于 Add Knowledge。
-2. 读取 [PROJECT.md](../PROJECT.md)，确认当前主题、目标、范围、术语和约束。如果它缺失、为空或还只是模板，先与用户确认项目上下文，再写入 `PROJECT.md`，然后才做项目相关假设。
+2. 读取 [PROJECT.md](../PROJECT.md)，确认当前主题、目标、范围、术语、wiki 结构要求、分类偏好、命名偏好、项目规则和约束。如果它缺失、为空或还只是没有任何已确认项目上下文的模板，先与用户确认项目上下文，再写入 `PROJECT.md`，然后才做项目相关假设。可选字段允许留空；只有当前任务依赖缺失字段时才追问。
 3. 读取 [WIKI.md](../WIKI.md)，使用其中的 intake 和 source review 规则。
 4. 检查 `inbox/` 中的完整文件名、类型、大小和可读性。
 5. 将可处理内容转换或规范化到 `intake/tmp/YYYY-MM-DD/原始文件基础名/source.md`。

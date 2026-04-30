@@ -8,11 +8,11 @@ WIKI.md
 
 ## Project Profile
 
-Read `PROJECT.md` for the configurable project context: current subject, goal, audience, scope, terminology, constraints, and open questions.
+Read `PROJECT.md` for the configurable project context: current subject, goal, audience, scope, terminology, wiki structure requirements, classification preferences, naming preferences, project-specific rules, constraints, and open questions.
 
-On the first project-context interaction, if `PROJECT.md` is missing, blank, or still only a template, clarify the current project context with the user and write the confirmed context to `PROJECT.md` before making project-specific assumptions.
+On the first project-context interaction, if `PROJECT.md` is missing, blank, or still only a template with no confirmed project context, clarify the current project context with the user and write the confirmed context to `PROJECT.md` before making project-specific assumptions. Fields in `PROJECT.md` are optional unless required for the current task; do not block on blank optional fields, and ask only when the task depends on a missing value.
 
-Treat `PROJECT.md` as a changeable context layer. Do not use it for stable wiki operating rules, runtime commands, repository workflow rules, or the stable wiki contract in `WIKI.md`.
+Treat `PROJECT.md` as the changeable context layer and the single place for project-specific personalization, including special wiki structure requirements, category schemes, naming preferences, and project-specific rules. Do not use it for stable wiki operating rules, runtime commands, repository workflow rules, or the stable wiki contract in `WIKI.md`.
 
 ## Runtime Requirement
 
@@ -31,6 +31,8 @@ When a user gives a new direction that replaces a prior plan, replace the old pl
 Keep `WIKI.md` focused on wiki operating rules, knowledge workflows, intake, ingest, traceability, and maintenance.
 
 Repository-level workflow instructions, agent behavior rules, runtime usage guidance, setup guidance, and usage-document routing belong in `AGENTS.md` or the relevant docs under `docs/`, not in `WIKI.md`, unless they are part of the wiki operating contract itself.
+
+Keep `WIKI.md`, `AGENTS.md`, and other agent entrypoint files stable and replaceable. Project-specific preferences and requirements belong in `PROJECT.md`, not in `WIKI.md` or agent entrypoint files.
 
 ## Package Rules
 
