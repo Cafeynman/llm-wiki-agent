@@ -1,27 +1,41 @@
-# 致谢
+<h1 align="center"><b>🙏 致谢</b></h1>
 
-[ENGLISH VERSION](acknowledgements.md)
+<p align="center">
+  <b><i><font size="4">感谢所有使本项目成为可能的开源社区与贡献者。</font></i></b>
+</p>
 
-本项目来自公开的 LLM Wiki 思想空间，也受益于那些记录、实现和解释这一模式的人。
+<p align="center">
+  <a href="acknowledgements.zh-CN.md">🇨🇳 中文</a> ·
+  <a href="acknowledgements.md">🇬🇧 English</a>
+</p>
 
-## 思想和先行实践
+<p align="center">
+  <a href="../README.zh-CN.md">🏠 返回首页</a>
+</p>
 
-感谢 Andrej Karpathy 发布 [LLM Wiki idea file](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)，它明确了使用 LLM agent 维护持久 Markdown 知识库的核心模式。
+---
 
-感谢 Antigravity 的文章 [Karpathy's LLM Wiki: The Complete Guide to His Idea File](https://antigravity.codes/blog/karpathy-llm-wiki-idea-file)，它帮助解释了 idea file 及相关工具。
+本项目的诞生离不开公开的 LLM Wiki 思想空间，以及那些记录、实现并解释这些思想的人们。
 
-感谢 Tahir Balarabe 的文章 [What is LLM Wiki Pattern? Persistent Knowledge with LLM Wikis](https://medium.com/@tahirbalarabe2/what-is-llm-wiki-pattern-persistent-knowledge-with-llm-wikis-3227f561abc1)，它清晰说明了从 retrieval 到 accumulated knowledge 的转变。
+## 💡 理念与先驱工作
 
-感谢 rohitg00 的 [LLM Wiki v2](https://gist.github.com/rohitg00/2067ab416f7bbe447c1977edaaa681e2)，尤其是其中关于 lifecycle、confidence、stale knowledge 和实际运行经验的讨论。
+- **Andrej Karpathy**: 感谢他发布了 [LLM Wiki idea file](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)，为使用 LLM 智能体维护持久化 Markdown 知识库构建了核心模式框架。
+- **Antigravity**: 感谢文章 [Karpathy's LLM Wiki: The Complete Guide to His Idea File](https://antigravity.codes/blog/karpathy-llm-wiki-idea-file)，这极大地帮助了解释该理念及其相关工具。
+- **Tahir Balarabe**: 感谢 [What is LLM Wiki Pattern? Persistent Knowledge with LLM Wikis](https://medium.com/@tahirbalarabe2/what-is-llm-wiki-pattern-persistent-knowledge-with-llm-wikis-3227f561abc1) 一文，清晰地描述了从“单纯检索”到“知识积累”的转变。
+- **rohitg00**: 感谢他在 [LLM Wiki v2](https://gist.github.com/rohitg00/2067ab416f7bbe447c1977edaaa681e2) 中关于生命周期、置信度、过时知识及操作经验的讨论。
+- **Pratiyush** & **SamurAIGPT**: 感谢 [Pratiyush/llm-wiki](https://github.com/Pratiyush/llm-wiki) 和 [SamurAIGPT/llm-wiki-agent](https://github.com/SamurAIGPT/llm-wiki-agent/tree/main) 的作者，为社区提供了智能体维护知识库的公开实现与工作流示例。
 
-感谢 [Pratiyush/llm-wiki](https://github.com/Pratiyush/llm-wiki) 和 [SamurAIGPT/llm-wiki-agent](https://github.com/SamurAIGPT/llm-wiki-agent/tree/main) 的作者提供公开实现和 agent-maintained knowledge base 的工作流样例。
+---
 
-## 环境配置帮助
+## 🛠️ 环境配置协助
 
-感谢 Bilibili UP 主“栗氪聊AI”发布的 [保姆级教程 搭建出karpathy同款AI知识库](https://www.bilibili.com/video/BV1p4DeB8ECi/?spm_id_from=333.337.search-card.all.click) 对 Obsidian + Claudian 环境配置的帮助。可通过后台私信UP主获取飞书文档说明。
+感谢 [BV1p4DeB8ECi](https://www.bilibili.com/video/BV1p4DeB8ECi/) 背后的 **B站 UP 主**提供的 Obsidian + Claudian 环境配置指导。这些材料让工作流在真实的本地知识库环境中更容易跑通。
 
-## 工具和生态
+---
 
-感谢 Obsidian 生态让本地 Markdown 知识库变得实用，也感谢本包使用的本地 skills 和转换工具的维护者。
+## 🌐 工具与生态系统
 
-完整引用见 [references.zh-CN.md](references.zh-CN.md)。
+感谢 **Obsidian 生态系统** 让本地 Markdown 知识库变得如此实用，也感谢本项目所使用的各种本地技能和格式转换工具的维护者们。
+
+> [!TIP]
+> 完整的参考列表请查看 [参考资料 (References)](references.zh-CN.md)。

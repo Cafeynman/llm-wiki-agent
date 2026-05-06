@@ -1,48 +1,64 @@
-# markitdown-ocr Guide
+<h1 align="center"><b>🔍 markitdown-ocr Guide</b></h1>
 
-[中文版](markitdown-ocr.zh-CN.md)
+<p align="center">
+  <b><i><font size="4">Handling scans, screenshots, and embedded images.</font></i></b>
+</p>
 
-Use `markitdown-ocr` only when important content is inside scans, screenshots, or embedded images. Keep the default workflow text-first. Do not enable OCR unless the user asks for it or plain `markitdown` misses critical text.
+<p align="center">
+  <a href="markitdown-ocr.zh-CN.md">🇨🇳 中文</a> ·
+  <a href="markitdown-ocr.md">🇬🇧 English</a>
+</p>
 
-## First Install
+<p align="center">
+  <a href="../README.md">🏠 Back to Home</a> · <a href="usage.md">📖 Usage Guide</a>
+</p>
 
-```sh
+---
+
+> [!WARNING]
+> Use `markitdown-ocr` **only** when important content is locked inside scans, screenshots, or embedded images. Keep the default workflow text-first. **Do not** enable OCR unless explicitly asked or if plain `markitdown` misses critical text.
+
+## 🚀 1. First Install
+
+To use OCR, add the required dependencies:
+```bash
 uv add markitdown-ocr openai
 uv run markitdown --list-plugins
 ```
+> **Check:** The plugin list output should include `ocr`.
 
-The plugin list should include `ocr`.
+---
 
-## One-Time Setup
+## ⚙️ 2. One-Time Setup
 
-Prepare `base_url`, `api_key`, and the repo-local default OCR model once. If `.env` already has the correct values, do not configure them again.
+You only need to prepare `base_url`, `api_key`, and the repo-local default OCR model once. If your `.env` is already set up, you can skip this.
 
-`.env`
+Create or update `.env`:
 ```env
 OPENAI_BASE_URL=https://your-openai-compatible-endpoint/v1
 OPENAI_API_KEY=your-api-key
 MARKITDOWN_OCR_MODEL=gpt-4o
 ```
 
-Load `.env` every time:
-
-```sh
+When running, load `.env` every time:
+```bash
 uv run --env-file .env markitdown input.pdf --use-plugins --llm-client openai --llm-model <value from MARKITDOWN_OCR_MODEL> -o output.md
 ```
 
-If you prefer, set `UV_ENV_FILE=.env` in your shell environment once and reuse plain `uv run` in that same shell.
+> [!TIP]
+> **Optional Shell Shortcut:** Set `UV_ENV_FILE=.env` in your shell environment once, and you can simply use `uv run` in that shell without repeatedly specifying the env file. However, the portable command is still the `--env-file .env` format.
 
-That shell-level shortcut is optional. The portable command is still the `--env-file .env` form above.
+---
 
-## Daily Command
+## ⚡ 3. Daily Command
 
-```sh
+For day-to-day OCR processing:
+```bash
 uv run --env-file .env markitdown input.pdf --use-plugins --llm-client openai --llm-model <value from MARKITDOWN_OCR_MODEL> -o output.md
 ```
 
-- Prefer environment variables for OpenAI-compatible setups.
-- Verify plugin discovery with `uv run markitdown --list-plugins`.
-- `OPENAI_BASE_URL` and `OPENAI_API_KEY` come from `.env`, so you do not need to repeat them in the command.
-- This repo treats `MARKITDOWN_OCR_MODEL` as the default OCR model.
-- The agent should read `MARKITDOWN_OCR_MODEL` from `.env` and pass it explicitly as `--llm-model`.
-- Keep passing `--llm-client openai`. If `llm_client` or `llm_model` is missing, the plugin may load but OCR will be skipped.
+### 📋 Key Rules
+- **Environment Variables:** Prefer using `.env` variables for OpenAI-compatible setups so you don't repeat them in the command.
+- **Verification:** Verify plugin discovery with `uv run markitdown --list-plugins`.
+- **Default Model:** This repo treats `MARKITDOWN_OCR_MODEL` as the default OCR model. The agent should read it from `.env` and pass it explicitly via `--llm-model`.
+- **Client Flag:** Always keep passing `--llm-client openai`. If `llm_client` or `llm_model` is missing, the plugin might load but OCR will be skipped entirely.

@@ -1,107 +1,107 @@
-# LLM Wiki Agent Best Practices
+<h1 align="center"><b>LLM Wiki Agent</b></h1>
 
-[中文版](README.zh-CN.md)
+<h2 align="center"><b>Build and maintain a persistent, traceable Obsidian-style Markdown knowledge base with an LLM agent.</b></h2>
 
-LLM Wiki Agent is a best-practice workflow package for building and maintaining a persistent, traceable Obsidian-style Markdown knowledge base with an LLM agent.
+<p align="center">
+  <b><i><font size="4">Just drop your files in the inbox, and let your agent build the wiki.</font></i></b>
+</p>
 
-The package gives the agent a clear operating contract: source files enter through `inbox/`, original files are preserved under `raw/`, reviewable Markdown is produced under `intake/`, durable knowledge is written into `wiki/`, and user-facing deliverables are saved under `artifacts/`.
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
+  <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+"></a>
+  <a href="https://docs.astral.sh/uv/"><img src="https://img.shields.io/badge/Package_Manager-uv-blue?logo=python&logoColor=white" alt="uv Package Manager"></a>
+  <a href="https://obsidian.md/"><img src="https://img.shields.io/badge/Optimized_for-Obsidian-483699?logo=obsidian&logoColor=white" alt="Optimized for Obsidian"></a>
+  <a href="#%EF%B8%8F-key-features--design-boundaries"><img src="https://img.shields.io/badge/⚠️_Rules-Text_First-orange" alt="Text-First Boundaries"></a>
+</p>
 
-## What This Is
+<p align="center">
+  <a href="README.zh-CN.md">🇨🇳 中文</a> ·
+  <a href="README.md">🇬🇧 English</a>
+</p>
 
-This repository is not a full application server or a replacement for Obsidian. It is a portable workflow package for agents that can read repository instructions such as Codex, Claude Code, Gemini CLI, OpenCode, or similar tools.
+<p align="center">
+  <a href="docs/usage.md">📖 Usage Guide</a> · <a href="AGENTS.md">🤖 Agent Rules</a> · <a href="WIKI.md">🧠 Wiki Rules</a> · <a href="PROJECT.md">⚙️ Project Context</a>
+</p>
 
-The core idea is simple:
+---
 
-1. Put source material into `inbox/`.
-2. Ask your agent to process the source according to [AGENTS.md](AGENTS.md), [PROJECT.md](PROJECT.md), and [WIKI.md](WIKI.md).
-3. The agent converts useful source material into reviewable Markdown.
-4. The agent reviews the converted material before writing wiki knowledge.
-5. Accepted knowledge becomes linked Markdown pages under `wiki/`.
+## ⚡ Quick Start: Zero to Wiki
 
-## Quick Start
+Clone or download this repository, then initialize the environment:
 
-Clone or download this repository, then enter the package directory:
-
-```sh
+```bash
 cd llm-wiki-agent
-```
 
-Install or make available [uv](https://docs.astral.sh/uv/) first. The initialization scripts use `uv sync` to create the local Python environment.
-
-Initialize the Python environment and create the wiki folder structure on Windows:
-
-```powershell
+# Windows
 .\scripts\init.ps1 -VaultRoot .
-```
 
-On macOS or Linux:
-
-```sh
+# macOS / Linux
 ./scripts/init.sh -VaultRoot .
 ```
 
-For a separate Obsidian vault, pass the vault path:
+*Note: For a separate Obsidian vault, pass the vault path like `.\scripts\init.ps1 -VaultRoot "C:\path\to\your\vault"`.*
 
-```powershell
-.\scripts\init.ps1 -VaultRoot "C:\path\to\your\vault"
-```
+**Your Minimal First Run:**
+1. Drop a source file in `inbox/example.md`.
+2. Ask your agent: *"Process the files in inbox/ according to AGENTS.md, PROJECT.md, and WIKI.md."*
+3. Watch the agent process your file into the `wiki/` directory!
 
-```sh
-./scripts/init.sh -VaultRoot "/path/to/your/vault"
-```
+---
 
-For full setup and operating details, read [docs/usage.md](docs/usage.md). For OCR-specific setup, see [docs/markitdown-ocr.md](docs/markitdown-ocr.md).
+## 🤔 What Is This?
 
-## Recommended Setup
+**You drop the files. The agent organizes the knowledge. You get a traceable wiki.**
 
-- [Claudian](https://github.com/YishenTu/claudian): recommended if you want an Obsidian-oriented local agent environment.
-- [Obsidian Web Clipper](https://github.com/obsidianmd/obsidian-clipper): recommended for collecting web pages into Markdown source material.
+This repository is **not** a full application server or a replacement for Obsidian. It is a **portable workflow package** for agents that can read repository instructions (like Codex, Claude Code, Gemini CLI, OpenCode, etc.). 
 
-## Minimal First Run
+The package gives your agent a strict, clear operating contract: 
+<table>
+<tr><td>📥</td><td><code>inbox/</code></td><td>Where source files enter</td></tr>
+<tr><td>🗄️</td><td><code>raw/</code></td><td>Where original files are preserved</td></tr>
+<tr><td>⚙️</td><td><code>intake/</code></td><td>Where reviewable Markdown is produced</td></tr>
+<tr><td>🧠</td><td><code>wiki/</code></td><td>Where durable knowledge is written</td></tr>
+<tr><td>📦</td><td><code>artifacts/</code></td><td>Where user-facing deliverables are saved</td></tr>
+</table>
 
-After initialization, place a source file in `inbox/`:
+---
 
-```text
-inbox/
-└── example.md
-```
+## 🔬 Core Workflows
 
-Ask the agent:
+The package keeps the agent strictly on three major workflows. The agent will always choose the shortest workflow that satisfies your request:
 
-```text
-Process the files in inbox/ according to AGENTS.md, PROJECT.md, and WIKI.md.
-```
+| Workflow | When to Use | What it Does |
+|-----------|-------------|--------------|
+| **➕ Add Knowledge** | Add files, review sources, convert material. | Promotes files from `inbox/` ➡️ `intake/` ➡️ `wiki/`, and reflects on confirmed discussion insights. |
+| **💡 Use Knowledge** | Answer questions, synthesize pages, create deliverables. | Searches the wiki to create reports, briefs, drafts, or comparison tables under `artifacts/`. |
+| **🧹 Maintain Wiki** | Check health, broken links, stale claims. | Finds contradictions, detects duplicates, logs gaps, and ensures traceability. |
 
-The expected lifecycle is:
+---
 
-```text
-inbox/ -> intake/tmp/ -> source review -> raw/<state>/ + intake/processed/ + wiki/
-```
+## ✨ Key Features & Design Boundaries
 
-The original source file is moved to exactly one raw state:
+| Feature | Description |
+|---------|------------|
+| **📜 Text-First Workflow** | Conversions result in Markdown. Attachments/images stay in `raw/` as preserved sources. |
+| **🔍 Source Review Gate** | A successful conversion isn't enough. The agent reviews sources before accepting them into the wiki. |
+| **🔗 Explicit Traceability** | The package favors explicit links over hidden memory. Claims cite source cards, raw files, or discussion records. |
+| **📂 Original Preservation** | Original files are preserved. Generated Markdown lands in `intake/`, never mixing with `raw/`. |
+| **⚙️ Replaceable Context** | `PROJECT.md` holds your specific preferences. `WIKI.md` and `AGENTS.md` remain stable workflow rules. |
+| **🛡️ Safe Artifacts** | User-facing reports, briefs, outlines, and drafts go to `artifacts/`, keeping the `wiki/` clean. |
 
-```text
-raw/digested/
-raw/needs-review/
-raw/ignored/
-raw/unsupported/
-```
+---
 
-Only `digested` sources are promoted into `intake/processed/` and used to update `wiki/`.
+## 🛠️ Recommended Setup
 
-## Core Workflows
+To get the most out of LLM Wiki Agent, we recommend pairing it with:
+- **[Claudian](https://github.com/YishenTu/claudian)**: Recommended if you want an Obsidian-oriented local agent environment.
+- **[Obsidian Web Clipper](https://github.com/obsidianmd/obsidian-clipper)**: Recommended for seamlessly collecting web pages into Markdown source material.
 
-The package keeps the agent on three workflows:
+---
 
-| Workflow | Use When |
-| --- | --- |
-| Add Knowledge | Add files, review sources, convert material, ingest accepted knowledge, or reflect confirmed discussion insights. |
-| Use Knowledge | Answer questions from the wiki, synthesize pages, or create deliverables under `artifacts/`. |
-| Maintain Wiki | Check broken links, missing sources, stale claims, contradictions, duplicate pages, and log gaps. |
+## 🧩 Package Contents
 
-The agent should choose the shortest workflow that fully satisfies the current request.
-
-## Package Contents
+<details>
+<summary>Click to view full directory structure</summary>
 
 ```text
 .
@@ -125,29 +125,16 @@ The agent should choose the shortest workflow that fully satisfies the current r
     └── acknowledgements.zh-CN.md
 ```
 
-## Design Boundaries
+</details>
 
-- Project-specific preferences and requirements belong in `PROJECT.md`. Keep `WIKI.md` and agent entrypoint files such as `AGENTS.md` stable and replaceable unless you are changing the package-level workflow itself.
-- The workflow is text-first. Attachments, scans, screenshots, images, and audio may remain part of preserved original sources, but they are not first-class wiki content unless you explicitly add image or audio handling.
-- Source review happens before wiki updates. A successful file conversion is not enough to accept a source.
-- Original source files are preserved. Generated Markdown belongs under `intake/`, not `raw/`.
-- Intake and source-card names preserve the original source filename language and characters. Converted Markdown first lands in `intake/tmp/`; only reviewed `digested` material moves to complete `intake/processed/` folders and then through Obsidian-format validation before wiki updates.
-- User-facing reports, briefs, outlines, drafts, and templates belong under `artifacts/`, not `wiki/`.
-- The package favors explicit traceability over hidden memory. Durable claims should cite source cards, intake output, raw files, or confirmed discussion records.
+---
 
-## Documentation
+## 🙏 Acknowledgements & References
 
-- [docs/usage.md](docs/usage.md): English usage guide.
-- [AGENTS.md](AGENTS.md): Agent entrypoint and repository-level workflow rules.
-- [PROJECT.md](PROJECT.md): Configurable project context for the current workspace, including project-specific wiki structure requirements, classification preferences, naming preferences, and project-specific rules.
-- [WIKI.md](WIKI.md): Canonical agent operating guide.
-- [docs/references.md](docs/references.md): English references.
-- [docs/acknowledgements.md](docs/acknowledgements.md): English acknowledgements.
+This package builds on the LLM Wiki pattern and related public work. See [References](docs/references.md) and [Acknowledgements](docs/acknowledgements.md) for details.
 
-## References and Credits
+---
 
-This package builds on the LLM Wiki pattern and related public work. See [docs/references.md](docs/references.md) and [docs/acknowledgements.md](docs/acknowledgements.md).
-
-## License
+## 📄 License
 
 MIT License. See [LICENSE](LICENSE).

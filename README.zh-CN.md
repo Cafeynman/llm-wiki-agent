@@ -1,107 +1,107 @@
-# LLM Wiki Agent 最佳实践
+<h1 align="center"><b>LLM Wiki Agent</b></h1>
 
-[ENGLISH VERSION](README.md)
+<h2 align="center"><b>通过 LLM 智能体构建并维护一个持久化、可溯源的 Obsidian 风格 Markdown 知识库。</b></h2>
 
-LLM Wiki Agent 是一个面向 LLM agent 的最佳实践工作流包，用于构建和维护一个持久、可追溯、Obsidian 风格的 Markdown 知识库。
+<p align="center">
+  <b><i><font size="4">只需将文件放入收件箱，让智能体为你构建 Wiki。</font></i></b>
+</p>
 
-这个包给 agent 提供明确的操作契约：原始文件进入 `inbox/`，原始文件保存在 `raw/`，可审查的 Markdown 写入 `intake/`，长期知识沉淀到 `wiki/`，面向用户的交付物保存到 `artifacts/`。
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
+  <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+"></a>
+  <a href="https://docs.astral.sh/uv/"><img src="https://img.shields.io/badge/Package_Manager-uv-blue?logo=python&logoColor=white" alt="uv Package Manager"></a>
+  <a href="https://obsidian.md/"><img src="https://img.shields.io/badge/Optimized_for-Obsidian-483699?logo=obsidian&logoColor=white" alt="Optimized for Obsidian"></a>
+  <a href="#%EF%B8%8F-核心特性与设计边界"><img src="https://img.shields.io/badge/⚠️_Rules-Text_First-orange" alt="Text-First Boundaries"></a>
+</p>
 
-## 这是什么
+<p align="center">
+  <a href="README.zh-CN.md">🇨🇳 中文</a> ·
+  <a href="README.md">🇬🇧 English</a>
+</p>
 
-这不是完整应用服务器，也不是 Obsidian 插件。它是一个可移植的 agent workflow 包，适合 Codex、Claude Code、Gemini CLI、OpenCode 或其他能读取项目说明文件的 agent 使用。
+<p align="center">
+  <a href="docs/usage.zh-CN.md">📖 使用指南</a> · <a href="AGENTS.md">🤖 智能体规则</a> · <a href="WIKI.md">🧠 Wiki 规则</a> · <a href="PROJECT.md">⚙️ 项目上下文</a>
+</p>
 
-核心流程很简单：
+---
 
-1. 把 source 文件放进 `inbox/`。
-2. 要求 agent 按 [AGENTS.md](AGENTS.md)、[PROJECT.md](PROJECT.md) 和 [WIKI.md](WIKI.md) 处理。
-3. agent 把有价值的 source 转成可审查 Markdown。
-4. agent 在写入 wiki 前先做 source review。
-5. 被接受的知识会变成 `wiki/` 下的互链 Markdown 页面。
+## ⚡ 快速开始：从零到 Wiki
 
-## 快速开始
+克隆或下载此仓库，然后初始化环境：
 
-克隆或下载仓库后进入目录：
-
-```sh
+```bash
 cd llm-wiki-agent
-```
 
-先安装或确保可以使用 [uv](https://docs.astral.sh/uv/)。初始化脚本会使用 `uv sync` 创建本地 Python 环境。
-
-在 Windows 初始化 Python 环境并创建 wiki 目录结构：
-
-```powershell
+# Windows
 .\scripts\init.ps1 -VaultRoot .
-```
 
-在 macOS 或 Linux：
-
-```sh
+# macOS / Linux
 ./scripts/init.sh -VaultRoot .
 ```
 
-如果要把 wiki 结构创建到单独的 Obsidian vault：
+*提示：如果要使用单独的 Obsidian 库，请传递库路径，例如 `.\scripts\init.ps1 -VaultRoot "C:\path\to\your\vault"`。*
 
-```powershell
-.\scripts\init.ps1 -VaultRoot "C:\path\to\your\vault"
-```
+**你的最小化首次运行：**
+1. 将源文件放入 `inbox/example.md`。
+2. 对智能体说：*"请根据 AGENTS.md, PROJECT.md 和 WIKI.md 处理 inbox/ 中的文件。"*
+3. 观察智能体将你的文件处理到 `wiki/` 目录！
 
-```sh
-./scripts/init.sh -VaultRoot "/path/to/your/vault"
-```
+---
 
-完整使用说明见 [docs/usage.zh-CN.md](docs/usage.zh-CN.md)。OCR 相关说明见 [docs/markitdown-ocr.zh-CN.md](docs/markitdown-ocr.zh-CN.md)。
+## 🤔 这是什么？
 
-## 推荐环境
+**你投放文件。智能体整理知识。你获得一个可溯源的 Wiki。**
 
-- Claude Code：可以参考这篇安装教程：[Claude Code 安装教程](https://mp.weixin.qq.com/s/MXIJzFJA8cAhUhmeVOdmSw)。
-- Obsidian 相关插件安装：可以参考 B 站视频 [保姆级教程 搭建出karpathy同款AI知识库](https://www.bilibili.com/video/BV1p4DeB8ECi/?spm_id_from=333.337.search-card.all.click)。感谢 UP 主“栗氪聊AI”的 Obsidian 全套插件配置说明；可通过后台私信UP主获取飞书文档说明。
+本仓库**不是**一个完整的应用服务器，也**不是** Obsidian 的替代品。它是一个**便携的工作流包**，专为能够读取仓库指令的智能体（如 Codex, Claude Code, Gemini CLI, OpenCode 等）设计。
 
-## 第一次最小运行
+该项目为你的智能体提供了一份严格而清晰的操作契约：
+<table>
+<tr><td>📥</td><td><code>inbox/</code></td><td>源文件的唯一入口</td></tr>
+<tr><td>🗄️</td><td><code>raw/</code></td><td>原始文件的持久化保存地</td></tr>
+<tr><td>⚙️</td><td><code>intake/</code></td><td>生成可审查 Markdown 的处理区</td></tr>
+<tr><td>🧠</td><td><code>wiki/</code></td><td>写入持久化知识的页面库</td></tr>
+<tr><td>📦</td><td><code>artifacts/</code></td><td>保存面向用户的交付物的目录</td></tr>
+</table>
 
-初始化后，把一个 source 文件放进 `inbox/`：
+---
 
-```text
-inbox/
-└── example.md
-```
+## 🔬 核心工作流
 
-向 agent 发送：
+该包严格限制智能体在三个主要工作流内运行。智能体会自动选择能够满足请求的最小工作流：
 
-```text
-请按照 AGENTS.md、PROJECT.md 和 WIKI.md 处理 inbox/ 中的文件。
-```
+| 工作流 | 何时使用 | 它的作用 |
+|-----------|-------------|--------------|
+| **➕ 添加知识 (Add Knowledge)** | 添加文件、审查来源、转换材料。 | 将文件从 `inbox/` 推进至 `intake/` 再到 `wiki/`，并反射确认的讨论见解。 |
+| **💡 使用知识 (Use Knowledge)** | 回答问题、综合页面、生成交付物。 | 检索 wiki，并在 `artifacts/` 目录下生成报告、简报、草案或对照表。 |
+| **🧹 维护 Wiki (Maintain Wiki)** | 健康检查、清理死链、查找过期声明。 | 查找矛盾、检测重复、记录日志空白，确保溯源完整。 |
 
-预期生命周期是：
+---
 
-```text
-inbox/ -> intake/tmp/ -> source review -> raw/<state>/ + intake/processed/ + wiki/
-```
+## ✨ 核心特性与设计边界
 
-原始文件最终只会进入一个 raw 状态：
+| 特性 | 描述 |
+|---------|------------|
+| **📜 文本优先 (Text-First)** | 转换必定生成 Markdown。附件和图片作为原始来源保留在 `raw/` 中。 |
+| **🔍 来源审查门 (Source Review)** | 成功转换是不够的。智能体在将来源接受进 wiki 之前必须进行审查。 |
+| **🔗 显式溯源 (Explicit Traceability)** | 提倡显式链接而非依赖隐藏记忆。所有声明必须引用来源卡片、原始文件或讨论记录。 |
+| **📂 原始文件留存 (Original Preservation)** | 妥善保管原始文件。生成的 Markdown 保存在 `intake/`，绝不混入 `raw/`。 |
+| **⚙️ 可替换上下文 (Replaceable Context)** | `PROJECT.md` 包含你的特定偏好。`WIKI.md` 和 `AGENTS.md` 则是稳定的工作流规则。 |
+| **🛡️ 安全的交付物 (Safe Artifacts)** | 面向用户的报告、简报、大纲和草案进入 `artifacts/`，保持 `wiki/` 的纯净。 |
 
-```text
-raw/digested/
-raw/needs-review/
-raw/ignored/
-raw/unsupported/
-```
+---
 
-只有 `digested` source 会进入 `intake/processed/` 并继续更新 `wiki/`。
+## 🛠️ 推荐配置
 
-## 核心工作流
+为了最大化发挥 LLM Wiki Agent 的能力，建议搭配以下工具使用：
+- **[Claudian](https://github.com/YishenTu/claudian)**：如果你想要一个面向 Obsidian 的本地智能体环境，这是推荐选择。
+- **[Obsidian Web Clipper](https://github.com/obsidianmd/obsidian-clipper)**：推荐用于将网页无缝剪辑为 Markdown 源材料。
 
-本包只保留三种 agent 工作流：
+---
 
-| 工作流 | 适用场景 |
-| --- | --- |
-| Add Knowledge | 添加文件、审查 source、转换资料、ingest 已接受知识、回流已确认讨论结论。 |
-| Use Knowledge | 使用 wiki 回答问题、综合页面、或在 `artifacts/` 下创建交付物。 |
-| Maintain Wiki | 检查断链、缺失来源、过期 claim、矛盾、重复页面和日志缺口。 |
+## 🧩 项目结构
 
-agent 应选择能够完整满足当前请求的最短工作流。
-
-## 包内容
+<details>
+<summary>点击查看完整目录结构</summary>
 
 ```text
 .
@@ -125,29 +125,16 @@ agent 应选择能够完整满足当前请求的最短工作流。
     └── acknowledgements.zh-CN.md
 ```
 
-## 设计边界
+</details>
 
-- 项目特定的偏好和要求应写入 `PROJECT.md`。除非要改变包级工作流本身，否则应保持 `WIKI.md` 和 `AGENTS.md` 等 agent 入口文件稳定、可替换。
-- 当前工作流是文本优先。附件、扫描件、截图、图片和音频可以作为原始 source 保存，但默认不是 wiki 的一等内容，除非你明确添加图片或音频处理。
-- wiki 更新前必须先做 source review。转换命令成功不代表 source 被接受。
-- 原始 source 文件应保持可追溯。agent 生成的 Markdown 属于 `intake/`，不属于 `raw/`。
-- intake 和 source card 命名保留原始 source 文件语言和字符。转换后的 Markdown 先进入 `intake/tmp/`；只有通过审查的 `digested` 内容才进入完整的 `intake/processed/` 文件夹，并在更新 wiki 前通过 Obsidian 格式检查。
-- 报告、brief、outline、draft、模板等面向用户的交付物应写入 `artifacts/`，不要写入 `wiki/`。
-- 本包优先使用显式 traceability，而不是隐藏 memory。长期 claim 应引用 source card、intake output、raw 文件或已确认的讨论记录。
+---
 
-## 文档
+## 🙏 致谢与参考
 
-- [docs/usage.zh-CN.md](docs/usage.zh-CN.md)：中文使用手册。
-- [AGENTS.md](AGENTS.md)：agent 入口和仓库级工作流规则。
-- [PROJECT.md](PROJECT.md)：当前工作区的可变项目上下文，包括项目特定的 wiki 结构要求、分类偏好、命名偏好和项目规则。
-- [WIKI.md](WIKI.md)：agent 执行时的主规则。
-- [docs/references.zh-CN.md](docs/references.zh-CN.md)：中文引用。
-- [docs/acknowledgements.zh-CN.md](docs/acknowledgements.zh-CN.md)：中文感谢。
+本工作流包基于 LLM Wiki 模式及相关的开源工作构建。请查看 [参考资料 (References)](docs/references.zh-CN.md) 和 [致谢 (Acknowledgements)](docs/acknowledgements.zh-CN.md) 获取详情。
 
-## 引用与感谢
+---
 
-本包基于 LLM Wiki pattern 及相关公开实践整理而成。见 [docs/references.zh-CN.md](docs/references.zh-CN.md) 和 [docs/acknowledgements.zh-CN.md](docs/acknowledgements.zh-CN.md)。
+## 📄 开源协议
 
-## 开源协议
-
-MIT License。见 [LICENSE](LICENSE)。
+MIT License. 参见 [LICENSE](LICENSE)。

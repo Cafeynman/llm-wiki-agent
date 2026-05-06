@@ -1,253 +1,192 @@
-# 使用手册
+<h1 align="center"><b>📖 使用指南</b></h1>
 
-本文说明如何安装、初始化和日常使用 LLM Wiki Agent。[AGENTS.md](../AGENTS.md) 是 agent 入口和仓库级规则文件，[PROJECT.md](../PROJECT.md) 保存当前工作区的可变项目上下文，包括项目特定的 wiki 结构要求、分类偏好、命名偏好和项目规则；[WIKI.md](../WIKI.md) 是主工作规则。
+<p align="center">
+  <b><i><font size="4">如何安装、初始化和操作 LLM Wiki Agent。</font></i></b>
+</p>
 
-日常个性化配置应修改 `PROJECT.md`。除非要改变包级工作流本身，否则应保持 `WIKI.md` 和 `AGENTS.md` 等 agent 入口文件可替换。
+<p align="center">
+  <a href="usage.zh-CN.md">🇨🇳 中文</a> ·
+  <a href="usage.md">🇬🇧 English</a>
+</p>
 
-[ENGLISH VERSION](usage.md)
+<p align="center">
+  <a href="../README.zh-CN.md">🏠 返回首页</a> · <a href="../AGENTS.md">🤖 智能体规则</a> · <a href="../WIKI.md">🧠 Wiki 规则</a> · <a href="../PROJECT.md">⚙️ 项目上下文</a>
+</p>
 
-## 1. 适用场景
+---
 
-LLM Wiki Agent 适合把长期积累的资料整理成一个可持续维护的 Markdown wiki：
+> **注意：** [AGENTS.md](../AGENTS.md) 是智能体入口。 [PROJECT.md](../PROJECT.md) 包含了当前工作区的配置项。 [WIKI.md](../WIKI.md) 是核心的操作指南。 请保持 `WIKI.md` 稳定，而日常的个性化设置请修改 `PROJECT.md`。
 
-- 研究资料、文章、论文、网页剪藏。
-- 项目知识、决策记录、会议纪要、技术调研。
-- 个人知识库、读书笔记、主题资料库。
-- 需要反复追溯来源、整理 claim、保留不确定性的问题。
+## 🎯 1. 适用场景
 
-它不适合作为一次性问答工具。一次性问答可以直接问模型；本包的价值在于把来源、判断、摘要、矛盾和后续问题沉淀成可复用的 wiki。
+**LLM Wiki Agent 非常适合处理：**
+- 研究笔记、文章、论文和剪辑的网页。
+- 项目知识、决策记录、会议纪要和技术调研。
+- 个人知识库、阅读笔记和主题归档。
+- 需要溯源、关注声明、不确定性和矛盾的查询驱动型知识库。
 
-## 2. 前置条件
+它**不是**用来进行一次性闲聊的工具。它的核心价值在于持久化的积累：将来源、判断和矛盾点作为可复用的 wiki 知识妥善保存。
 
-当前包依赖：
+---
 
-- [uv](https://docs.astral.sh/uv/)，用于 Python 环境管理。初始化脚本会运行 `uv sync`。
-- PowerShell，用于在 Windows 运行初始化脚本 [scripts/init.ps1](../scripts/init.ps1)。
-- Bash，用于在 macOS 或 Linux 运行初始化脚本 [scripts/init.sh](../scripts/init.sh)。
-- Obsidian 或任意可以浏览 Markdown 文件的编辑器。
-- 一个能读取项目说明文件的 agent，例如 Codex、Claude Code、Gemini CLI、OpenCode 或类似工具。
+## ⚙️ 2. 环境要求
 
-初始化脚本会检查 `uv`。如果本机没有 `uv`，脚本会尝试通过官方安装脚本安装；安装失败时，按脚本提示手动安装后重新运行。
+开始前，请确保你拥有：
+- [uv](https://docs.astral.sh/uv/)，用于 Python 环境管理 (初始化脚本会运行 `uv sync`)。
+- PowerShell (Windows) 或 Bash (macOS/Linux) 用于执行初始化脚本。
+- Obsidian，或任何标准的 Markdown 编辑器。
+- 一个能够读取仓库级别指令的 AI 智能体 (例如 Codex, Claude Code, Gemini CLI, OpenCode)。
 
-## 3. 安装
+---
 
-进入仓库目录：
+## 🚀 3. 安装与初始化
 
-```powershell
+```bash
 cd llm-wiki-agent
-```
 
-在 Windows 初始化当前目录：
-
-```powershell
+# Windows
 .\scripts\init.ps1 -VaultRoot .
-```
 
-在 macOS 或 Linux：
-
-```sh
+# macOS / Linux
 ./scripts/init.sh -VaultRoot .
 ```
 
-或把 wiki 结构创建到一个单独的 Obsidian vault：
-
-```powershell
+若要在单独的现有 Obsidian 库中创建结构：
+```bash
+# Windows
 .\scripts\init.ps1 -VaultRoot "C:\path\to\your\vault"
-```
 
-```sh
+# macOS / Linux
 ./scripts/init.sh -VaultRoot "/path/to/your/vault"
 ```
 
-脚本会执行两件事：
+**它的作用是：**
+1. 运行 `uv sync` 来创建或更新 `.venv/` 本地运行环境。
+2. 创建所有必要的工作流目录 (`inbox/`, `raw/`, `intake/`, `wiki/` 等)。
 
-1. 在 agent 包目录运行 `uv sync`，创建或同步 `.venv/`。
-2. 在 `-VaultRoot` 指定的位置创建 `inbox/`、`raw/`、`intake/`、`wiki/` 等目录。
+---
 
-`.venv/` 是本地环境目录，不应提交到 git。
+## 📂 4. 目录结构与职责
 
-## 4. 目录结构
-
-初始化后的 wiki 结构如下：
-
-```text
-.
-├── inbox/
-├── raw/
-│   ├── digested/
-│   ├── needs-review/
-│   ├── ignored/
-│   └── unsupported/
-├── intake/
-│   ├── tmp/
-│   ├── processed/
-│   └── logs/
-├── reviews/
-│   ├── source-review/
-│   └── reflection/
-├── logs/
-│   └── wiki.md
-├── questions/
-├── artifacts/
-└── wiki/
-    ├── home.md
-    ├── index.md
-    ├── overview.md
-    ├── sources/
-    ├── entities/
-    ├── concepts/
-    ├── claims/
-    └── syntheses/
-```
-
-核心职责：
-
-| 目录 | 职责 |
+| 目录 | 职责说明 |
 | --- | --- |
-| `inbox/` | 用户投递原始文件的唯一入口。 |
-| `raw/` | 保存原始文件的最终状态，不保存 agent 生成的 Markdown。 |
-| `intake/tmp/` | 转换后、审查前的临时 Markdown。 |
-| `intake/processed/` | 已通过审查、可用于 wiki ingest 的 Markdown。 |
-| `reviews/` | source review 和 discussion reflection 记录。 |
-| `logs/` | 单文件高层 wiki 操作历史，在 `logs/wiki.md` 中按日期标题追加。 |
-| `wiki/` | 可持续维护的知识页面。 |
-| `questions/` | 未解决问题和调查线索。 |
-| `artifacts/` | 面向用户的报告、brief、草稿、模板等交付物。 |
+| `inbox/` | 📥 用户提交原始文件的**唯一入口**。 |
+| `raw/` | 🗄️ 原始文件的最终存放地。(不存放智能体生成的 Markdown)。 |
+| `intake/tmp/` | ⚙️ 存放转换后且未进行来源审查前的临时 Markdown 文件。 |
+| `intake/processed/` | ✅ 存放已接受并准备写入 wiki 的 Markdown 文件。 |
+| `reviews/` | 📝 存放来源审查记录与讨论反射记录。 |
+| `logs/` | ⏱️ 存放高维度的 wiki 操作历史记录 (`logs/wiki.md`)。 |
+| `wiki/` | 🧠 存放持久化的知识库页面。 |
+| `questions/` | ❓ 存放悬而未决的问题与调查线索。 |
+| `artifacts/` | 📦 存放报告、简报、草案、模板等面向用户的交付物。 |
 
-`intake/logs/YYYY-MM-DD.md` 和 `reviews/source-review/YYYY-MM-DD.md` 按天拆分。`logs/wiki.md` 是单文件追加式操作历史，按日期标题分组；内容应保持简洁，不重复每日 intake 明细。
+---
 
-## 5. 第一次处理文件
+## 📥 5. 首次摄入文件工作流
 
-把原始文件放入 `inbox/`：
+遵循以下生命周期来添加新知识：
 
-```text
-inbox/
-└── example.md
-```
+1. **放入文件：** 将原始文件放入 `inbox/` (如 `inbox/example.md`)。
+2. **提示智能体：** 询问智能体：*"请根据 AGENTS.md, PROJECT.md 和 WIKI.md 处理 inbox/ 中的文件。"*
+3. **智能体操作：** 
+    - 智能体将内容转换为 `intake/tmp/YYYY-MM-DD/source.md`。
+    - 它会执行 **来源审查门 (Source Review Gate)**。
+    - 原始文件被移入 `raw/` 下对应的状态子目录。
+    - 只有被标记为 `digested` (已通过) 的内容才会被移至 `intake/processed/` 并用于更新 `wiki/`。
 
-向 agent 发出请求：
+---
 
-```text
-请按照 AGENTS.md、PROJECT.md 和 WIKI.md 处理 inbox/ 中的文件。
-```
+## 🔍 6. 来源审查门 (Source Review Gate) 结果
 
-agent 应按以下顺序处理：
+来源审查门是决定一个来源是否有资格进入 wiki 的严格边界。
 
-1. 读取 [AGENTS.md](../AGENTS.md)，确认任务属于 Add Knowledge。
-2. 读取 [PROJECT.md](../PROJECT.md)，确认当前主题、目标、范围、术语、wiki 结构要求、分类偏好、命名偏好、项目规则和约束。如果它缺失、为空或还只是没有任何已确认项目上下文的模板，先与用户确认项目上下文，再写入 `PROJECT.md`，然后才做项目相关假设。可选字段允许留空；只有当前任务依赖缺失字段时才追问。
-3. 读取 [WIKI.md](../WIKI.md)，使用其中的 intake 和 source review 规则。
-4. 检查 `inbox/` 中的完整文件名、类型、大小和可读性。
-5. 将可处理内容转换或规范化到 `intake/tmp/YYYY-MM-DD/原始文件基础名/source.md`。
-6. 基于临时 Markdown 运行 Source Review Gate。
-7. 将原始文件移动到 `raw/digested/`、`raw/needs-review/`、`raw/ignored/` 或 `raw/unsupported/`。
-8. 只有 `digested` 内容进入 `intake/processed/` 并继续更新 `wiki/`。
-9. 更新 `reviews/source-review/`、`intake/logs/`、`wiki/index.md` 和 `logs/wiki.md`。
-
-`原始文件基础名` 保留源文件原本的语言和字符，只去掉扩展名。如果重复或不明确的基础名会和已有路径冲突，将该 source 移到 `raw/needs-review/` 并记录命名问题，不要自行追加后缀。
-
-## 6. Source Review Gate
-
-Source Review Gate 决定一个 source 是否值得进入 wiki。
-
-| 结果 | 原始文件位置 | 后续动作 |
+| 审查结果 | 目标路径 | 下一步动作 |
 | --- | --- | --- |
-| `digested` | `raw/digested/` | 进入 `intake/processed/`，创建 source card，并更新 wiki。 |
-| `needs-review` | `raw/needs-review/` | 记录需要用户判断的问题，暂不更新 wiki。 |
-| `ignored` | `raw/ignored/` | 记录忽略原因，暂不更新 wiki。 |
-| `unsupported` | `raw/unsupported/` | 记录无法处理的原因，暂不更新 wiki。 |
+| **`digested`** | `raw/digested/` | 推进至 `intake/processed/`，创建来源卡片，更新 wiki。 |
+| **`needs-review`**| `raw/needs-review/`| 记录审查疑问。(如需要人工判断或图像处理)。**暂不更新 wiki**。 |
+| **`ignored`** | `raw/ignored/` | 记录忽略理由。**不更新 wiki**。 |
+| **`unsupported`** | `raw/unsupported/` | 记录阻碍原因。**不更新 wiki**。 |
 
-转换命令成功不代表 source 可用。乱码、空内容、明显截断、结构破碎、缺失关键文本、依赖图片或扫描页的信息，都应进入 `needs-review` 或 `unsupported`。
+> [!WARNING]
+> 一次成功的格式转换**不**代表它会被自动接受进入 wiki。空白、乱码或严重依赖图片的文件会被标记为 `needs-review`。
 
-`intake/processed/` 下每个已接受 source 文件夹都必须包含 `source.md`、`summary.md` 和 `manifest.md`。任何生成已接受 Markdown 的转换或规范化路径都必须满足这个要求。
+---
 
-已接受的 intake 输出进入 `wiki/` 前，应检查 Obsidian Markdown：内部 wikilink 是否有效，表格中的 wikilink alias 是否写成 `[[路径\|别名]]`，frontmatter 是否有效，加粗标记是否闭合，traceability 是否链接到存在的 vault 文件。
+## 📜 7. 文本优先边界 (Text-First)
 
-如果曾经进入 `unsupported`、`ignored` 或 `needs-review` 的 source 后来被接受为 `digested`，必须在同一轮关闭旧状态。不能让同一个原始文件名同时留在两个 raw 状态目录中，intake 日志、source review 记录、manifest、source card、`wiki/index.md` 和 `logs/wiki.md` 也应反映最新状态。
+LLM Wiki Agent 严格遵循“文本优先”思维进行操作：
+- 所有可读文档 (HTML, PDF, Word, PPT, Excel 等) 在摄入前都会转为 Markdown。
+- 扫描件、图片和音频作为原始来源保留在 `raw/`，但它们**不是**一等公民 (wiki 内容)。
+- 除非已明确配置图片处理机制，否则不要将图片直接复制到 wiki 页面内。
 
-## 7. 文本优先边界
+> [!TIP]
+> 关于 OCR 处理，请参考 [markitdown-ocr.zh-CN.md](markitdown-ocr.zh-CN.md)。OCR 是可选的，并且默认不开启。
 
-当前工作流是 text-first：
+---
 
-- Markdown、网页、PDF、Word、PowerPoint、Excel、CSV、JSON、XML 等文件应先转为可审查 Markdown。
-- 图片、扫描件、截图和音频可以作为原始来源保存，但默认不是 wiki 的一等内容。
-- 如果某个文件的重要信息依赖未处理的图片、扫描页、截图或音频，移动到 `raw/needs-review/` 并记录缺失处理步骤。
-- 不要默认创建附件资源目录、复制图片到 wiki 页面，或添加图片引用方案。
+## 🧠 8. 使用现有知识
 
-如果是扫描页很多、截图很多、图片里才有关键内容的 PDF、Word、PowerPoint、Excel，OCR 只是可选能力，不应默认开启。只有普通 `markitdown` 提不出关键文本时才用。配置时优先用 `.env` 加 `uv run --env-file .env ...`，具体最短步骤见 [markitdown-ocr.zh-CN.md](markitdown-ocr.zh-CN.md)。
+要使用知识库，请询问智能体：
+*"wiki 里面关于 <topic> 是怎么说的？"*
 
-## 8. 使用已有知识
+智能体会搜索：
+1. `wiki/index.md` & `wiki/overview.md`
+2. `wiki/sources/`, `wiki/entities/`, `wiki/concepts/`, `wiki/claims/`
+3. `questions/` 和 `artifacts/`
 
-当你想从 wiki 中获得答案时，向 agent 提问：
+智能体应当将生成的所有交付物 (报告、模板、草案) 放置在 `artifacts/` 目录中。
 
-```text
-wiki 里关于 <主题> 是怎么说的？
-```
+---
 
-agent 应先读：
+## 🪞 9. 反射 (Reflect) 讨论知识
 
-1. `wiki/index.md`
-2. `wiki/overview.md`
-3. 相关 `wiki/sources/`、`wiki/entities/`、`wiki/concepts/`、`wiki/claims/`、`wiki/syntheses/`
-4. 必要时读取 `questions/` 和 `artifacts/`
+你可以要求智能体通过“反射”固化讨论中的知识，例如：
+- 确认的用户偏好
+- 架构层面的判定
+- 可复用的结论
 
-需要生成报告、brief、outline、draft、模板或对比表时，交付物应写入 `artifacts/`。
+这些内容将被写入 `reviews/reflection/YYYY-MM-DD.md`。
 
-## 9. 讨论内容回流
+---
 
-讨论产生的长期有效知识使用 Reflect 处理。适合回流的内容包括：
+## 🧹 10. 维护 Wiki
 
-- 用户确认的偏好。
-- 工作流规则。
-- 架构判断。
-- 可长期复用的结论。
-- 已确认的概念关系或待研究问题。
+通过以下询问来进行定期的维护：
+- *"对 wiki 进行健康检查"*
+- *"找出死链 (broken links)"*
+- *"清理重复内容"*
+- *"找出没有来源引用的声明 (claims)"*
 
-没有明确要求时，agent 应先列出建议回流的要点并等待确认。确认后，讨论来源记录写入 `reviews/reflection/YYYY-MM-DD.md`。
+---
 
-## 10. 维护 Wiki
+## ❓ 11. 常见问题 (FAQ)
 
-可以使用这些自然语言请求：
+<details>
+<summary><b>如果找不到 <code>uv</code> 怎么办？</b></summary>
+先运行初始化脚本。如果自动安装失败，请手动安装 <code>uv</code> 然后再次运行初始化脚本。
+</details>
 
-```text
-检查 wiki 健康状态
-查找断开的链接
-查找过期的 claim
-清理重复页面
-检查没有来源的 claim
-```
+<details>
+<summary><b>如果文件已经在 <code>raw/</code> 里面了呢？</b></summary>
+新提交的原始文件必须通过 <code>inbox/</code> 进入。 <code>raw/</code> 是一个审查后的状态保留区，而不是摄入的入口。
+</details>
 
-agent 可以直接修复机械问题。涉及解释、合并、删除、来源判断变化的问题，应先给出方案并等待确认。
+<details>
+<summary><b>转换后的 Markdown 能不能直接放进 <code>wiki/</code>？</b></summary>
+不行。转换后的 Markdown 首先会进入 <code>intake/tmp/</code>，接受来源审查门 (Source Review Gate) 的检查。只有通过的材料才能进入 <code>intake/processed/</code>，最后写入 <code>wiki/</code>。
+</details>
 
-## 11. 常见问题
+<details>
+<summary><b>我应该把个人 wiki 内容提交到 GitHub 吗？</b></summary>
+不要。默认的 <code>.gitignore</code> 会忽略本地运行目录，比如 <code>inbox/</code>, <code>raw/</code>, <code>intake/</code> 和 <code>wiki/</code>。
+</details>
 
-### uv 不存在怎么办
+---
 
-先运行初始化脚本。脚本会尝试安装 `uv`。如果安装失败，手动安装 `uv`，然后重新运行：
+## 💡 12. 推荐习惯
 
-```powershell
-.\scripts\init.ps1 -VaultRoot .
-```
-
-### 文件已经放进 raw/ 了怎么办
-
-把用户新投递的原始文件放回 `inbox/` 再处理。`raw/` 是处理后的状态区，不是入口。
-
-### 为什么文件进了 needs-review
-
-`needs-review` 表示文件可能有价值，但 agent 当前不能可靠完成最终判断。常见原因包括内容太大、转换质量差、缺少关键图片信息、来源范围不清、压缩包需要选择成员、或内容需要用户判断。
-
-### 可以直接把转换结果写进 wiki 吗
-
-不可以。转换结果先进入 `intake/tmp/`，通过 Source Review Gate 后才能进入 `intake/processed/`，然后再更新 `wiki/`。
-
-### GitHub 仓库里要提交个人 wiki 内容吗
-
-公开分享本 agent 包时，不建议提交个人 `inbox/`、`raw/`、`intake/`、`wiki/`、`logs/`、`questions/` 或 `artifacts/` 内容。默认 [.gitignore](../.gitignore) 会忽略这些本地运行目录。
-
-## 12. 推荐工作习惯
-
-- 小批量投递 source，先确认一轮 intake 质量，再增加规模。
-- 对大文件先让 agent 读 metadata、目录、页数、行数或 chunk index。
-- 对有争议的 claim 保留反证和不确定性，不要压成单一结论。
-- 经常要求 agent 运行 Maintain Wiki，检查断链、重复页面、无来源 claim 和过期内容。
-- 把用户交付物放在 `artifacts/`，把长期知识放在 `wiki/`。
+- 将源文件分为小批量处理，等确认一个摄入周期成功后再批量导入。
+- 面对大文件，先让智能体检查其元数据或分块索引。
+- 面对有争议的声明时，保留其反证依据和不确定性。
+- 定期运行 **Maintain Wiki (维护 Wiki)** 任务。
+- 将面向用户的交付产物放在 `artifacts/`，而将持久化的知识放在 `wiki/`。
