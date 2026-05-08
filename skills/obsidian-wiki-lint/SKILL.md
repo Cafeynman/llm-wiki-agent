@@ -1,6 +1,6 @@
 ---
 name: obsidian-wiki-lint
-description: Use when maintaining an Obsidian wiki vault, checking broken wikilinks, orphan wiki pages, stale or malformed internal links, truncated source links, or adding conservative cross-links between concept notes.
+description: Foundational Obsidian wiki static linting tool. Use as the FIRST standard layer for checking broken wikilinks and orphan pages. For project-specific business logic validations (e.g. counting files, checking specific metadata), ALWAYS run this skill first to establish a baseline, then write custom scripts for the rest. Do not write custom scripts to replace this skill's basic link parsing.
 ---
 
 # Obsidian Wiki Lint
@@ -14,6 +14,12 @@ Run scripts from the vault or package root with `uv run --no-project`. The scrip
 ```powershell
 uv run --no-project skills/obsidian-wiki-lint/scripts/lint_wiki.py --vault . --scope wiki
 ```
+
+## Verification Architecture
+
+When users request complex health checks or business logic validation, follow a two-layer approach:
+1. **Standard Layer (Foundation)**: Always run `lint_wiki.py` first to establish a reliable baseline of structural integrity (broken links and orphans).
+2. **Project Layer (Custom)**: Write custom one-off scripts to verify project-specific states (e.g., source card counts, synthesis completion, metadata values). Do not mix foundational wiki link parsing with custom business logic.
 
 ## Core Workflow
 
@@ -61,6 +67,6 @@ uv run --no-project skills/obsidian-wiki-lint/scripts/crosslink_concepts.py --va
 
 - Do not use link repair to guess between multiple candidates. Leave ambiguous links unchanged and report them.
 - Do not cross-link every occurrence. Keep `--max-per-concept` low; the default is 2 per source page.
-- Do not add cross-links inside frontmatter, code blocks, inline code, Markdown links, existing wikilinks, table rows, or URLs.
+- Do not add cross-links inside frontmatter, code blocks, inline code, Markdown links, existing wikilinks, or URLs. Table rows are supported and alias separators will be automatically escaped.
 - Keep project-specific aliases in a JSON alias file instead of hard-coding them into the script.
 - When `lint_wiki.py` finds orphans, distinguish true orphan pages from intentional entry pages such as `wiki/home.md`, `wiki/index.md`, and `wiki/overview.md`.

@@ -10,6 +10,7 @@ from collections import defaultdict
 from pathlib import Path
 
 WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
+MD_LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 SKIP_DIRS = {
     ".git",
     ".obsidian",
@@ -62,7 +63,14 @@ def build_lookup(markdown_files: list[Path], vault: Path) -> tuple[set[str], dic
     return all_files, by_stem
 
 
-def resolve_target(target: str, all_files: set[str], by_stem: dict[str, list[str]]) -> str | None:
+def resolve_target(vault: Path, target: str, all_files: set[str], by_stem: dict[str, list[str]]) -> str | None:
+    target = target.strip().replace("\\", "/")
+    if not target:
+        return None
+    if (vault / target).exists() and not (vault / target).is_dir():
+        # If it directly exists (e.g. an attachment)
+        return target
+
     normalized = normalize_target(target)
     if not normalized:
         return None
@@ -87,13 +95,24 @@ def lint(vault: Path, scope: str) -> int:
         content = (vault / rel).read_text(encoding="utf-8")
         for match in WIKILINK_RE.finditer(content):
             raw_target = split_wikilink(match.group(1))
-            if not raw_target or raw_target.startswith(("http://", "https://")):
+            if not raw_target or raw_target.startswith(("http://", "https://", "mailto:")):
                 continue
-            resolved = resolve_target(raw_target, all_files, by_stem)
+            resolved = resolve_target(vault, raw_target, all_files, by_stem)
             if not resolved:
                 continue
             incoming[resolved].append(rel)
-            if resolved not in all_files:
+            if resolved not in all_files and not (vault / resolved).exists():
+                broken[resolved].append(rel)
+
+        for match in MD_LINK_RE.finditer(content):
+            raw_target = match.group(1).split("#", 1)[0].strip().replace("%20", " ")
+            if not raw_target or raw_target.startswith(("http://", "https://", "mailto:")):
+                continue
+            resolved = resolve_target(vault, raw_target, all_files, by_stem)
+            if not resolved:
+                continue
+            incoming[resolved].append(rel)
+            if resolved not in all_files and not (vault / resolved).exists():
                 broken[resolved].append(rel)
 
     orphans = [rel for rel in scoped_files if rel not in incoming]

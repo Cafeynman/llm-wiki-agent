@@ -74,11 +74,10 @@ def in_span(index: int, spans: list[tuple[int, int]]) -> bool:
 
 
 def link_line(line: str, concept: Concept, max_count: int) -> tuple[str, int]:
-    if "|" in line and re.match(r"^\s*\|", line):
-        return line, 0
+    is_table = "|" in line and bool(re.match(r"^\s*\|", line))
 
     escaped = re.escape(concept.name)
-    pattern = re.compile(rf"(?<![\w\[/#])({escaped})(?![\w\]])")
+    pattern = re.compile(rf"(?<![a-zA-Z0-9_\[/#])({escaped})(?![a-zA-Z0-9_\]])")
     spans = protected_spans(line)
     pieces: list[str] = []
     last = 0
@@ -88,7 +87,8 @@ def link_line(line: str, concept: Concept, max_count: int) -> tuple[str, int]:
         if count >= max_count or in_span(match.start(), spans):
             continue
         pieces.append(line[last : match.start()])
-        pieces.append(f"[[{concept.target}|{match.group(1)}]]")
+        alias_sep = r"\|" if is_table else "|"
+        pieces.append(f"[[{concept.target}{alias_sep}{match.group(1)}]]")
         last = match.end()
         count += 1
 
@@ -101,11 +101,13 @@ def link_line(line: str, concept: Concept, max_count: int) -> tuple[str, int]:
 def crosslink_file(file_path: Path, concepts: list[Concept], max_per_concept: int) -> tuple[str, int]:
     content = file_path.read_text(encoding="utf-8")
     match = FRONTMATTER_RE.match(content)
-    if not match:
-        return content, 0
+    if match:
+        frontmatter, body = match.groups()
+        current_title = read_title(frontmatter, file_path.stem)
+    else:
+        frontmatter, body = "", content
+        current_title = file_path.stem
 
-    frontmatter, body = match.groups()
-    current_title = read_title(frontmatter, file_path.stem)
     current_target_name = file_path.stem
     total = 0
     lines = body.splitlines(keepends=True)
