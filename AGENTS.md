@@ -39,7 +39,7 @@ Keep `WIKI.md`, `AGENTS.md`, and other agent entrypoint files stable and replace
 1. Keep package files, runtime configuration, helper scripts, and local skills inside the project root.
 2. Keep the local uv virtual environment at `.venv/` when used, and do not commit it.
 3. Put all temporary files and one-off working scripts under `tmp/` to keep the project workspace clean.
-4. Prefer existing package skills under `skills/` before creating any new skill.
+4. Prefer existing package skills under `.agents/skills/` before creating any new skill.
 5. Use `wiki/home.md` as the human-facing wiki home.
 6. Use `wiki/index.md` as the structured catalog.
 7. Use `logs/wiki.md` as the operation history.

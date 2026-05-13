@@ -50,7 +50,7 @@ cd llm-wiki-agent
 
 ## 🤔 这是什么？
 
-**你投放文件。智能体整理知识。你获得一个可溯源的 Wiki。**
+**你投放文件，智能体整理知识，你获得一个可溯源的 Wiki。**
 
 本仓库**不是**一个完整的应用服务器，也**不是** Obsidian 的替代品。它是一个**便携的工作流包**，专为能够读取仓库指令的智能体（如 Codex, Claude Code, Gemini CLI, OpenCode 等）设计。
 
@@ -115,7 +115,8 @@ cd llm-wiki-agent
 ├── scripts/
 │   ├── init.ps1
 │   └── init.sh
-├── skills/
+├── .agents/
+│   └── skills/
 └── docs/
     ├── usage.md
     ├── usage.zh-CN.md

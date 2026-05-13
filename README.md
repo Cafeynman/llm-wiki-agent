@@ -115,7 +115,8 @@ To get the most out of LLM Wiki Agent, we recommend pairing it with:
 ├── scripts/
 │   ├── init.ps1
 │   └── init.sh
-├── skills/
+├── .agents/
+│   └── skills/
 └── docs/
     ├── usage.md
     ├── usage.zh-CN.md

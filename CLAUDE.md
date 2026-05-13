@@ -22,6 +22,10 @@ When a task depends on project-local environment variables, prefer `uv run --env
 
 Before handling any wiki task, read and follow `WIKI.md`.
 
+## Skill Source
+
+When using skills for this project, read the skill files from this repository's `.agents/skills/` directory first. Treat `.agents/skills/` as the project-local source of truth for package skills, and do not prefer global or external skill copies unless the user explicitly asks.
+
 ## Replacement Rule
 
 When a user gives a new direction that replaces a prior plan, replace the old plan completely instead of patching around it: define the single new source of truth, remove old wording and workflows, scan the target files for stale terms, and finish only when the old terms are gone.
@@ -39,7 +43,7 @@ Keep `WIKI.md`, `AGENTS.md`, and other agent entrypoint files stable and replace
 1. Keep package files, runtime configuration, helper scripts, and local skills inside the project root.
 2. Keep the local uv virtual environment at `.venv/` when used, and do not commit it.
 3. Put all temporary files and one-off working scripts under `tmp/` to keep the project workspace clean.
-4. Prefer existing package skills under `skills/` before creating any new skill.
+4. Prefer existing package skills under `.agents/skills/` before creating any new skill.
 5. Use `wiki/home.md` as the human-facing wiki home.
 6. Use `wiki/index.md` as the structured catalog.
 7. Use `logs/wiki.md` as the operation history.
