@@ -254,6 +254,19 @@ After a final outcome is reached for a source, no temporary folder for that sour
 
 Source Review Gate is an intake step. It runs after conversion or normalization has produced readable temporary Markdown. Its goal is to decide what deserves permanent intake output and wiki ingestion, not to update wiki knowledge pages.
 
+Before assigning a Source Review Gate outcome, classify conversion quality separately from source value. A source must not be treated as `digested` only because conversion exited successfully.
+
+| Quality | Standard | Intake effect |
+| --- | --- | --- |
+| `good` | Main body text is readable, structure is understandable, and any garbling is minor enough that it does not affect interpretation | May continue to value review |
+| `usable-with-caveats` | Most main content is readable, but there is local garbling, missing text, broken tables, or structural damage that should be recorded | May continue to value review, but record the quality caveat in review notes or `summary.md` |
+| `poor` | Readable content is mixed with substantial garbling or broken structure, and key paragraphs, tables, conclusions, claims, or evidence cannot be judged reliably | Must become `needs-review` |
+| `unreadable` | Most main body content is garbled, mojibake, meaningless symbols, repeated broken characters, empty, or obviously truncated | Must become `needs-review`, unless the original file is clearly damaged or unsupported |
+
+Use conservative thresholds for garbling. If roughly 5-20% of the main body is garbled, the best possible quality is usually `usable-with-caveats`. If roughly 20-50% is garbled, the best possible quality is usually `poor`. If more than half of the main body is unreadable, the quality is `unreadable`. A source whose main body is about 90% garbled must never be classified as `good` or `digested`.
+
+Critical content overrides percentages. If definitions, conclusions, source evidence, important tables, or other core content are garbled or missing, do not classify the conversion as `good` even when the overall garbling ratio appears low.
+
 Each reviewed item receives one outcome that maps to a raw file location:
 
 | Outcome | Raw destination | Intake effect | Meaning |

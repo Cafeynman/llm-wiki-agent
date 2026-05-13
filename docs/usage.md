@@ -108,7 +108,7 @@ The Source Review Gate is the strict boundary that decides whether a source dese
 | **`unsupported`** | `raw/unsupported/` | Record blocker. Do not update wiki. |
 
 > [!WARNING]
-> A successful conversion does **not** mean automatic acceptance. Empty, garbled, or highly image-dependent files become `needs-review`.
+> A successful conversion does **not** mean automatic acceptance. Empty, substantially garbled, structurally broken, or highly image-dependent files become `needs-review`. If roughly half or more of the main body is unreadable, it must not be treated as good-quality input.
 
 ---
 
