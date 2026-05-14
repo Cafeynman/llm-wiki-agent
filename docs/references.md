@@ -55,7 +55,7 @@ This package turns the theoretical pattern into a stricter, production-ready ope
 
 - `inbox/` is the **only entry point** for user-submitted original files.
 - `raw/` is a strict state area with `digested`, `needs-review`, `ignored`, and `unsupported` outcomes.
-- Source review happens **after** conversion and **before** wiki updates.
+- Source review happens **after** extraction and **before** wiki updates.
 - Accepted sources get content-rich source cards under `wiki/sources/`.
 - Discussion-derived knowledge is recorded separately from source-derived knowledge.
 - The workflow is **text-first**, meaning images, scans, screenshots, and audio remain preserved source material unless image or audio handling is explicitly added.

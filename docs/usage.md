@@ -63,6 +63,7 @@ To create the structure inside an existing separate Obsidian vault:
 **What this does:**
 1. Runs `uv sync` to create or update the `.venv/` runtime state.
 2. Creates all necessary workflow directories (`inbox/`, `raw/`, `intake/`, `wiki/`, etc.).
+3. Leaves source extraction preferences in `PROJECT.md` for the agent to confirm when they matter.
 
 ---
 
@@ -72,7 +73,7 @@ To create the structure inside an existing separate Obsidian vault:
 | --- | --- |
 | `inbox/` | 📥 Only entrypoint for user-submitted original files. |
 | `raw/` | 🗄️ Final state area for original files. (Does not store agent-generated Markdown). |
-| `intake/tmp/` | ⚙️ Temporary Markdown after conversion and before source review. |
+| `intake/tmp/` | ⚙️ Temporary Markdown after extraction and before source review. |
 | `intake/processed/` | ✅ Accepted Markdown ready for wiki ingestion. |
 | `reviews/` | 📝 Source review and discussion reflection records. |
 | `logs/` | ⏱️ High-level wiki operation history (`logs/wiki.md`). |
@@ -89,7 +90,7 @@ Follow this lifecycle for adding new knowledge:
 1. **Drop File:** Put an original file into `inbox/` (e.g., `inbox/example.md`).
 2. **Prompt Agent:** Ask the agent: *"Process the files in inbox/ according to AGENTS.md, PROJECT.md, and WIKI.md."*
 3. **Agent Action:** 
-    - The agent converts content into `intake/tmp/YYYY-MM-DD/source.md`.
+    - The agent follows `PROJECT.md` and extracts content into `intake/tmp/YYYY-MM-DD/source.md`.
     - It runs the **Source Review Gate**.
     - Original file moves to a `raw/` subfolder.
     - Only `digested` (approved) content moves to `intake/processed/` and updates `wiki/`.
@@ -108,7 +109,7 @@ The Source Review Gate is the strict boundary that decides whether a source dese
 | **`unsupported`** | `raw/unsupported/` | Record blocker. Do not update wiki. |
 
 > [!WARNING]
-> A successful conversion does **not** mean automatic acceptance. Empty, substantially garbled, structurally broken, or highly image-dependent files become `needs-review`. If roughly half or more of the main body is unreadable, it must not be treated as good-quality input.
+> A successful extraction does **not** mean automatic acceptance. Empty, substantially garbled, structurally broken, or highly image-dependent files become `needs-review`. If roughly half or more of the main body is unreadable, it must not be treated as good-quality input.
 
 ---
 
@@ -116,11 +117,8 @@ The Source Review Gate is the strict boundary that decides whether a source dese
 
 LLM Wiki Agent operates with a strict text-first mindset:
 - All readable documents (HTML, PDF, Word, PPT, Excel, etc.) become Markdown before ingestion.
-- Scans, images, and audio stay as original sources in `raw/` but are **not** first-class wiki content.
+- Scans, images, audio, and video stay as original sources in `raw/` but are **not** first-class wiki content unless extraction is explicitly configured and approved.
 - Do not copy images directly into wiki pages unless image handling is explicitly configured.
-
-> [!TIP]
-> For OCR handling, refer to [markitdown-ocr.md](markitdown-ocr.md). OCR is optional and not enabled by default.
 
 ---
 
@@ -172,8 +170,8 @@ New user-submitted originals must enter through <code>inbox/</code>. <code>raw/<
 </details>
 
 <details>
-<summary><b>Can converted Markdown go straight into <code>wiki/</code>?</b></summary>
-No. Converted Markdown first goes to <code>intake/tmp/</code>, then the Source Review Gate. Only accepted material goes to <code>intake/processed/</code> and then into <code>wiki/</code>.
+<summary><b>Can extracted Markdown go straight into <code>wiki/</code>?</b></summary>
+No. Extracted Markdown first goes to <code>intake/tmp/</code>, then the Source Review Gate. Only accepted material goes to <code>intake/processed/</code> and then into <code>wiki/</code>.
 </details>
 
 <details>

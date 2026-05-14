@@ -41,6 +41,8 @@ cd llm-wiki-agent
 
 *提示：如果要使用单独的 Obsidian 库，请传递库路径，例如 `.\scripts\init.ps1 -VaultRoot "C:\path\to\your\vault"`。*
 
+默认来源提取偏好记录在 `PROJECT.md`。首次摄入来源材料时，智能体会确认与当前任务相关的偏好。
+
 **你的最小化首次运行：**
 1. 将源文件放入 `inbox/example.md`。
 2. 对智能体说：*"请根据 AGENTS.md, PROJECT.md 和 WIKI.md 处理 inbox/ 中的文件。"*
@@ -71,7 +73,7 @@ cd llm-wiki-agent
 
 | 工作流 | 何时使用 | 它的作用 |
 |-----------|-------------|--------------|
-| **➕ 添加知识 (Add Knowledge)** | 添加文件、审查来源、转换材料。 | 将文件从 `inbox/` 推进至 `intake/` 再到 `wiki/`，并反射确认的讨论见解。 |
+| **➕ 添加知识 (Add Knowledge)** | 添加文件、审查来源、提取材料。 | 将文件从 `inbox/` 推进至 `intake/` 再到 `wiki/`，并反射确认的讨论见解。 |
 | **💡 使用知识 (Use Knowledge)** | 回答问题、综合页面、生成交付物。 | 检索 wiki，并在 `artifacts/` 目录下生成报告、简报、草案或对照表。 |
 | **🧹 维护 Wiki (Maintain Wiki)** | 健康检查、清理死链、查找过期声明。 | 查找矛盾、检测重复、记录日志空白，确保溯源完整。 |
 
@@ -81,8 +83,8 @@ cd llm-wiki-agent
 
 | 特性 | 描述 |
 |---------|------------|
-| **📜 文本优先 (Text-First)** | 转换必定生成 Markdown。附件和图片作为原始来源保留在 `raw/` 中。 |
-| **🔍 来源审查门 (Source Review)** | 成功转换是不够的。智能体在将来源接受进 wiki 之前必须进行审查。 |
+| **📜 文本优先 (Text-First)** | 提取结果必须是 Markdown。附件和图片作为原始来源保留在 `raw/` 中。 |
+| **🔍 来源审查门 (Source Review)** | 成功提取是不够的。智能体在将来源接受进 wiki 之前必须进行审查。 |
 | **🔗 显式溯源 (Explicit Traceability)** | 提倡显式链接而非依赖隐藏记忆。所有声明必须引用来源卡片、原始文件或讨论记录。 |
 | **📂 原始文件留存 (Original Preservation)** | 妥善保管原始文件。生成的 Markdown 保存在 `intake/`，绝不混入 `raw/`。 |
 | **⚙️ 可替换上下文 (Replaceable Context)** | `PROJECT.md` 包含你的特定偏好。`WIKI.md` 和 `AGENTS.md` 则是稳定的工作流规则。 |

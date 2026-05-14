@@ -17,3 +17,15 @@ Fields are optional unless required for the current task. Leave a field blank wh
 - Project-specific rules:
 - Constraints:
 - Open questions:
+
+## Source Extraction Preferences
+
+- Preferences status: unconfirmed
+- Default provider for document: markitdown
+- Alternative provider for document: mineru
+- Default provider for webpage: defuddle
+- Image extraction policy: ask-before-ocr
+- Audio extraction policy: ask-before-transcription
+- Video extraction policy: ask-before-transcription-or-frame-ocr
+- Unsupported source kinds:
+- Provider-specific preferences:

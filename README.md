@@ -41,6 +41,8 @@ cd llm-wiki-agent
 
 *Note: For a separate Obsidian vault, pass the vault path like `.\scripts\init.ps1 -VaultRoot "C:\path\to\your\vault"`.*
 
+Default source extraction preferences are recorded in `PROJECT.md`. On the first source intake, the agent confirms any preference that matters for the task.
+
 **Your Minimal First Run:**
 1. Drop a source file in `inbox/example.md`.
 2. Ask your agent: *"Process the files in inbox/ according to AGENTS.md, PROJECT.md, and WIKI.md."*
@@ -81,8 +83,8 @@ The package keeps the agent strictly on three major workflows. The agent will al
 
 | Feature | Description |
 |---------|------------|
-| **📜 Text-First Workflow** | Conversions result in Markdown. Attachments/images stay in `raw/` as preserved sources. |
-| **🔍 Source Review Gate** | A successful conversion isn't enough. The agent reviews sources before accepting them into the wiki. |
+| **📜 Text-First Workflow** | Extraction results in Markdown. Attachments/images stay in `raw/` as preserved sources. |
+| **🔍 Source Review Gate** | A successful extraction isn't enough. The agent reviews sources before accepting them into the wiki. |
 | **🔗 Explicit Traceability** | The package favors explicit links over hidden memory. Claims cite source cards, raw files, or discussion records. |
 | **📂 Original Preservation** | Original files are preserved. Generated Markdown lands in `intake/`, never mixing with `raw/`. |
 | **⚙️ Replaceable Context** | `PROJECT.md` holds your specific preferences. `WIKI.md` and `AGENTS.md` remain stable workflow rules. |

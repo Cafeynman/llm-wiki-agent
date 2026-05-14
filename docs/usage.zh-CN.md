@@ -63,6 +63,7 @@ cd llm-wiki-agent
 **它的作用是：**
 1. 运行 `uv sync` 来创建或更新 `.venv/` 本地运行环境。
 2. 创建所有必要的工作流目录 (`inbox/`, `raw/`, `intake/`, `wiki/` 等)。
+3. 将来源提取偏好保留在 `PROJECT.md` 中，由智能体在需要时确认。
 
 ---
 
@@ -72,7 +73,7 @@ cd llm-wiki-agent
 | --- | --- |
 | `inbox/` | 📥 用户提交原始文件的**唯一入口**。 |
 | `raw/` | 🗄️ 原始文件的最终存放地。(不存放智能体生成的 Markdown)。 |
-| `intake/tmp/` | ⚙️ 存放转换后且未进行来源审查前的临时 Markdown 文件。 |
+| `intake/tmp/` | ⚙️ 存放提取后且未进行来源审查前的临时 Markdown 文件。 |
 | `intake/processed/` | ✅ 存放已接受并准备写入 wiki 的 Markdown 文件。 |
 | `reviews/` | 📝 存放来源审查记录与讨论反射记录。 |
 | `logs/` | ⏱️ 存放高维度的 wiki 操作历史记录 (`logs/wiki.md`)。 |
@@ -89,7 +90,7 @@ cd llm-wiki-agent
 1. **放入文件：** 将原始文件放入 `inbox/` (如 `inbox/example.md`)。
 2. **提示智能体：** 询问智能体：*"请根据 AGENTS.md, PROJECT.md 和 WIKI.md 处理 inbox/ 中的文件。"*
 3. **智能体操作：** 
-    - 智能体将内容转换为 `intake/tmp/YYYY-MM-DD/source.md`。
+    - 智能体按照 `PROJECT.md` 将内容提取为 `intake/tmp/YYYY-MM-DD/source.md`。
     - 它会执行 **来源审查门 (Source Review Gate)**。
     - 原始文件被移入 `raw/` 下对应的状态子目录。
     - 只有被标记为 `digested` (已通过) 的内容才会被移至 `intake/processed/` 并用于更新 `wiki/`。
@@ -108,7 +109,7 @@ cd llm-wiki-agent
 | **`unsupported`** | `raw/unsupported/` | 记录阻碍原因。**不更新 wiki**。 |
 
 > [!WARNING]
-> 一次成功的格式转换**不**代表它会被自动接受进入 wiki。空白、严重乱码、结构破损或严重依赖图片的文件会被标记为 `needs-review`。如果主体内容约半数以上不可读，就不能把它当作质量良好的输入。
+> 一次成功的来源提取**不**代表它会被自动接受进入 wiki。空白、严重乱码、结构破损或严重依赖图片的文件会被标记为 `needs-review`。如果主体内容约半数以上不可读，就不能把它当作质量良好的输入。
 
 ---
 
@@ -116,11 +117,8 @@ cd llm-wiki-agent
 
 LLM Wiki Agent 严格遵循“文本优先”思维进行操作：
 - 所有可读文档 (HTML, PDF, Word, PPT, Excel 等) 在摄入前都会转为 Markdown。
-- 扫描件、图片和音频作为原始来源保留在 `raw/`，但它们**不是**一等公民 (wiki 内容)。
+- 扫描件、图片、音频和视频作为原始来源保留在 `raw/`，但除非已明确配置并批准提取，否则它们**不是**一等公民 (wiki 内容)。
 - 除非已明确配置图片处理机制，否则不要将图片直接复制到 wiki 页面内。
-
-> [!TIP]
-> 关于 OCR 处理，请参考 [markitdown-ocr.zh-CN.md](markitdown-ocr.zh-CN.md)。OCR 是可选的，并且默认不开启。
 
 ---
 
@@ -172,8 +170,8 @@ LLM Wiki Agent 严格遵循“文本优先”思维进行操作：
 </details>
 
 <details>
-<summary><b>转换后的 Markdown 能不能直接放进 <code>wiki/</code>？</b></summary>
-不行。转换后的 Markdown 首先会进入 <code>intake/tmp/</code>，接受来源审查门 (Source Review Gate) 的检查。只有通过的材料才能进入 <code>intake/processed/</code>，最后写入 <code>wiki/</code>。
+<summary><b>提取后的 Markdown 能不能直接放进 <code>wiki/</code>？</b></summary>
+不行。提取后的 Markdown 首先会进入 <code>intake/tmp/</code>，接受来源审查门 (Source Review Gate) 的检查。只有通过的材料才能进入 <code>intake/processed/</code>，最后写入 <code>wiki/</code>。
 </details>
 
 <details>

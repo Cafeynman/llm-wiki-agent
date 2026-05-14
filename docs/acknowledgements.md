@@ -35,7 +35,7 @@ Thanks to the **Bilibili UP creator** behind [BV1p4DeB8ECi](https://www.bilibili
 
 ## 🌐 Tools and Ecosystem
 
-Thanks to the **Obsidian ecosystem** for making local Markdown knowledge bases practical, and to the maintainers of the local skills and conversion tools used by this package.
+Thanks to the **Obsidian ecosystem** for making local Markdown knowledge bases practical, and to the maintainers of the local skills and extraction tools used by this package.
 
 > [!TIP]
 > See [References](references.md) for the full reference list.

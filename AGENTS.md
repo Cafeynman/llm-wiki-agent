@@ -61,13 +61,15 @@ When writing Obsidian frontmatter property values, wrap strings containing `"` i
 
 ## Intake Output Names
 
-When generating intake Markdown from an original file, including MarkItDown, manual normalization, repaired document extraction, or any other converter, the intake directory name must preserve the original file's base filename and source language. Except for removing the extension, do not replace, delete, transcode, URL encode, change case, translate, romanize, or slugify any character.
+When generating intake Markdown from an original file, including MarkItDown, manual normalization, repaired document extraction, or any other provider, the intake directory name must preserve the original file's base filename and source language. Except for removing the extension, do not replace, delete, transcode, URL encode, change case, translate, romanize, or slugify any character.
 
 Use the same source-language naming rule for `wiki/sources/` source cards. Do not translate a source title into another language or slug unless the user explicitly asks for that naming scheme.
 
-## Current Tool Limits
+## Source Extraction Providers
 
-This package currently uses MarkItDown as a text-first converter. Remove inline `data:image/...;base64,...` image links from converted Markdown; they are dead links for this wiki. Do not OCR, describe images, copy attachments into wiki pages, or transcribe audio by default. If Word/PDF/PPT/image/audio content depends on figures, scans, screenshots, attachments, or audio, move the original to `raw/needs-review/` and record the missing non-text processing step. If OCR is explicitly enabled for a task, read `docs/markitdown-ocr.md` before invoking OCR-related commands. When `.env` defines `MARKITDOWN_OCR_MODEL`, use that value as the default OCR model and pass it explicitly as `--llm-model`; if it is missing, ask the user before proceeding with OCR. Keep `WIKI.md` tool-agnostic; record current converter limitations here.
+Before source extraction, use the local `.agents/skills/source-extraction/` skill. Document, webpage, image, audio, and video extraction choices belong in `PROJECT.md`, not in `AGENTS.md` or `CLAUDE.md`.
+
+OCR, image extraction, audio transcription, and video frame/audio extraction must follow `PROJECT.md`; do not enable them automatically. Real API keys and tokens belong only in the local project-root `.env` file and must not be written into project instructions, manifests, logs, wiki pages, source cards, or skill files.
 
 ## Workflow Router
 
@@ -83,4 +85,4 @@ When a request could fit multiple workflows, start with the smallest workflow th
 
 ## Large Sources
 
-For large files, large converted Markdown, archives, tables, slide decks, OCR-heavy documents, or noisy sources, follow the `Large File and Context Budget Policy` in `WIKI.md`. Do not load large sources into context in one pass.
+For large files, large extracted Markdown, archives, tables, slide decks, OCR-heavy documents, or noisy sources, follow the `Large File and Context Budget Policy` in `WIKI.md`. Do not load large sources into context in one pass.
