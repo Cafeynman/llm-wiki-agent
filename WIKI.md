@@ -63,6 +63,8 @@ If preserving the original base filename would collide with an existing path for
 
 Use `digest.md` only when it helps review. Use `chunks/` only when the source is too large or structurally complex to handle as one file.
 
+Intake outputs are processing records, not the final place for durable knowledge. Detailed source syntheses, core arguments, concept explanations, and reusable claims belong in `wiki/` pages after ingest, not in `digest.md`, `summary.md`, or `manifest.md`.
+
 ## Log Structure
 
 Use `intake/logs/YYYY-MM-DD.md` for daily source handling logs. Use `reviews/source-review/YYYY-MM-DD.md` for daily review decisions. Use `logs/wiki.md` as one append-only high-level operation history grouped by date headings. `logs/wiki.md` may grow over time, so entries should stay concise and should not duplicate detailed intake or source review records. Do not split, summarize, or archive `logs/wiki.md` unless the user explicitly changes the package contract.
@@ -295,13 +297,22 @@ Each accepted intake folder under `intake/processed/` must include:
 
 ```text
 source.md      Reviewable source Markdown from the original file.
-summary.md     Short processing summary and value judgment.
-manifest.md    Traceability record from original file to wiki updates.
+summary.md     Processing decision: outcome, extraction quality, source value, caveats, and recommended ingest scope.
+manifest.md    Traceability ledger: original file, generated intake outputs, source review, and wiki/question/artifact updates.
 ```
 
 These files are required for every accepted source, including later reprocessing, repaired document extraction, manual normalization, and any other approved text extraction path. A `source.md` without `summary.md` and `manifest.md` is incomplete and must not be treated as fully ingested.
 
 It may also include `digest.md` when a short digest was useful for review, and `chunks/` when the source required chunking.
+
+Keep accepted intake files distinct:
+
+- `digest.md` is optional review support. It may contain a compact content map, review cues, likely useful sections, and extraction warnings. It must not record final wiki updates, act as the final value judgment, or duplicate the manifest ledger.
+- `summary.md` is the final intake processing summary. It should say why the source was accepted, how reliable the extraction is, what caveats matter, and what scope should be ingested. It must not become a detailed source note, chapter-by-chapter digest, or final knowledge synthesis.
+- `manifest.md` is the traceability ledger. It should list paths and updates, not content summaries, core viewpoints, detailed quality analysis, or reading recommendations. If quality caveats matter, link to or briefly point at `summary.md` instead of restating them.
+- `chunks/index.md` is the chunk directory. If it already lists chunk titles and ranges, `summary.md` should link to it or state the chunk count rather than copying the full chunk table.
+
+Before treating an intake folder as complete, check that `digest.md`, `summary.md`, and `manifest.md` are not all repeating the same source information, quality caveats, value judgment, or processing recommendations. Pick one primary location for each kind of information and link to it from the others only when needed.
 
 #### Excerpt-Type `source.md`
 
@@ -340,7 +351,7 @@ Use this policy whenever a raw file, extracted `source.md`, or generated chunk i
 1. Inspect metadata before reading full content: exact filename, file type, file size, line count, page or slide count, table dimensions, archive listing, headings, and extraction warnings when available.
 2. Do not load a very large original file or `source.md` into context in one pass. Work from `summary.md`, `manifest.md`, and `chunks/index.md` first.
 3. For large sources, create `chunks/` before ingest. Each chunk must be a coherent unit small enough to read and summarize independently. Prefer semantic boundaries such as headings, chapters, slides, page ranges, sections, tables, or archive members.
-4. Write or update `summary.md` progressively from chunk summaries. The summary should capture the source topic, useful claims, low-value regions, noisy regions, and recommended ingest scope.
+4. Write or update `summary.md` progressively from chunk summaries. The summary should capture the source topic, processing value, extraction caveats, low-value regions, noisy regions, and recommended ingest scope. Do not use `summary.md` as the detailed source synthesis; move durable claims and core viewpoints into `wiki/` during ingest.
 5. During ingest, read only the chunks needed for the current wiki update. Do not read all chunks unless the user explicitly asks for a full-source pass and the available context can support it.
 6. If a large source cannot be fully reviewed in the current pass, move the original out of `inbox/` to `raw/needs-review/`, record the review question, and clean `intake/tmp/`.
 7. If the source is mostly boilerplate, duplicate text, extraction errors, generated logs, raw data dumps, or other noise, do not expand it into the wiki. Record the issue in the review report and move the original to `raw/ignored/`, `raw/needs-review/`, or `raw/unsupported/` according to the blocker.
@@ -355,11 +366,12 @@ When a source is ready to become wiki knowledge:
 4. Extract durable knowledge: main thesis, key claims, evidence, counterevidence, named entities, important concepts, decisions, recommendations, contradictions, and open questions.
 5. Verify Obsidian Markdown before writing wiki pages: internal links must be wikilinks, wikilink aliases inside tables must escape `|` as `\|`, frontmatter must parse as valid Obsidian properties, bold markers must be balanced, and traceability links must point to existing vault files.
 6. Create or update exactly one content-rich source card under `wiki/sources/`.
-7. Create or update relevant pages in `wiki/entities/`, `wiki/concepts/`, `wiki/claims/`, or `wiki/syntheses/` only when useful.
-8. Create or update `questions/` only when an unresolved investigation thread is worth tracking separately.
-9. Update `wiki/overview.md` only when the source changes the overall synthesis.
-10. Update `wiki/index.md`, `wiki/home.md` when needed, and `logs/wiki.md`.
-11. Update the intake `manifest.md` when intake outputs led to wiki, question, or artifact changes.
+7. For long books, manuals, standards, reports, or other sources that need a structured reading surface, create or update a source-specific wiki entry only when useful. Put full-source detailed summaries, core viewpoints, knowledge flow, chapter navigation, and chapter-level digests there, for example under `wiki/books/original-source-base-filename/`.
+8. Create or update relevant pages in `wiki/entities/`, `wiki/concepts/`, `wiki/claims/`, or `wiki/syntheses/` only when useful.
+9. Create or update `questions/` only when an unresolved investigation thread is worth tracking separately.
+10. Update `wiki/overview.md` only when the source changes the overall synthesis.
+11. Update `wiki/index.md`, `wiki/home.md` when needed, and `logs/wiki.md`.
+12. Update the intake `manifest.md` when intake outputs led to wiki, question, or artifact changes.
 
 Do not flatten disagreement into false consensus. If sources conflict, preserve the disagreement and cite both sides.
 
