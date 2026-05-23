@@ -72,7 +72,7 @@ To create the structure inside an existing separate Obsidian vault:
 | Directory | Responsibility |
 | --- | --- |
 | `inbox/` | 📥 Only entrypoint for user-submitted original files. |
-| `raw/` | 🗄️ Final state area for original files. (Does not store agent-generated Markdown). |
+| `raw/` | 🗄️ Final state area for original files, preserving their source-relative paths. (Does not store agent-generated Markdown). |
 | `intake/tmp/` | ⚙️ Temporary Markdown after extraction and before source review. |
 | `intake/processed/` | ✅ Accepted Markdown ready for wiki ingestion. |
 | `reviews/` | 📝 Source review and discussion reflection records. |
@@ -90,9 +90,9 @@ Follow this lifecycle for adding new knowledge:
 1. **Drop File:** Put an original file into `inbox/` (e.g., `inbox/example.md`).
 2. **Prompt Agent:** Ask the agent: *"Process the files in inbox/ according to AGENTS.md, PROJECT.md, and WIKI.md."*
 3. **Agent Action:** 
-    - The agent follows `PROJECT.md` and extracts content into `intake/tmp/YYYY-MM-DD/source.md`.
+    - The agent follows `PROJECT.md` and extracts content into `intake/tmp/YYYY-MM-DD/source-relative-parent/original-source-base-filename/source.md`.
     - It runs the **Source Review Gate**.
-    - Original file moves to a `raw/` subfolder.
+    - Original file moves to a `raw/` state subfolder while preserving its path below `inbox/`.
     - Only `digested` (approved) content moves to `intake/processed/` and updates `wiki/`.
 
 ---
@@ -103,10 +103,10 @@ The Source Review Gate is the strict boundary that decides whether a source dese
 
 | Outcome | Destination | Next Action |
 | --- | --- | --- |
-| **`digested`** | `raw/digested/` | Promote to `intake/processed/`, create source card, update wiki. |
-| **`needs-review`**| `raw/needs-review/`| Record review question. (e.g., requires human judgment or image processing). Do not update wiki yet. |
-| **`ignored`** | `raw/ignored/` | Record reason. Do not update wiki. |
-| **`unsupported`** | `raw/unsupported/` | Record blocker. Do not update wiki. |
+| **`digested`** | `raw/digested/<source-relative-path>` | Promote to `intake/processed/`, create source card, update wiki. |
+| **`needs-review`**| `raw/needs-review/<source-relative-path>`| Record review question. (e.g., requires human judgment or image processing). Do not update wiki yet. |
+| **`ignored`** | `raw/ignored/<source-relative-path>` | Record reason. Do not update wiki. |
+| **`unsupported`** | `raw/unsupported/<source-relative-path>` | Record blocker. Do not update wiki. |
 
 > [!WARNING]
 > A successful extraction does **not** mean automatic acceptance. Empty, substantially garbled, structurally broken, or highly image-dependent files become `needs-review`. If roughly half or more of the main body is unreadable, it must not be treated as good-quality input.
@@ -166,7 +166,7 @@ Run the initialization script first. If it fails, install <code>uv</code> manual
 
 <details>
 <summary><b>What if a file is already in <code>raw/</code>?</b></summary>
-New user-submitted originals must enter through <code>inbox/</code>. <code>raw/</code> is a post-review state area, not an intake entrypoint.
+New user-submitted originals must enter through <code>inbox/</code>. Files already in <code>raw/&lt;state&gt;/</code> may be reprocessed from their current state directory because they have already entered the lifecycle. Reprocessing must preserve the path after <code>raw/&lt;state&gt;/</code>, and when a source moves to a new state, the old state entry must be removed.
 </details>
 
 <details>

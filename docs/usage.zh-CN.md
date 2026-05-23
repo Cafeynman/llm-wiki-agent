@@ -72,7 +72,7 @@ cd llm-wiki-agent
 | 目录 | 职责说明 |
 | --- | --- |
 | `inbox/` | 📥 用户提交原始文件的**唯一入口**。 |
-| `raw/` | 🗄️ 原始文件的最终存放地。(不存放智能体生成的 Markdown)。 |
+| `raw/` | 🗄️ 原始文件的状态存放地，并保留来源相对路径。(不存放智能体生成的 Markdown)。 |
 | `intake/tmp/` | ⚙️ 存放提取后且未进行来源审查前的临时 Markdown 文件。 |
 | `intake/processed/` | ✅ 存放已接受并准备写入 wiki 的 Markdown 文件。 |
 | `reviews/` | 📝 存放来源审查记录与讨论反射记录。 |
@@ -90,9 +90,9 @@ cd llm-wiki-agent
 1. **放入文件：** 将原始文件放入 `inbox/` (如 `inbox/example.md`)。
 2. **提示智能体：** 询问智能体：*"请根据 AGENTS.md, PROJECT.md 和 WIKI.md 处理 inbox/ 中的文件。"*
 3. **智能体操作：** 
-    - 智能体按照 `PROJECT.md` 将内容提取为 `intake/tmp/YYYY-MM-DD/source.md`。
+    - 智能体按照 `PROJECT.md` 将内容提取为 `intake/tmp/YYYY-MM-DD/source-relative-parent/original-source-base-filename/source.md`。
     - 它会执行 **来源审查门 (Source Review Gate)**。
-    - 原始文件被移入 `raw/` 下对应的状态子目录。
+    - 原始文件被移入 `raw/` 下对应的状态子目录，并保留其在 `inbox/` 下的相对路径。
     - 只有被标记为 `digested` (已通过) 的内容才会被移至 `intake/processed/` 并用于更新 `wiki/`。
 
 ---
@@ -103,10 +103,10 @@ cd llm-wiki-agent
 
 | 审查结果 | 目标路径 | 下一步动作 |
 | --- | --- | --- |
-| **`digested`** | `raw/digested/` | 推进至 `intake/processed/`，创建来源卡片，更新 wiki。 |
-| **`needs-review`**| `raw/needs-review/`| 记录审查疑问。(如需要人工判断或图像处理)。**暂不更新 wiki**。 |
-| **`ignored`** | `raw/ignored/` | 记录忽略理由。**不更新 wiki**。 |
-| **`unsupported`** | `raw/unsupported/` | 记录阻碍原因。**不更新 wiki**。 |
+| **`digested`** | `raw/digested/<source-relative-path>` | 推进至 `intake/processed/`，创建来源卡片，更新 wiki。 |
+| **`needs-review`**| `raw/needs-review/<source-relative-path>`| 记录审查疑问。(如需要人工判断或图像处理)。**暂不更新 wiki**。 |
+| **`ignored`** | `raw/ignored/<source-relative-path>` | 记录忽略理由。**不更新 wiki**。 |
+| **`unsupported`** | `raw/unsupported/<source-relative-path>` | 记录阻碍原因。**不更新 wiki**。 |
 
 > [!WARNING]
 > 一次成功的来源提取**不**代表它会被自动接受进入 wiki。空白、严重乱码、结构破损或严重依赖图片的文件会被标记为 `needs-review`。如果主体内容约半数以上不可读，就不能把它当作质量良好的输入。
@@ -166,7 +166,7 @@ LLM Wiki Agent 严格遵循“文本优先”思维进行操作：
 
 <details>
 <summary><b>如果文件已经在 <code>raw/</code> 里面了呢？</b></summary>
-新提交的原始文件必须通过 <code>inbox/</code> 进入。 <code>raw/</code> 是一个审查后的状态保留区，而不是摄入的入口。
+新提交的原始文件必须通过 <code>inbox/</code> 进入。已经位于 <code>raw/&lt;state&gt;/</code> 中的历史文件，可以从当前状态目录继续重新处理，因为它已经进入过生命周期。重新处理时必须保留 <code>raw/&lt;state&gt;/</code> 之后的相对路径；当来源移动到新状态时，旧状态目录中的那份必须移除。
 </details>
 
 <details>

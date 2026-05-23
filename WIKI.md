@@ -44,10 +44,10 @@ Use this structure unless the user explicitly asks for a different one:
 
 Create only the directories required for the current task. Do not add exports, dashboards, databases, watchers, static sites, or graph files unless the user asks.
 
-For each digested raw source, write intake outputs under:
+For each digested raw source, write intake outputs under the source-relative path:
 
 ```text
-intake/processed/YYYY-MM-DD/original-source-base-filename/
+intake/processed/YYYY-MM-DD/source-relative-parent/original-source-base-filename/
 ├── source.md
 ├── summary.md
 ├── manifest.md
@@ -57,9 +57,11 @@ intake/processed/YYYY-MM-DD/original-source-base-filename/
     └── 01.md
 ```
 
-The `original-source-base-filename` directory must preserve the original source file's base filename and source language. Except for removing the extension, do not translate, romanize, slugify, lowercase, URL encode, or simplify it. Use the same source-language naming rule for source cards under `wiki/sources/`.
+If the source has no parent directory under the intake root, omit `source-relative-parent`. The `original-source-base-filename` directory must preserve the original source file's base filename and source language. Except for removing the extension, do not translate, romanize, slugify, lowercase, URL encode, or simplify it. Use the same source-relative parent and source-language base filename for source cards under `wiki/sources/`.
 
-If preserving the original base filename would collide with an existing path for a distinct source, do not invent a suffix or choose a new title by assumption. Move the duplicate or ambiguous source to `raw/needs-review/`, record the naming collision question, and wait for user judgment.
+The source-relative path is the path below `inbox/` for first intake, or the path below the current `raw/<state>/` directory for reprocessing. Preserve this relative path when moving originals between raw state directories, when writing `intake/tmp/` or `intake/processed/` outputs, and when creating source cards under `wiki/sources/`. The relative path is traceability, not a wiki taxonomy.
+
+If preserving the source-relative output path would collide with an existing path for a distinct source, do not invent a suffix or choose a new title by assumption. Move the duplicate or ambiguous source to `raw/needs-review/`, record the naming collision question, and wait for user judgment.
 
 Use `digest.md` only when it helps review. Use `chunks/` only when the source is too large or structurally complex to handle as one file.
 
@@ -73,15 +75,17 @@ Use `intake/logs/YYYY-MM-DD.md` for daily source handling logs. Use `reviews/sou
 
 1. Treat user-submitted files in `inbox/` and original files under `raw/` as source truth.
 2. Do not rewrite, normalize, rename, or edit original file contents unless the user explicitly asks.
-3. All user-submitted original files must enter through `inbox/` before extraction, review, or classification. Once a file is handled by intake, move it out of `inbox/` in the same pass, regardless of outcome.
-4. Agent-generated Markdown never goes back into `raw/`; write temporary extraction output under `intake/tmp/` and accepted outputs under `intake/processed/`.
-5. `intake/tmp/` is not a holding area. Every temporary extraction must end by promoting accepted Markdown to `intake/processed/` or by deleting the temporary folder after the original moves to `raw/needs-review/`, `raw/ignored/`, or `raw/unsupported/`.
-6. Every factual wiki claim must be grounded in an original source, an intake Markdown output, a cited wiki page, or a confirmed discussion-derived source record under `reviews/reflection/`.
-7. If a claim is useful but unsupported, put it in `questions/`, a needs-verification note on the relevant page, or a low-confidence page under `wiki/claims/`.
-8. Do not copy API keys, tokens, passwords, private keys, session cookies, or sensitive personal information into generated notes. Redact and cite the source path instead.
-9. Intake logs and review reports must record the complete original filename, file type, source path, final raw destination, and any generated Markdown path. Do not use ellipses or shortened paths for source traceability.
-10. Intake must preserve meaningful text and identify important non-text material. If useful content appears to depend on figures, screenshots, scans, audio, or other non-text material that was not processed, move the original to `raw/needs-review/` and record the missing processing step.
-11. This is a text-first workflow. Attachments, images, scans, screenshots, and audio may remain part of the preserved original source, but they are not first-class wiki content by default. Do not create attachment asset directories, copy images into wiki pages, or add image-reference schemes unless the user explicitly asks for image handling.
+3. All new user-submitted original files must enter through `inbox/` before extraction, review, or classification. Once a file is handled by intake, move it out of `inbox/` in the same pass, regardless of outcome.
+4. Files already under `raw/digested/`, `raw/needs-review/`, `raw/ignored/`, or `raw/unsupported/` have already entered the lifecycle. They may be reprocessed from their current raw state directory without moving them back to `inbox/`.
+5. Preserve the source-relative path when moving originals into or between raw state directories. For first intake, this is the path below `inbox/`; for reprocessing, this is the path below the current `raw/<state>/` directory. The raw state directory records lifecycle status; the preserved relative path records source identity.
+6. Agent-generated Markdown never goes back into `raw/`; write temporary extraction output under `intake/tmp/` and accepted outputs under `intake/processed/`.
+7. `intake/tmp/` is not a holding area. Every temporary extraction must end by promoting accepted Markdown to `intake/processed/` or by deleting the temporary folder after the original moves to `raw/needs-review/`, `raw/ignored/`, or `raw/unsupported/`.
+8. Every factual wiki claim must be grounded in an original source, an intake Markdown output, a cited wiki page, or a confirmed discussion-derived source record under `reviews/reflection/`.
+9. If a claim is useful but unsupported, put it in `questions/`, a needs-verification note on the relevant page, or a low-confidence page under `wiki/claims/`.
+10. Do not copy API keys, tokens, passwords, private keys, session cookies, or sensitive personal information into generated notes. Redact and cite the source path instead.
+11. Intake logs and review reports must record the complete original filename, file type, source path, final raw destination, and any generated Markdown path. Do not use ellipses or shortened paths for source traceability.
+12. Intake must preserve meaningful text and identify important non-text material. If useful content appears to depend on figures, screenshots, scans, audio, or other non-text material that was not processed, move the original to `raw/needs-review/` and record the missing processing step.
+13. This is a text-first workflow. Attachments, images, scans, screenshots, and audio may remain part of the preserved original source, but they are not first-class wiki content by default. Do not create attachment asset directories, copy images into wiki pages, or add image-reference schemes unless the user explicitly asks for image handling.
 
 ## Page Conventions
 
@@ -115,7 +119,7 @@ Use `wiki/index.md` as the structured catalog and `logs/wiki.md` as the operatio
 
 Write deliverables to `artifacts/` when the user asks for a report, brief, outline, draft, comparison table, template, or other reusable output made from wiki knowledge. Track open questions and investigation trails under `questions/`. These files may use frontmatter with `type: artifact` or `type: question`, but they are work products next to the wiki, not canonical wiki knowledge pages.
 
-Create one `wiki/sources/` source card for every `digested` source. Do not create source cards for `ignored`, `unsupported`, or unresolved `needs-review` files.
+Create one source card under `wiki/sources/<source-relative-parent>/original-source-base-filename.md` for every `digested` source. Do not create source cards for `ignored`, `unsupported`, or unresolved `needs-review` files.
 
 A source card is the wiki-facing summary of a source, not an intake receipt. It must contain substantive content: source summary, key points, supported claims, scope, limitations, and links to the raw file, processed Markdown, source review, and manifest. A page with only frontmatter, file size, line count, processing date, or paths is invalid.
 
@@ -219,7 +223,7 @@ Use the shortest reliable extraction path allowed by `PROJECT.md` and the select
 
 | File type                   | Temporary extraction handling                                      |
 | --------------------------- | ------------------------------------------------------------------ |
-| Markdown                    | Normalize into `intake/tmp/YYYY-MM-DD/original-source-base-filename/source.md` before review |
+| Markdown                    | Normalize into `intake/tmp/YYYY-MM-DD/source-relative-parent/original-source-base-filename/source.md` before review |
 | PDF                         | Convert readable content to Markdown; scanned or image-heavy PDFs become `needs-review` when important content is not processed |
 | Word                        | Convert text, headings, tables, captions, and any supported document content; unprocessed important embedded material becomes `needs-review` |
 | PowerPoint                  | Convert to Markdown and preserve slide structure                   |
@@ -239,17 +243,17 @@ The intake order is:
 1. Take original files from `inbox/`.
 2. Inspect and record the complete raw file path, exact filename, file type, size, and basic readability.
 3. For batch intake and other multi-file requests, perform OCR precheck before extraction when any file appears likely to benefit from OCR. Present the grouped recommendation once and wait for the user's decision before enabling OCR.
-4. Use the `source-extraction` skill to select the source kind and provider, then extract or normalize the file to temporary Markdown under `intake/tmp/YYYY-MM-DD/original-source-base-filename/`.
+4. Use the `source-extraction` skill to select the source kind and provider, then extract or normalize the file to temporary Markdown under `intake/tmp/YYYY-MM-DD/source-relative-parent/original-source-base-filename/`.
 5. For archives, create a member listing first. Record each useful member's archive path, filename, detected type, and extraction result. Extract only members that are useful for review.
-6. If extraction fails, move the original file to `raw/unsupported/`, record the blocker in `intake/logs/YYYY-MM-DD.md`, delete the temporary folder, and stop.
-7. If extraction technically succeeds but the Markdown is garbled, empty, too thin to judge, obviously truncated, structurally broken, or missing important text, move the original to `raw/needs-review/`, record the extraction-quality question, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and stop.
-8. If the source is too large, ambiguous, encrypted, noisy, multimodal, or requires user selection before a final decision, move the original to `raw/needs-review/`, record the question, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and stop.
+6. If extraction fails, move the original file to `raw/unsupported/` while preserving its source-relative path, record the blocker in `intake/logs/YYYY-MM-DD.md`, delete the temporary folder, and stop.
+7. If extraction technically succeeds but the Markdown is garbled, empty, too thin to judge, obviously truncated, structurally broken, or missing important text, move the original to `raw/needs-review/` while preserving its source-relative path, record the extraction-quality question, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and stop.
+8. If the source is too large, ambiguous, encrypted, noisy, multimodal, or requires user selection before a final decision, move the original to `raw/needs-review/` while preserving its source-relative path, record the question, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and stop.
 9. Optionally write `digest.md` in the temporary intake folder when a short digest would make review easier; do not make digest mandatory.
 10. Run Source Review Gate on the temporary Markdown and optional digest, not on the raw filename alone.
-11. If the outcome is `digested`, promote the temporary Markdown to `intake/processed/YYYY-MM-DD/original-source-base-filename/`, write `source.md`, `summary.md`, `manifest.md`, include `digest.md` only if it was useful, move the original to `raw/digested/`, delete the temporary folder, then ingest.
-12. If the outcome is `ignored`, move the original to `raw/ignored/`, log the reason, delete the temporary folder, and stop.
-13. If the outcome is `unsupported`, move the original to `raw/unsupported/`, log the blocker, delete the temporary folder, and stop.
-14. If the outcome is `needs-review`, move the original to `raw/needs-review/`, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and record the question.
+11. If the outcome is `digested`, promote the temporary Markdown to `intake/processed/YYYY-MM-DD/source-relative-parent/original-source-base-filename/`, write `source.md`, `summary.md`, `manifest.md`, include `digest.md` only if it was useful, move the original to `raw/digested/` while preserving its source-relative path, delete the temporary folder, then ingest.
+12. If the outcome is `ignored`, move the original to `raw/ignored/` while preserving its source-relative path, log the reason, delete the temporary folder, and stop.
+13. If the outcome is `unsupported`, move the original to `raw/unsupported/` while preserving its source-relative path, log the blocker, delete the temporary folder, and stop.
+14. If the outcome is `needs-review`, move the original to `raw/needs-review/` while preserving its source-relative path, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and record the question.
 
 After a final outcome is reached for a source, no temporary folder for that source may remain under `intake/tmp/`.
 
@@ -274,10 +278,10 @@ Each reviewed item receives one outcome that maps to a raw file location:
 
 | Outcome | Raw destination | Intake effect | Meaning |
 | --- | --- | --- | --- |
-| `digested` | `raw/digested/` | Promote temporary Markdown to `intake/processed/`, then ingest | Useful, relevant, readable, and likely to improve the wiki |
-| `needs-review` | `raw/needs-review/` | Move useful review notes to `reviews/source-review/` and clean `intake/tmp/` | Potentially useful but requires user judgment before final handling |
-| `ignored` | `raw/ignored/` | Do not promote to `intake/processed/` and do not ingest | Duplicate, irrelevant, too shallow, or not worth preserving |
-| `unsupported` | `raw/unsupported/` | Do not promote to `intake/processed/` and do not ingest | Cannot currently be extracted, read, or trusted enough to review |
+| `digested` | `raw/digested/<source-relative-path>` | Promote temporary Markdown to `intake/processed/`, then ingest | Useful, relevant, readable, and likely to improve the wiki |
+| `needs-review` | `raw/needs-review/<source-relative-path>` | Move useful review notes to `reviews/source-review/` and clean `intake/tmp/` | Potentially useful but requires user judgment before final handling |
+| `ignored` | `raw/ignored/<source-relative-path>` | Do not promote to `intake/processed/` and do not ingest | Duplicate, irrelevant, too shallow, or not worth preserving |
+| `unsupported` | `raw/unsupported/<source-relative-path>` | Do not promote to `intake/processed/` and do not ingest | Cannot currently be extracted, read, or trusted enough to review |
 
 Use `digested` when a source adds new evidence, a useful framework, a meaningful contradiction, a reusable definition, a decision, a timeline, a comparison, a concrete example, or a strong source for a weak claim.
 
@@ -328,15 +332,15 @@ Each excerpt block must include:
 
 Missing heading context or required table context means the excerpt is incomplete and must not be ingested.
 
-After intake, move each original file from `inbox/` into exactly one state directory: `raw/digested/`, `raw/needs-review/`, `raw/ignored/`, or `raw/unsupported/`. `inbox/` must not retain files that were already handled once. Record every move in `intake/logs/YYYY-MM-DD.md` with complete filenames, file types, source paths, and final destinations.
+After intake, move each original file from `inbox/` into exactly one state directory: `raw/digested/`, `raw/needs-review/`, `raw/ignored/`, or `raw/unsupported/`, preserving the path below `inbox/`. `inbox/` must not retain files that were already handled once. Record every move in `intake/logs/YYYY-MM-DD.md` with complete filenames, file types, source paths, and final destinations.
 
-Treat `raw/needs-review/` as a queue, not a final archive. Each file moved there must have a recorded review question in `reviews/source-review/YYYY-MM-DD.md` or `intake/logs/YYYY-MM-DD.md`. When the user or a later agent resolves the question, restart intake from that original file, extract again to `intake/tmp/` if needed, then finish with `digested`, `ignored`, or `unsupported`. Do not leave a file in `raw/needs-review/` after a final decision exists.
+Treat `raw/needs-review/` as a queue, not a final archive. Each file moved there must have a recorded review question in `reviews/source-review/YYYY-MM-DD.md` or `intake/logs/YYYY-MM-DD.md`. When the user or a later agent resolves the question, restart intake from that original file in its current raw state directory, preserve the path below `raw/needs-review/`, extract again to `intake/tmp/` if needed, then finish with `digested`, `ignored`, or `unsupported`. Do not leave a file in `raw/needs-review/` after a final decision exists.
 
 ### Reprocessing and State Correction
 
 When a source previously marked `ignored`, `unsupported`, or `needs-review` is later resolved and accepted as `digested`, close the old state in the same pass:
 
-1. Move or remove the old raw state entry so the same original filename does not remain in two raw state directories.
+1. Move or remove the old raw state entry so the same source-relative path does not remain in two raw state directories.
 2. Update `intake/logs/YYYY-MM-DD.md` for the new handling pass.
 3. Update or append `reviews/source-review/YYYY-MM-DD.md` so the latest decision is visible.
 4. Write or update the accepted folder's `source.md`, `summary.md`, and `manifest.md`.
