@@ -65,6 +65,20 @@ cd llm-wiki-agent
 2. 创建所有必要的工作流目录 (`inbox/`, `raw/`, `intake/`, `wiki/` 等)。
 3. 将来源提取偏好保留在 `PROJECT.md` 中，由智能体在需要时确认。
 
+### 升级包文件
+
+将新版本包应用到已有工作区时，使用升级脚本：
+
+```bash
+# Windows
+.\scripts\upgrade.ps1 -TargetRoot "C:\path\to\your\workspace"
+
+# macOS / Linux
+./scripts/upgrade.sh -TargetRoot "/path/to/your/workspace"
+```
+
+升级只处理 `scripts/upgrade-manifest.txt` 中列出的条目。列出的文件会被覆盖；列出的目录会按包文件合并覆盖，并保留目标目录中额外存在的条目。工作区个性化配置应放在 `PROJECT.md`。
+
 ---
 
 ## 📂 4. 目录结构与职责

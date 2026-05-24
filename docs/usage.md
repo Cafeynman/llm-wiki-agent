@@ -65,6 +65,20 @@ To create the structure inside an existing separate Obsidian vault:
 2. Creates all necessary workflow directories (`inbox/`, `raw/`, `intake/`, `wiki/`, etc.).
 3. Leaves source extraction preferences in `PROJECT.md` for the agent to confirm when they matter.
 
+### Upgrade Package Files
+
+Use the upgrade scripts when applying a newer package release to an existing workspace:
+
+```bash
+# Windows
+.\scripts\upgrade.ps1 -TargetRoot "C:\path\to\your\workspace"
+
+# macOS / Linux
+./scripts/upgrade.sh -TargetRoot "/path/to/your/workspace"
+```
+
+The upgrade covers only entries listed in `scripts/upgrade-manifest.txt`. Listed files are overwritten. Listed directories are merged by overwriting package-managed files while leaving additional target entries in place. Keep workspace-specific configuration in `PROJECT.md`.
+
 ---
 
 ## 📂 4. Directory Structure

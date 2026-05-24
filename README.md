@@ -42,6 +42,7 @@ cd llm-wiki-agent
 *Note: For a separate Obsidian vault, pass the vault path like `.\scripts\init.ps1 -VaultRoot "C:\path\to\your\vault"`.*
 
 Default source extraction preferences are recorded in `PROJECT.md`. On the first source intake, the agent confirms any preference that matters for the task.
+For package upgrades, use the manifest-driven scripts documented in [Usage Guide](docs/usage.md#upgrade-package-files).
 
 **Your Minimal First Run:**
 1. Drop a source file in `inbox/example.md`.
@@ -116,7 +117,10 @@ To get the most out of LLM Wiki Agent, we recommend pairing it with:
 ├── pyproject.toml
 ├── scripts/
 │   ├── init.ps1
-│   └── init.sh
+│   ├── init.sh
+│   ├── upgrade-manifest.txt
+│   ├── upgrade.ps1
+│   └── upgrade.sh
 ├── .agents/
 │   └── skills/
 └── docs/

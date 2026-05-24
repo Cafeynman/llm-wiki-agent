@@ -42,6 +42,7 @@ cd llm-wiki-agent
 *提示：如果要使用单独的 Obsidian 库，请传递库路径，例如 `.\scripts\init.ps1 -VaultRoot "C:\path\to\your\vault"`。*
 
 默认来源提取偏好记录在 `PROJECT.md`。首次摄入来源材料时，智能体会确认与当前任务相关的偏好。
+后续升级包文件时，请使用 [使用指南](docs/usage.zh-CN.md#升级包文件) 中的 manifest 驱动升级脚本。
 
 **你的最小化首次运行：**
 1. 将源文件放入 `inbox/example.md`。
@@ -116,7 +117,10 @@ cd llm-wiki-agent
 ├── pyproject.toml
 ├── scripts/
 │   ├── init.ps1
-│   └── init.sh
+│   ├── init.sh
+│   ├── upgrade-manifest.txt
+│   ├── upgrade.ps1
+│   └── upgrade.sh
 ├── .agents/
 │   └── skills/
 └── docs/
