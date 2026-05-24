@@ -138,7 +138,7 @@ confidence: medium
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 sources:
-  - raw/digested/original-filename.ext
+  - raw/digested/source-relative-parent/original-filename.ext
   - intake/processed/source-relative-parent/original-source-base-filename/source.md
   - reviews/source-review/YYYY-MM-DD.md
 tags:
@@ -170,7 +170,7 @@ State missing context, weak extraction, image-only material, uncertain claims, a
 
 ## Traceability
 
-- Original file: [[raw/digested/original-filename.ext]]
+- Original file: [[raw/digested/source-relative-parent/original-filename.ext]]
 - Processed Markdown: [[intake/processed/source-relative-parent/original-source-base-filename/source]]
 - Source review: [[reviews/source-review/YYYY-MM-DD]]
 - Manifest: [[intake/processed/source-relative-parent/original-source-base-filename/manifest]]
@@ -200,7 +200,8 @@ Classify the input before acting, then enter the matching path below. The "Start
 | -------------------------------------------------------------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------- |
 | A batch of candidate raw files, `inbox/`, or a triage request                                            | Intake                               | Extract each file to `intake/tmp/`, optionally write a digest, then run Source Review Gate     |
 | One specific raw file in `inbox/`                                                                        | Intake                               | Extract or normalize to `intake/tmp/`, optionally write a digest, then run Source Review Gate  |
-| A non-Markdown source that needs extraction                                                              | Intake                               | Ensure the original is in `inbox/`, extract to `intake/tmp/`, then run Source Review Gate  |
+| A file already under `raw/digested/`, `raw/needs-review/`, `raw/ignored/`, or `raw/unsupported/` that needs reprocessing | Intake | Use the current raw state directory as the intake root, preserve the path below it, extract to `intake/tmp/`, then run Source Review Gate |
+| A new non-Markdown source that needs extraction                                                          | Intake                               | Ensure the original is in `inbox/`, extract to `intake/tmp/`, then run Source Review Gate  |
 | Large, archived, table-heavy, slide, scanned, multimodal, or noisy source                                | Large File and Context Budget Policy | Inspect metadata first; if it cannot be completed in the same pass, move the original to `raw/needs-review/` and record the next review question |
 | An existing intake output under `intake/processed/`                                                      | Ingest                               | Update manifest, `wiki/index.md`, `wiki/home.md`, and `logs/wiki.md` as needed                 |
 | An existing wiki page that needs new knowledge merged in                                                 | Ingest                               | Update related wiki pages; track unresolved threads in `questions/`                            |
@@ -242,8 +243,8 @@ The intake order is:
 
 `intake/tmp/` is the first Markdown landing area after extraction or normalization. `intake/processed/` is not a scratch area; it is only for Markdown accepted by Source Review Gate and ready for ingest. Any extraction or normalization path that produces accepted Markdown must follow the same lifecycle and output requirements.
 
-1. Take original files from `inbox/`.
-2. Inspect and record the complete raw file path, exact filename, file type, size, and basic readability.
+1. Choose the intake root. For first intake, take original files from `inbox/`. For reprocessing, take original files from their current `raw/<state>/` directory.
+2. Compute the source-relative path from the intake root, then inspect and record the complete raw file path, exact filename, file type, size, and basic readability.
 3. For batch intake and other multi-file requests, perform OCR precheck before extraction when any file appears likely to benefit from OCR. Present the grouped recommendation once and wait for the user's decision before enabling OCR.
 4. Use the `source-extraction` skill to select the source kind and provider, then extract or normalize the file to temporary Markdown under `intake/tmp/source-relative-parent/original-source-base-filename/`.
 5. For archives, create a member listing first. Record each useful member's archive path, filename, detected type, and extraction result. Extract only members that are useful for review.
@@ -371,8 +372,8 @@ When a source is ready to become wiki knowledge:
 3. Read the original source only when accuracy or extraction quality needs verification.
 4. Extract durable knowledge: main thesis, key claims, evidence, counterevidence, named entities, important concepts, decisions, recommendations, contradictions, and open questions.
 5. Verify Obsidian Markdown before writing wiki pages: internal links must be wikilinks, wikilink aliases inside tables must escape `|` as `\|`, frontmatter must parse as valid Obsidian properties, bold markers must be balanced, and traceability links must point to existing vault files.
-6. Create or update exactly one content-rich source card under `wiki/sources/`.
-7. For long books, manuals, standards, reports, or other sources that need a structured reading surface, create or update a source-specific wiki entry only when useful. Put full-source detailed summaries, core viewpoints, knowledge flow, chapter navigation, and chapter-level digests there, for example under `wiki/books/original-source-base-filename/`.
+6. Create or update exactly one content-rich source card under `wiki/sources/<source-relative-parent>/original-source-base-filename.md`.
+7. For long books, manuals, standards, reports, or other sources that need a structured reading surface, create or update a source-specific wiki entry only when useful. Put full-source detailed summaries, core viewpoints, knowledge flow, chapter navigation, and chapter-level digests there, for example under `wiki/books/source-relative-parent/original-source-base-filename/`.
 8. Create or update relevant pages in `wiki/entities/`, `wiki/concepts/`, `wiki/claims/`, or `wiki/syntheses/` only when useful.
 9. Create or update `questions/` only when an unresolved investigation thread is worth tracking separately.
 10. Update `wiki/overview.md` only when the source changes the overall synthesis.
@@ -392,6 +393,8 @@ Initial state:
 └── inbox/
     ├── paper.pdf
     ├── notes.md
+    ├── bundle/
+    │   └── report.pdf
     ├── slides.pptx
     ├── duplicate.html
     └── corrupted.pdf
@@ -404,6 +407,8 @@ Intake first converts or normalizes each original file into temporary Markdown:
 ├── inbox/
 │   ├── paper.pdf
 │   ├── notes.md
+│   ├── bundle/
+│   │   └── report.pdf
 │   ├── slides.pptx
 │   ├── duplicate.html
 │   └── corrupted.pdf
@@ -418,6 +423,9 @@ Intake first converts or normalizes each original file into temporary Markdown:
         │       └── 02.md
         ├── notes/
         │   └── source.md
+        ├── bundle/
+        │   └── report/
+        │       └── source.md
         ├── slides/
         │   ├── source.md
         │   └── digest.md
@@ -432,6 +440,8 @@ If `corrupted.pdf` cannot be extracted, stop handling that file immediately:
 ├── inbox/
 │   ├── paper.pdf
 │   ├── notes.md
+│   ├── bundle/
+│   │   └── report.pdf
 │   ├── slides.pptx
 │   └── duplicate.html
 ├── raw/
@@ -448,6 +458,7 @@ Then run Source Review Gate on the temporary Markdown and optional digests:
 | ---------------- | ------------------------------------------------------- | -------------- | ----------------------------------------------------------------------------- |
 | `paper.pdf`      | `intake/tmp/paper/source.md`, chunks, digest | `digested`     | Promote to `intake/processed/`, move original to `raw/digested/`, clean `intake/tmp/`, update wiki |
 | `notes.md`       | `intake/tmp/notes/source.md`                 | `digested`     | Promote to `intake/processed/`, move original to `raw/digested/`, clean `intake/tmp/`, update wiki |
+| `bundle/report.pdf` | `intake/tmp/bundle/report/source.md`      | `digested`     | Promote to `intake/processed/bundle/report/`, move original to `raw/digested/bundle/report.pdf`, create `wiki/sources/bundle/report.md` |
 | `slides.pptx`    | `intake/tmp/slides/source.md`, digest        | `needs-review` | Move original to `raw/needs-review/`, record the question, clean `intake/tmp/` |
 | `duplicate.html` | `intake/tmp/duplicate/source.md`             | `ignored`      | Move original to `raw/ignored/`, log the reason, clean `intake/tmp/`           |
 | `corrupted.pdf`  | extraction failure                                      | `unsupported`  | Move original to `raw/unsupported/`, log the blocker                          |
@@ -460,7 +471,9 @@ Final state after accepted files are ingested:
 ├── raw/
 │   ├── digested/
 │   │   ├── paper.pdf
-│   │   └── notes.md
+│   │   ├── notes.md
+│   │   └── bundle/
+│   │       └── report.pdf
 │   ├── needs-review/
 │   │   └── slides.pptx
 │   ├── ignored/
@@ -478,10 +491,15 @@ Final state after accepted files are ingested:
 │   │   │       ├── index.md
 │   │   │       ├── 01.md
 │   │   │       └── 02.md
-│   │   └── notes/
-│   │       ├── source.md
-│   │       ├── summary.md
-│   │       └── manifest.md
+│   │   ├── notes/
+│   │   │   ├── source.md
+│   │   │   ├── summary.md
+│   │   │   └── manifest.md
+│   │   └── bundle/
+│   │       └── report/
+│   │           ├── source.md
+│   │           ├── summary.md
+│   │           └── manifest.md
 │   └── logs/
 │       └── YYYY-MM-DD.md
 ├── reviews/
@@ -493,6 +511,11 @@ Final state after accepted files are ingested:
     ├── home.md
     ├── index.md
     ├── overview.md
+    ├── sources/
+    │   ├── paper.md
+    │   ├── notes.md
+    │   └── bundle/
+    │       └── report.md
     └── concepts/
         └── relevant-concept.md
 ```

@@ -67,7 +67,9 @@ When writing Obsidian frontmatter property values, wrap strings containing `"` i
 
 When generating intake Markdown from an original file, including MarkItDown, manual normalization, repaired document extraction, or any other provider, the intake directory name must preserve the original file's base filename and source language. Except for removing the extension, do not replace, delete, transcode, URL encode, change case, translate, romanize, or slugify any character.
 
-Use the same source-language naming rule for `wiki/sources/` source cards. Do not translate a source title into another language or slug unless the user explicitly asks for that naming scheme.
+Also preserve the source-relative parent path defined in `WIKI.md` when writing `intake/tmp/`, `intake/processed/`, and `wiki/sources/`. Do not add a date directory under `intake/tmp/` or `intake/processed/`; processing dates belong in manifests, logs, and review records.
+
+Use the same source-relative parent and source-language naming rule for `wiki/sources/` source cards. Do not translate a source title into another language or slug unless the user explicitly asks for that naming scheme.
 
 ## Source Extraction Providers
 
