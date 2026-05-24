@@ -90,7 +90,7 @@ cd llm-wiki-agent
 1. **放入文件：** 将原始文件放入 `inbox/` (如 `inbox/example.md`)。
 2. **提示智能体：** 询问智能体：*"请根据 AGENTS.md, PROJECT.md 和 WIKI.md 处理 inbox/ 中的文件。"*
 3. **智能体操作：** 
-    - 智能体按照 `PROJECT.md` 将内容提取为 `intake/tmp/YYYY-MM-DD/source-relative-parent/original-source-base-filename/source.md`。
+    - 智能体按照 `PROJECT.md` 将内容提取为 `intake/tmp/source-relative-parent/original-source-base-filename/source.md`。
     - 它会执行 **来源审查门 (Source Review Gate)**。
     - 原始文件被移入 `raw/` 下对应的状态子目录，并保留其在 `inbox/` 下的相对路径。
     - 只有被标记为 `digested` (已通过) 的内容才会被移至 `intake/processed/` 并用于更新 `wiki/`。

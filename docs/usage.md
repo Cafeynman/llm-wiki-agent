@@ -90,7 +90,7 @@ Follow this lifecycle for adding new knowledge:
 1. **Drop File:** Put an original file into `inbox/` (e.g., `inbox/example.md`).
 2. **Prompt Agent:** Ask the agent: *"Process the files in inbox/ according to AGENTS.md, PROJECT.md, and WIKI.md."*
 3. **Agent Action:** 
-    - The agent follows `PROJECT.md` and extracts content into `intake/tmp/YYYY-MM-DD/source-relative-parent/original-source-base-filename/source.md`.
+    - The agent follows `PROJECT.md` and extracts content into `intake/tmp/source-relative-parent/original-source-base-filename/source.md`.
     - It runs the **Source Review Gate**.
     - Original file moves to a `raw/` state subfolder while preserving its path below `inbox/`.
     - Only `digested` (approved) content moves to `intake/processed/` and updates `wiki/`.

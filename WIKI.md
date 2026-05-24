@@ -47,7 +47,7 @@ Create only the directories required for the current task. Do not add exports, d
 For each digested raw source, write intake outputs under the source-relative path:
 
 ```text
-intake/processed/YYYY-MM-DD/source-relative-parent/original-source-base-filename/
+intake/processed/source-relative-parent/original-source-base-filename/
 ├── source.md
 ├── summary.md
 ├── manifest.md
@@ -60,6 +60,8 @@ intake/processed/YYYY-MM-DD/source-relative-parent/original-source-base-filename
 If the source has no parent directory under the intake root, omit `source-relative-parent`. The `original-source-base-filename` directory must preserve the original source file's base filename and source language. Except for removing the extension, do not translate, romanize, slugify, lowercase, URL encode, or simplify it. Use the same source-relative parent and source-language base filename for source cards under `wiki/sources/`.
 
 The source-relative path is the path below `inbox/` for first intake, or the path below the current `raw/<state>/` directory for reprocessing. Preserve this relative path when moving originals between raw state directories, when writing `intake/tmp/` or `intake/processed/` outputs, and when creating source cards under `wiki/sources/`. The relative path is traceability, not a wiki taxonomy.
+
+Do not add a date directory under `intake/tmp/` or `intake/processed/`. Processing dates belong in `manifest.md`, `intake/logs/YYYY-MM-DD.md`, `reviews/source-review/YYYY-MM-DD.md`, and other dated logs or review records.
 
 If preserving the source-relative output path would collide with an existing path for a distinct source, do not invent a suffix or choose a new title by assumption. Move the duplicate or ambiguous source to `raw/needs-review/`, record the naming collision question, and wait for user judgment.
 
@@ -105,7 +107,7 @@ created: YYYY-MM-DD
 updated: YYYY-MM-DD
 sources:
   - raw/digested/example.pdf
-  - intake/processed/YYYY-MM-DD/original-source-base-filename/source.md
+  - intake/processed/source-relative-parent/original-source-base-filename/source.md
 tags:
   - llm-wiki
 ---
@@ -137,7 +139,7 @@ created: YYYY-MM-DD
 updated: YYYY-MM-DD
 sources:
   - raw/digested/original-filename.ext
-  - intake/processed/YYYY-MM-DD/original-source-base-filename/source.md
+  - intake/processed/source-relative-parent/original-source-base-filename/source.md
   - reviews/source-review/YYYY-MM-DD.md
 tags:
   - llm-wiki
@@ -169,9 +171,9 @@ State missing context, weak extraction, image-only material, uncertain claims, a
 ## Traceability
 
 - Original file: [[raw/digested/original-filename.ext]]
-- Processed Markdown: [[intake/processed/YYYY-MM-DD/original-source-base-filename/source]]
+- Processed Markdown: [[intake/processed/source-relative-parent/original-source-base-filename/source]]
 - Source review: [[reviews/source-review/YYYY-MM-DD]]
-- Manifest: [[intake/processed/YYYY-MM-DD/original-source-base-filename/manifest]]
+- Manifest: [[intake/processed/source-relative-parent/original-source-base-filename/manifest]]
 ```
 
 ## Core Workflows
@@ -223,7 +225,7 @@ Use the shortest reliable extraction path allowed by `PROJECT.md` and the select
 
 | File type                   | Temporary extraction handling                                      |
 | --------------------------- | ------------------------------------------------------------------ |
-| Markdown                    | Normalize into `intake/tmp/YYYY-MM-DD/source-relative-parent/original-source-base-filename/source.md` before review |
+| Markdown                    | Normalize into `intake/tmp/source-relative-parent/original-source-base-filename/source.md` before review |
 | PDF                         | Convert readable content to Markdown; scanned or image-heavy PDFs become `needs-review` when important content is not processed |
 | Word                        | Convert text, headings, tables, captions, and any supported document content; unprocessed important embedded material becomes `needs-review` |
 | PowerPoint                  | Convert to Markdown and preserve slide structure                   |
@@ -243,14 +245,14 @@ The intake order is:
 1. Take original files from `inbox/`.
 2. Inspect and record the complete raw file path, exact filename, file type, size, and basic readability.
 3. For batch intake and other multi-file requests, perform OCR precheck before extraction when any file appears likely to benefit from OCR. Present the grouped recommendation once and wait for the user's decision before enabling OCR.
-4. Use the `source-extraction` skill to select the source kind and provider, then extract or normalize the file to temporary Markdown under `intake/tmp/YYYY-MM-DD/source-relative-parent/original-source-base-filename/`.
+4. Use the `source-extraction` skill to select the source kind and provider, then extract or normalize the file to temporary Markdown under `intake/tmp/source-relative-parent/original-source-base-filename/`.
 5. For archives, create a member listing first. Record each useful member's archive path, filename, detected type, and extraction result. Extract only members that are useful for review.
 6. If extraction fails, move the original file to `raw/unsupported/` while preserving its source-relative path, record the blocker in `intake/logs/YYYY-MM-DD.md`, delete the temporary folder, and stop.
 7. If extraction technically succeeds but the Markdown is garbled, empty, too thin to judge, obviously truncated, structurally broken, or missing important text, move the original to `raw/needs-review/` while preserving its source-relative path, record the extraction-quality question, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and stop.
 8. If the source is too large, ambiguous, encrypted, noisy, multimodal, or requires user selection before a final decision, move the original to `raw/needs-review/` while preserving its source-relative path, record the question, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and stop.
 9. Optionally write `digest.md` in the temporary intake folder when a short digest would make review easier; do not make digest mandatory.
 10. Run Source Review Gate on the temporary Markdown and optional digest, not on the raw filename alone.
-11. If the outcome is `digested`, promote the temporary Markdown to `intake/processed/YYYY-MM-DD/source-relative-parent/original-source-base-filename/`, write `source.md`, `summary.md`, `manifest.md`, include `digest.md` only if it was useful, move the original to `raw/digested/` while preserving its source-relative path, delete the temporary folder, then ingest.
+11. If the outcome is `digested`, promote the temporary Markdown to `intake/processed/source-relative-parent/original-source-base-filename/`, write `source.md`, `summary.md`, `manifest.md`, include `digest.md` only if it was useful, move the original to `raw/digested/` while preserving its source-relative path, delete the temporary folder, then ingest.
 12. If the outcome is `ignored`, move the original to `raw/ignored/` while preserving its source-relative path, log the reason, delete the temporary folder, and stop.
 13. If the outcome is `unsupported`, move the original to `raw/unsupported/` while preserving its source-relative path, log the blocker, delete the temporary folder, and stop.
 14. If the outcome is `needs-review`, move the original to `raw/needs-review/` while preserving its source-relative path, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and record the question.
@@ -407,21 +409,20 @@ Intake first converts or normalizes each original file into temporary Markdown:
 │   └── corrupted.pdf
 └── intake/
     └── tmp/
-        └── YYYY-MM-DD/
-            ├── paper/
-            │   ├── source.md
-            │   ├── digest.md
-            │   └── chunks/
-            │       ├── index.md
-            │       ├── 01.md
-            │       └── 02.md
-            ├── notes/
-            │   └── source.md
-            ├── slides/
-            │   ├── source.md
-            │   └── digest.md
-            └── duplicate/
-                └── source.md
+        ├── paper/
+        │   ├── source.md
+        │   ├── digest.md
+        │   └── chunks/
+        │       ├── index.md
+        │       ├── 01.md
+        │       └── 02.md
+        ├── notes/
+        │   └── source.md
+        ├── slides/
+        │   ├── source.md
+        │   └── digest.md
+        └── duplicate/
+            └── source.md
 ```
 
 If `corrupted.pdf` cannot be extracted, stop handling that file immediately:
@@ -445,10 +446,10 @@ Then run Source Review Gate on the temporary Markdown and optional digests:
 
 | File             | Review input                                            | Outcome        | Result                                                                        |
 | ---------------- | ------------------------------------------------------- | -------------- | ----------------------------------------------------------------------------- |
-| `paper.pdf`      | `intake/tmp/YYYY-MM-DD/paper/source.md`, chunks, digest | `digested`     | Promote to `intake/processed/`, move original to `raw/digested/`, clean `intake/tmp/`, update wiki |
-| `notes.md`       | `intake/tmp/YYYY-MM-DD/notes/source.md`                 | `digested`     | Promote to `intake/processed/`, move original to `raw/digested/`, clean `intake/tmp/`, update wiki |
-| `slides.pptx`    | `intake/tmp/YYYY-MM-DD/slides/source.md`, digest        | `needs-review` | Move original to `raw/needs-review/`, record the question, clean `intake/tmp/` |
-| `duplicate.html` | `intake/tmp/YYYY-MM-DD/duplicate/source.md`             | `ignored`      | Move original to `raw/ignored/`, log the reason, clean `intake/tmp/`           |
+| `paper.pdf`      | `intake/tmp/paper/source.md`, chunks, digest | `digested`     | Promote to `intake/processed/`, move original to `raw/digested/`, clean `intake/tmp/`, update wiki |
+| `notes.md`       | `intake/tmp/notes/source.md`                 | `digested`     | Promote to `intake/processed/`, move original to `raw/digested/`, clean `intake/tmp/`, update wiki |
+| `slides.pptx`    | `intake/tmp/slides/source.md`, digest        | `needs-review` | Move original to `raw/needs-review/`, record the question, clean `intake/tmp/` |
+| `duplicate.html` | `intake/tmp/duplicate/source.md`             | `ignored`      | Move original to `raw/ignored/`, log the reason, clean `intake/tmp/`           |
 | `corrupted.pdf`  | extraction failure                                      | `unsupported`  | Move original to `raw/unsupported/`, log the blocker                          |
 
 Final state after accepted files are ingested:
@@ -468,20 +469,19 @@ Final state after accepted files are ingested:
 │       └── corrupted.pdf
 ├── intake/
 │   ├── processed/
-│   │   └── YYYY-MM-DD/
-│   │       ├── paper/
-│   │       │   ├── source.md
-│   │       │   ├── summary.md
-│   │       │   ├── manifest.md
-│   │       │   ├── digest.md
-│   │       │   └── chunks/
-│   │       │       ├── index.md
-│   │       │       ├── 01.md
-│   │       │       └── 02.md
-│   │       └── notes/
-│   │           ├── source.md
-│   │           ├── summary.md
-│   │           └── manifest.md
+│   │   ├── paper/
+│   │   │   ├── source.md
+│   │   │   ├── summary.md
+│   │   │   ├── manifest.md
+│   │   │   ├── digest.md
+│   │   │   └── chunks/
+│   │   │       ├── index.md
+│   │   │       ├── 01.md
+│   │   │       └── 02.md
+│   │   └── notes/
+│   │       ├── source.md
+│   │       ├── summary.md
+│   │       └── manifest.md
 │   └── logs/
 │       └── YYYY-MM-DD.md
 ├── reviews/
@@ -607,7 +607,7 @@ what should I ingest next?
 intake
 process raw files
 convert raw files to markdown
-ingest intake/processed/YYYY-MM-DD/original-source-base-filename/source.md
+ingest intake/processed/source-relative-parent/original-source-base-filename/source.md
 process this source
 extract claims
 reflect
