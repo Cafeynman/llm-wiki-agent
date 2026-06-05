@@ -37,7 +37,7 @@ If you want automatic reminders or setup assistance, use the opt-in hook workflo
 | Found better approach | Log to `.learnings/LEARNINGS.md` with category `best_practice` |
 | Simplify/Harden recurring patterns | Log/update `.learnings/LEARNINGS.md` with `Source: simplify-and-harden` and a stable `Pattern-Key` |
 | Similar to existing entry | Link with `**See Also**`, consider priority bump |
-| Broadly applicable learning | Promote to `CLAUDE.md`, `AGENTS.md`, and/or `.github/copilot-instructions.md` |
+| Broadly applicable learning | Promote to `AGENTS.md` and/or `.github/copilot-instructions.md`; mirror to `CLAUDE.md` only when it is an active agent adapter |
 | Workflow improvements | Promote to `AGENTS.md` (OpenClaw workspace) |
 | Tool gotchas | Promote to `TOOLS.md` (OpenClaw workspace) |
 | Behavioral patterns | Promote to `SOUL.md` (OpenClaw workspace) |
@@ -136,15 +136,15 @@ mkdir -p .learnings
 
 Create the files inline using the headers shown above. Avoid reading templates from the current repo or workspace unless you explicitly trust that path.
 
-### Add reference to agent files AGENTS.md, CLAUDE.md, or .github/copilot-instructions.md to remind yourself to log learnings. (this is an alternative to hook-based reminders)
+### Add reference to agent files such as AGENTS.md or .github/copilot-instructions.md to remind yourself to log learnings. Add CLAUDE.md only when it is an active adapter for the workspace. (this is an alternative to hook-based reminders)
 
 #### Self-Improvement Workflow
 
 When errors or corrections occur:
 1. Log to `.learnings/ERRORS.md`, `LEARNINGS.md`, or `FEATURE_REQUESTS.md`
 2. Review and promote broadly applicable learnings to:
-   - `CLAUDE.md` - project facts and conventions
-   - `AGENTS.md` - workflows and automation
+   - `AGENTS.md` - canonical workflows, automation, and agent-facing project rules
+   - `CLAUDE.md` - Claude adapter mirror only when the workspace uses it
    - `.github/copilot-instructions.md` - Copilot context
 
 ## Logging Format
@@ -277,7 +277,7 @@ When an issue is fixed, update the entry:
 Other status values:
 - `in_progress` - Actively being worked on
 - `wont_fix` - Decided not to address (add reason in Resolution notes)
-- `promoted` - Elevated to CLAUDE.md, AGENTS.md, or .github/copilot-instructions.md
+- `promoted` - Elevated to AGENTS.md, .github/copilot-instructions.md, or an active adapter file
 
 ## Promoting to Project Memory
 
@@ -294,8 +294,8 @@ When a learning is broadly applicable (not a one-off fix), promote it to permane
 
 | Target | What Belongs There |
 |--------|-------------------|
-| `CLAUDE.md` | Project facts, conventions, gotchas for all Claude interactions |
-| `AGENTS.md` | Agent-specific workflows, tool usage patterns, automation rules |
+| `AGENTS.md` | Canonical agent workflows, tool usage patterns, automation rules, and durable project rules |
+| `CLAUDE.md` | Claude-specific adapter notes only when the workspace uses this file |
 | `.github/copilot-instructions.md` | Project context and conventions for GitHub Copilot |
 | `SOUL.md` | Behavioral guidelines, communication style, principles (OpenClaw workspace) |
 | `TOOLS.md` | Tool capabilities, usage patterns, integration gotchas (OpenClaw workspace) |
@@ -306,7 +306,7 @@ When a learning is broadly applicable (not a one-off fix), promote it to permane
 2. **Add** to appropriate section in target file (create file if needed)
 3. **Update** original entry:
    - Change `**Status**: pending` → `**Status**: promoted`
-   - Add `**Promoted**: CLAUDE.md`, `AGENTS.md`, or `.github/copilot-instructions.md`
+   - Add `**Promoted**: AGENTS.md`, `.github/copilot-instructions.md`, or an active adapter file
 
 ### Promotion Examples
 
@@ -314,7 +314,7 @@ When a learning is broadly applicable (not a one-off fix), promote it to permane
 > Project uses pnpm workspaces. Attempted `npm install` but failed. 
 > Lock file is `pnpm-lock.yaml`. Must use `pnpm install`.
 
-**In CLAUDE.md** (concise):
+**In AGENTS.md** (concise):
 ```markdown
 ## Build & Dependencies
 - Package manager: pnpm (not npm) - use `pnpm install`
@@ -339,7 +339,7 @@ If logging something similar to an existing entry:
 2. **Link entries**: Add `**See Also**: ERR-20250110-001` in Metadata
 3. **Bump priority** if issue keeps recurring
 4. **Consider systemic fix**: Recurring issues often indicate:
-   - Missing documentation (→ promote to CLAUDE.md or .github/copilot-instructions.md)
+   - Missing documentation (→ promote to AGENTS.md or .github/copilot-instructions.md)
    - Missing automation (→ add to AGENTS.md)
    - Architectural problem (→ create tech debt ticket)
 
@@ -372,9 +372,9 @@ Promote recurring patterns into agent context/system prompt files when all are t
 - Occurred within a 30-day window
 
 Promotion targets:
-- `CLAUDE.md`
 - `AGENTS.md`
 - `.github/copilot-instructions.md`
+- active adapter files such as `CLAUDE.md` only when the workspace uses them
 - `SOUL.md` / `TOOLS.md` for OpenClaw workspace-level guidance when applicable
 
 Write promoted rules as short prevention rules (what to do before/while coding),
@@ -465,7 +465,7 @@ Use to filter learnings by codebase region:
 4. **Link related files** - makes fixes easier
 5. **Suggest concrete fixes** - not just "investigate"
 6. **Use consistent categories** - enables filtering
-7. **Promote aggressively** - if in doubt, add to CLAUDE.md or .github/copilot-instructions.md
+7. **Promote aggressively** - if in doubt, add to AGENTS.md or .github/copilot-instructions.md
 8. **Review regularly** - stale learnings lose value
 
 ## Gitignore Options
