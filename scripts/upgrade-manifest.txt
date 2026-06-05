@@ -7,6 +7,7 @@ file README.zh-CN.md
 file LICENSE
 file pyproject.toml
 file .gitattributes
+file .gitignore
 dir docs
 dir scripts
 dir .agents/skills

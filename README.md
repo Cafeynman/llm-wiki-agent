@@ -39,7 +39,7 @@ cd llm-wiki-agent
 ./scripts/init.sh -VaultRoot .
 ```
 
-*Note: For a separate Obsidian vault, pass the vault path like `.\scripts\init.ps1 -VaultRoot "C:\path\to\your\vault"`.*
+*Note: For a separate Obsidian vault, pass the vault path like `.\scripts\init.ps1 -VaultRoot "C:\path\to\your\vault"`. The target vault becomes the working root and receives the package-managed agent files, local skills, scripts, docs, and runtime structure. Package-managed files are replaced by the package copy; vault-specific preferences belong in `PROJECT.md`.*
 
 Default source extraction preferences are recorded in `PROJECT.md`. On the first source intake, the agent confirms any preference that matters for the task.
 For package upgrades, use the manifest-driven scripts documented in [Usage Guide](docs/usage.md#upgrade-package-files).

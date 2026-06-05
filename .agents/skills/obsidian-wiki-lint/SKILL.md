@@ -12,7 +12,7 @@ Maintain an Obsidian wiki with deterministic checks before judgment-heavy cleanu
 Run scripts from the vault or package root with `uv run --no-project`. The scripts use only Python standard library modules and require no Node.js or npm dependencies. `--no-project` avoids installing unrelated project dependencies just to run lint utilities.
 
 ```powershell
-uv run --no-project skills/obsidian-wiki-lint/scripts/lint_wiki.py --vault . --scope wiki
+uv run --no-project .agents/skills/obsidian-wiki-lint/scripts/lint_wiki.py --vault . --scope wiki
 ```
 
 ## Verification Architecture
@@ -42,25 +42,25 @@ When users request complex health checks or business logic validation, follow a 
 Check wiki pages:
 
 ```powershell
-uv run --no-project skills/obsidian-wiki-lint/scripts/lint_wiki.py --vault . --scope wiki
+uv run --no-project .agents/skills/obsidian-wiki-lint/scripts/lint_wiki.py --vault . --scope wiki
 ```
 
 Preview truncated link fixes:
 
 ```powershell
-uv run --no-project skills/obsidian-wiki-lint/scripts/fix_truncated_links.py --vault . --source-file wiki/sources/example.md --target-dir intake/processed/example
+uv run --no-project .agents/skills/obsidian-wiki-lint/scripts/fix_truncated_links.py --vault . --source-file wiki/sources/example.md --target-dir intake/processed/example
 ```
 
 Apply reviewed truncated link fixes:
 
 ```powershell
-uv run --no-project skills/obsidian-wiki-lint/scripts/fix_truncated_links.py --vault . --source-file wiki/sources/example.md --target-dir intake/processed/example --write
+uv run --no-project .agents/skills/obsidian-wiki-lint/scripts/fix_truncated_links.py --vault . --source-file wiki/sources/example.md --target-dir intake/processed/example --write
 ```
 
 Preview conservative concept cross-links:
 
 ```powershell
-uv run --no-project skills/obsidian-wiki-lint/scripts/crosslink_concepts.py --vault . --concepts-dir wiki/concepts --alias-file tmp/concept-aliases.json
+uv run --no-project .agents/skills/obsidian-wiki-lint/scripts/crosslink_concepts.py --vault . --concepts-dir wiki/concepts --alias-file tmp/concept-aliases.json
 ```
 
 ## Guardrails

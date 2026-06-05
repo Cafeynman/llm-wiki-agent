@@ -8,23 +8,23 @@ Detailed examples and patterns for document conversion.
 
 ```bash
 # To stdout
-markitdown document.pdf
+uv run markitdown document.pdf
 
 # To file
-markitdown document.pdf -o output.md
+uv run markitdown document.pdf -o output.md
 
 # From stdin
-cat document.pdf | markitdown > output.md
+cat document.pdf | uv run markitdown > output.md
 ```
 
 ### Web Content
 
 ```bash
 # Fetch and convert URL
-markitdown https://example.com/docs -o docs.md
+uv run markitdown https://example.com/docs -o docs.md
 
 # GitHub README
-markitdown https://raw.githubusercontent.com/user/repo/main/README.md
+uv run markitdown https://raw.githubusercontent.com/user/repo/main/README.md
 ```
 
 ### Batch Processing
@@ -32,24 +32,24 @@ markitdown https://raw.githubusercontent.com/user/repo/main/README.md
 ```bash
 # Convert all PDFs
 for file in *.pdf; do
-  markitdown "$file" -o "${file%.pdf}.md"
+  uv run markitdown "$file" -o "${file%.pdf}.md"
 done
 
 # Using the included script
-python scripts/batch_convert.py docs/*.pdf -o markdown/ -v
+uv run .agents/skills/markitdown-skill/scripts/batch_convert.py docs/*.pdf -o markdown/ -v
 ```
 
 ### Advanced Options
 
 ```bash
 # Enable plugins
-markitdown --use-plugins file.pdf
+uv run markitdown --use-plugins file.pdf
 
 # List plugins
-markitdown --list-plugins
+uv run markitdown --list-plugins
 
 # Azure Document Intelligence (complex PDFs)
-markitdown file.pdf -d -e "<endpoint>" -o output.md
+uv run markitdown file.pdf -d -e "<endpoint>" -o output.md
 ```
 
 ---
@@ -118,7 +118,7 @@ try:
     print(result.text_content)
 except ImportError as e:
     print(f"Missing dependency: {e}")
-    print("Install with: pip install 'markitdown[pdf]'")
+    print("Refresh the project environment with: uv sync")
 except Exception as e:
     print(f"Conversion failed: {e}")
 ```
@@ -131,16 +131,16 @@ except Exception as e:
 
 ```bash
 # Simple extraction
-markitdown document.pdf -o document.md
+uv run markitdown document.pdf -o document.md
 
 # Complex layouts (Azure)
-markitdown document.pdf -d -e "<endpoint>" -o document.md
+uv run markitdown document.pdf -d -e "<endpoint>" -o document.md
 ```
 
 ### PowerPoint Presentations
 
 ```bash
-markitdown presentation.pptx -o slides.md
+uv run markitdown presentation.pptx -o slides.md
 ```
 
 ```python
@@ -153,7 +153,7 @@ result = md.convert("presentation.pptx")
 ### Excel Spreadsheets
 
 ```bash
-markitdown spreadsheet.xlsx -o data.md
+uv run markitdown spreadsheet.xlsx -o data.md
 ```
 
 Output format:
@@ -169,28 +169,28 @@ Output format:
 
 ```bash
 # Requires Tesseract OCR
-markitdown scanned-document.jpg -o extracted.md
+uv run markitdown scanned-document.jpg -o extracted.md
 ```
 
 ### Audio Transcription
 
 ```bash
-pip install 'markitdown[audio-transcription]'
-markitdown recording.mp3 -o transcript.md
+uv sync
+uv run markitdown recording.mp3 -o transcript.md
 ```
 
 ### YouTube Videos
 
 ```bash
-pip install 'markitdown[youtube-transcription]'
-markitdown "https://youtube.com/watch?v=VIDEO_ID" -o transcript.md
+uv sync
+uv run markitdown "https://youtube.com/watch?v=VIDEO_ID" -o transcript.md
 ```
 
 ### ZIP Archives
 
 ```bash
 # Iterates over all files inside
-markitdown archive.zip -o contents.md
+uv run markitdown archive.zip -o contents.md
 ```
 
 ---

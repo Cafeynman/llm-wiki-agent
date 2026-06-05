@@ -13,34 +13,28 @@ This skill provides:
 - ✅ A batch conversion script (`scripts/batch_convert.py`)
 - ✅ Usage examples and API reference
 
-The actual document conversion is done by Microsoft's `markitdown` CLI, installed separately via pip.
+In this package, the actual document conversion is done by Microsoft's `markitdown` CLI through the project `uv` environment.
 
 ## Install
 
-### Via ClawHub
-```bash
-clawhub install markitdown-skill
-pip install 'markitdown[all]'  # Install the CLI
-```
+From the package root:
 
-### Manual
 ```bash
-cd ~/.openclaw/skills
-git clone https://github.com/karmanverma/markitdown-skill.git markitdown
-pip install 'markitdown[all]'
+uv sync
+uv run markitdown --help
 ```
 
 ## Quick Start
 
 ```bash
 # Convert PDF
-markitdown document.pdf -o output.md
+uv run markitdown document.pdf -o output.md
 
 # Fetch web docs
-markitdown https://example.com/docs -o docs.md
+uv run markitdown https://example.com/docs -o docs.md
 
 # Batch convert
-python ~/.openclaw/skills/markitdown/scripts/batch_convert.py docs/*.pdf -o markdown/
+uv run .agents/skills/markitdown-skill/scripts/batch_convert.py docs/*.pdf -o markdown/
 ```
 
 ## Supported Formats
@@ -58,7 +52,7 @@ python ~/.openclaw/skills/markitdown/scripts/batch_convert.py docs/*.pdf -o mark
 
 ## Documentation
 
-- [SKILL.md](llm-wiki-agent/skills/markitdown-skill/SKILL.md) - Main documentation
+- [SKILL.md](SKILL.md) - Main documentation
 - [USAGE-GUIDE.md](USAGE-GUIDE.md) - Detailed examples
 - [reference.md](reference.md) - Full API reference
 - [POST_INSTALL.md](POST_INSTALL.md) - Setup guide

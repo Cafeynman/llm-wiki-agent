@@ -138,21 +138,21 @@ markitdown <file> -d -e <endpoint>  # Azure Doc Intelligence
 ### PDF
 - **Best for:** Text-based PDFs
 - **Limitations:** Complex layouts may need Azure Document Intelligence
-- **Dependencies:** `pip install 'markitdown[pdf]'`
+- **Dependencies:** project dependencies in `pyproject.toml`; refresh with `uv sync`
 
 ### PowerPoint (.pptx)
 - **Extracts:** Slide text, structure
 - **Enhanced with:** LLM image descriptions
-- **Dependencies:** `pip install 'markitdown[pptx]'`
+- **Dependencies:** project dependencies in `pyproject.toml`; refresh with `uv sync`
 
 ### Word (.docx)
 - **Preserves:** Headings, lists, tables, links
-- **Dependencies:** `pip install 'markitdown[docx]'`
+- **Dependencies:** project dependencies in `pyproject.toml`; refresh with `uv sync`
 
 ### Excel (.xlsx, .xls)
 - **Extracts:** Tables, multiple sheets
 - **Format:** Markdown tables
-- **Dependencies:** `pip install 'markitdown[xlsx]'` or `'markitdown[xls]'`
+- **Dependencies:** project dependencies in `pyproject.toml`; refresh with `uv sync`
 
 ### Images (jpg, png, etc.)
 - **Extracts:** EXIF metadata + OCR text
@@ -161,12 +161,12 @@ markitdown <file> -d -e <endpoint>  # Azure Doc Intelligence
 
 ### Audio (wav, mp3)
 - **Extracts:** EXIF metadata + speech transcription
-- **Dependencies:** `pip install 'markitdown[audio-transcription]'`
+- **Dependencies:** project dependencies in `pyproject.toml`; refresh with `uv sync`
 - **Note:** System audio libraries may be required
 
 ### YouTube
 - **Extracts:** Video transcription (if available)
-- **Dependencies:** `pip install 'markitdown[youtube-transcription]'`
+- **Dependencies:** project dependencies in `pyproject.toml`; refresh with `uv sync`
 - **Usage:** `markitdown "https://youtube.com/watch?v=VIDEO_ID"`
 
 ### HTML
@@ -239,7 +239,7 @@ For high-quality PDF conversion with complex layouts:
 
 **CLI:**
 ```bash
-markitdown document.pdf -d -e "<endpoint>" -o output.md
+uv run markitdown document.pdf -d -e "<endpoint>" -o output.md
 ```
 
 **Python:**
@@ -282,7 +282,7 @@ try:
     result = md.convert("file.pdf")
 except ImportError as e:
     print(f"Missing dependency: {e}")
-    print("Install with: pip install 'markitdown[pdf]'")
+    print("Refresh the project environment with: uv sync")
 ```
 
 **File format not supported:**
@@ -368,7 +368,7 @@ async def convert_file(file: UploadFile):
 ## Breaking Changes (v0.0.1 → v0.1.0)
 
 1. **Dependencies:** Now organized into feature groups
-   - Use `pip install 'markitdown[all]'` for backward compatibility
+   - Use `uv sync` after dependency changes
 
 2. **convert_stream():** Now requires binary file-like objects
    - Changed from text (io.StringIO) to binary (io.BytesIO)

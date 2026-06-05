@@ -34,6 +34,7 @@
 开始前，请确保你拥有：
 - [uv](https://docs.astral.sh/uv/)，用于 Python 环境管理 (初始化脚本会运行 `uv sync`)。
 - PowerShell (Windows) 或 Bash (macOS/Linux) 用于执行初始化脚本。
+- 当你要使用默认网页提取器时，需要 Node.js/npm 或已安装的 Defuddle CLI。
 - Obsidian，或任何标准的 Markdown 编辑器。
 - 一个能够读取仓库级别指令的 AI 智能体 (例如 Codex, Claude Code, Gemini CLI, OpenCode)。
 
@@ -60,10 +61,13 @@ cd llm-wiki-agent
 ./scripts/init.sh -VaultRoot "/path/to/your/vault"
 ```
 
+外部库初始化完成后，请从初始化后的库根目录打开或运行智能体。目标库会得到包管理的入口文件、本地技能、脚本、文档、运行目录和项目环境。目标库中已有的包管理文件会被包副本替换；库级个性化偏好应放在 `PROJECT.md`。
+
 **它的作用是：**
-1. 运行 `uv sync` 来创建或更新 `.venv/` 本地运行环境。
-2. 创建所有必要的工作流目录 (`inbox/`, `raw/`, `intake/`, `wiki/` 等)。
-3. 将来源提取偏好保留在 `PROJECT.md` 中，由智能体在需要时确认。
+1. 将包管理的入口文件、本地技能、脚本和文档安装到目标根目录。
+2. 在缺失时创建 `PROJECT.md`，并将来源提取偏好放在那里，由智能体在需要时确认。
+3. 补齐缺失的工作流目录和默认 wiki 文件 (`inbox/`, `raw/`, `intake/`, `reviews/`, `logs/`, `wiki/` 等)，不覆盖已有运行内容。
+4. 在初始化后的根目录运行 `uv sync`，创建或更新 `.venv` 本地运行环境。
 
 ### 升级包文件
 
@@ -77,7 +81,7 @@ cd llm-wiki-agent
 ./scripts/upgrade.sh -TargetRoot "/path/to/your/workspace"
 ```
 
-升级只处理 `scripts/upgrade-manifest.txt` 中列出的条目。列出的文件会被覆盖；列出的目录会按包文件合并覆盖，并保留目标目录中额外存在的条目。工作区个性化配置应放在 `PROJECT.md`。
+升级会处理 `scripts/upgrade-manifest.txt` 中列出的条目，在缺失时创建 `PROJECT.md`，补齐缺失的运行目录和默认 wiki 文件，并在目标根目录运行 `uv sync`。列出的文件会被覆盖；列出的目录会按包文件合并覆盖，并保留目标目录中额外存在的条目。工作区个性化配置应放在 `PROJECT.md`。
 
 ---
 
@@ -176,6 +180,11 @@ LLM Wiki Agent 严格遵循“文本优先”思维进行操作：
 <details>
 <summary><b>如果找不到 <code>uv</code> 怎么办？</b></summary>
 先运行初始化脚本。如果自动安装失败，请手动安装 <code>uv</code> 然后再次运行初始化脚本。
+</details>
+
+<details>
+<summary><b>如果找不到 Defuddle 怎么办？</b></summary>
+默认网页提取器是 Defuddle。请通过 npm 安装，或让智能体按照 <code>.agents/skills/source-extraction/references/providers/defuddle/setup.md</code> 执行。
 </details>
 
 <details>

@@ -4,6 +4,11 @@ This file records the current workspace's configurable project context, includin
 
 Fields are optional unless required for the current task. Leave a field blank when the project has no specific preference; blank fields mean "not specified," not "to be invented."
 
+## Workspace Paths
+
+- Vault root:
+- Package root:
+
 ## Context
 
 - Theme:
