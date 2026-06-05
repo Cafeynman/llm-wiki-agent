@@ -1,5 +1,7 @@
 # LLM Wiki Agent
 
+`AGENTS.md` is the canonical agent entrypoint for this repository. This file is a Claude adapter only. Read and follow `AGENTS.md` first; if this file and `AGENTS.md` conflict, `AGENTS.md` wins. Do not add durable project rules only to this file.
+
 This package uses one shared wiki operating guide:
 
 ```text
@@ -21,6 +23,16 @@ Do not call `python` or `pip` directly for project tasks unless the user explici
 When a task depends on project-local environment variables, prefer `uv run --env-file .env` from the project root, or set `UV_ENV_FILE=.env` in the current shell for repeated `uv run` commands.
 
 Before handling any wiki task, read and follow `WIKI.md`.
+
+## Initialization Requirement
+
+Before the first wiki task in a workspace, check whether the package-managed entrypoint files and runtime structure exist. If `.venv/` or required runtime paths such as `inbox/`, `raw/`, `intake/`, `reviews/`, `logs/`, `questions/`, `artifacts/`, or `wiki/` are missing, run the initialization script from the package root instead of creating directories by hand.
+
+Use `.\scripts\init.ps1 -VaultRoot .` on Windows and `./scripts/init.sh -VaultRoot .` on macOS or Linux.
+
+When the user wants the wiki structure in a separate Obsidian vault, pass that vault path as `-VaultRoot`. The initialization script installs the package-managed agent entrypoint files, local skills, scripts, and docs into that vault, creates `PROJECT.md` there when it is missing, creates missing runtime directories and default wiki files, and runs `uv sync` from the initialized vault root. Existing package-managed files in the target root are replaced by the package copy; workspace-specific preferences belong in `PROJECT.md`.
+
+After external-vault initialization, treat the initialized vault root as the working package root for future agent tasks.
 
 ## Skill Source
 

@@ -22,6 +22,20 @@ When a task depends on project-local environment variables, prefer `uv run --env
 
 Before handling any wiki task, read and follow `WIKI.md`.
 
+## Initialization Requirement
+
+Before the first wiki task in a workspace, check whether the package-managed entrypoint files and runtime structure exist. If `.venv/` or required runtime paths such as `inbox/`, `raw/`, `intake/`, `reviews/`, `logs/`, `questions/`, `artifacts/`, or `wiki/` are missing, run the initialization script from the package root instead of creating directories by hand.
+
+Use `.\scripts\init.ps1 -VaultRoot .` on Windows and `./scripts/init.sh -VaultRoot .` on macOS or Linux.
+
+When the user wants the wiki structure in a separate Obsidian vault, pass that vault path as `-VaultRoot`. The initialization script installs the package-managed agent entrypoint files, local skills, scripts, and docs into that vault, creates `PROJECT.md` there when it is missing, creates missing runtime directories and default wiki files, and runs `uv sync` from the initialized vault root. Existing package-managed files in the target root are replaced by the package copy; workspace-specific preferences belong in `PROJECT.md`.
+
+After external-vault initialization, treat the initialized vault root as the working package root for future agent tasks.
+
+## Skill Source
+
+When using skills for this project, read the skill files from this repository's `.agents/skills/` directory first. Treat `.agents/skills/` as the project-local source of truth for package skills, and do not prefer global or external skill copies unless the user explicitly asks.
+
 ## Replacement Rule
 
 When a user gives a new direction that replaces a prior plan, replace the old plan completely instead of patching around it: define the single new source of truth, remove old wording and workflows, scan the target files for stale terms, and finish only when the old terms are gone.

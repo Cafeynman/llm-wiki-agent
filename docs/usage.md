@@ -34,6 +34,7 @@ It is **not** meant for one-off chatting. Its true value lies in durable accumul
 Before you start, ensure you have:
 - [uv](https://docs.astral.sh/uv/) for Python environment management (the init scripts run `uv sync`).
 - PowerShell (Windows) or Bash (macOS/Linux) for initialization scripts.
+- Node.js/npm or an installed Defuddle CLI when you want the default webpage extraction provider.
 - Obsidian, or any standard Markdown editor.
 - An AI Agent that reads repository instructions (e.g., Codex, Claude Code, Gemini CLI, OpenCode).
 
@@ -60,10 +61,13 @@ To create the structure inside an existing separate Obsidian vault:
 ./scripts/init.sh -VaultRoot "/path/to/your/vault"
 ```
 
+After external-vault initialization, open or run the agent from the initialized vault root. The target vault receives the package-managed entrypoint files, local skills, scripts, docs, runtime directories, and project environment. Existing package-managed files in the target vault are replaced by the package copy; keep vault-specific preferences in `PROJECT.md`.
+
 **What this does:**
-1. Runs `uv sync` to create or update the `.venv/` runtime state.
-2. Creates all necessary workflow directories (`inbox/`, `raw/`, `intake/`, `wiki/`, etc.).
-3. Leaves source extraction preferences in `PROJECT.md` for the agent to confirm when they matter.
+1. Installs package-managed entrypoint files, local skills, scripts, and docs into the target root.
+2. Creates `PROJECT.md` when it is missing and leaves source extraction preferences there for the agent to confirm when they matter.
+3. Creates missing workflow directories and default wiki files (`inbox/`, `raw/`, `intake/`, `reviews/`, `logs/`, `wiki/`, etc.) without overwriting existing runtime content.
+4. Runs `uv sync` in the initialized root to create or update the `.venv/` runtime state.
 
 ### Upgrade Package Files
 
@@ -77,7 +81,7 @@ Use the upgrade scripts when applying a newer package release to an existing wor
 ./scripts/upgrade.sh -TargetRoot "/path/to/your/workspace"
 ```
 
-The upgrade covers only entries listed in `scripts/upgrade-manifest.txt`. Listed files are overwritten. Listed directories are merged by overwriting package-managed files while leaving additional target entries in place. Keep workspace-specific configuration in `PROJECT.md`.
+The upgrade covers entries listed in `scripts/upgrade-manifest.txt`, creates `PROJECT.md` when it is missing, reconciles missing runtime directories and default wiki files, and runs `uv sync` in the target root. Listed files are overwritten. Listed directories are merged by overwriting package-managed files while leaving additional target entries in place. Keep workspace-specific configuration in `PROJECT.md`.
 
 ---
 
@@ -176,6 +180,11 @@ Run periodic maintenance by asking:
 <details>
 <summary><b>What if `uv` is missing?</b></summary>
 Run the initialization script first. If it fails, install <code>uv</code> manually and rerun the init script.
+</details>
+
+<details>
+<summary><b>What if Defuddle is missing?</b></summary>
+The default webpage provider is Defuddle. Install it with npm or ask the agent to follow <code>.agents/skills/source-extraction/references/providers/defuddle/setup.md</code>.
 </details>
 
 <details>
