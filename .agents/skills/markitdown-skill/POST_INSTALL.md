@@ -5,22 +5,22 @@ MarkItDown skill installed! Here's how to get started.
 ## 1. Verify Installation
 
 ```bash
-markitdown --version
+uv run markitdown --version
 ```
 
-If not found, install the CLI:
+If not found, refresh the project environment from the package root:
 ```bash
-pip install 'markitdown[all]'
+uv sync
 ```
 
 ## 2. Test It
 
 ```bash
 # Convert a PDF
-markitdown document.pdf -o output.md
+uv run markitdown document.pdf -o output.md
 
 # Convert a URL
-markitdown https://example.com -o page.md
+uv run markitdown https://example.com -o page.md
 ```
 
 ## 3. Add to Agent Instructions (Recommended)
@@ -30,27 +30,18 @@ Add to your `AGENTS.md`:
 ```markdown
 ## Document Conversion
 When fetching documentation or converting files:
-- Use `markitdown <url>` instead of curl/wget for web docs
-- Use `markitdown <file>` to convert PDFs, Word, Excel, etc.
+- Use `uv run markitdown <url>` instead of curl/wget for web docs
+- Use `uv run markitdown <file>` to convert PDFs, Word, Excel, etc.
 - Output is clean markdown optimized for LLM analysis
+- In this package, run the CLI as `uv run markitdown ...`
 ```
 
 ## 4. Install Format-Specific Dependencies
 
-Only install what you need:
+Project dependencies are managed in `pyproject.toml`. After dependency changes, refresh the environment:
 
 ```bash
-pip install 'markitdown[pdf]'      # PDF support
-pip install 'markitdown[docx]'     # Word documents
-pip install 'markitdown[pptx]'     # PowerPoint
-pip install 'markitdown[xlsx]'     # Excel
-pip install 'markitdown[audio-transcription]'   # Audio
-pip install 'markitdown[youtube-transcription]' # YouTube
-```
-
-Or install everything:
-```bash
-pip install 'markitdown[all]'
+uv sync
 ```
 
 ## 5. System Dependencies (Optional)
@@ -68,25 +59,25 @@ brew install tesseract
 
 ```bash
 # File conversion
-markitdown file.pdf -o output.md
+uv run markitdown file.pdf -o output.md
 
 # URL conversion
-markitdown https://example.com -o page.md
+uv run markitdown https://example.com -o page.md
 
 # Batch conversion
-python ~/.openclaw/skills/markitdown/scripts/batch_convert.py docs/*.pdf -o markdown/ -v
+uv run .agents/skills/markitdown-skill/scripts/batch_convert.py docs/*.pdf -o markdown/ -v
 ```
 
 ## Troubleshooting
 
 **"markitdown not found"**
 ```bash
-pip install 'markitdown[all]'
+uv sync
 ```
 
 **"No module named 'xxx'"**
 ```bash
-pip install 'markitdown[pdf]'  # or docx, pptx, etc.
+uv sync
 ```
 
 **OCR not working**

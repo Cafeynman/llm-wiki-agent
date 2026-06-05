@@ -87,7 +87,7 @@ def main():
             md_kwargs["llm_model"] = args.llm_model
         except ImportError:
             print("Error: openai package required for LLM features", file=sys.stderr)
-            print("Install with: pip install openai", file=sys.stderr)
+            print("Refresh the project environment with: uv sync", file=sys.stderr)
             sys.exit(1)
     
     if args.docintel_endpoint:

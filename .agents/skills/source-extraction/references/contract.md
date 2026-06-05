@@ -14,7 +14,7 @@ A provider receives:
 
 - Original source path or source URL.
 - Source kind.
-- Temporary output directory under `intake/tmp/YYYY-MM-DD/original-source-base-filename/`.
+- Temporary output directory under `intake/tmp/source-relative-parent/original-source-base-filename/`, omitting `source-relative-parent` when the source is directly under the intake root.
 - Project preferences from `PROJECT.md`.
 - Provider-specific options approved for the current task.
 

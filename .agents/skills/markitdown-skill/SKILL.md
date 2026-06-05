@@ -6,20 +6,14 @@ metadata:
     emoji: "📄"
     homepage: https://github.com/karmanverma/markitdown-skill
     requires:
-      bins: ["python3", "pip", "markitdown"]
-    install:
-      - id: "markitdown"
-        kind: "pip"
-        package: "markitdown[all]"
-        bins: ["markitdown"]
-        label: "Install MarkItDown CLI (pip)"
+      bins: ["uv"]
 ---
 
 # MarkItDown Skill
 
 Documentation and utilities for converting documents to Markdown using Microsoft's [MarkItDown](https://github.com/microsoft/markitdown) library.
 
-> **Note:** This skill provides documentation and a batch script. The actual conversion is done by the `markitdown` CLI/library installed via pip.
+> **Note:** In this package, MarkItDown is installed through `pyproject.toml` and `uv sync`. Run it with `uv run markitdown ...` from the package root.
 
 ## When to Use
 
@@ -35,10 +29,10 @@ Documentation and utilities for converting documents to Markdown using Microsoft
 
 ```bash
 # Convert file to markdown
-markitdown document.pdf -o output.md
+uv run markitdown document.pdf -o output.md
 
 # Convert URL
-markitdown https://example.com/docs -o docs.md
+uv run markitdown https://example.com/docs -o docs.md
 ```
 
 ## Supported Formats
@@ -56,37 +50,38 @@ markitdown https://example.com/docs -o docs.md
 
 ## Installation
 
-The skill requires Microsoft's `markitdown` CLI:
+The project dependency set includes Microsoft's `markitdown` CLI. Initialize or refresh the environment from the package root:
 
 ```bash
-pip install 'markitdown[all]'
+uv sync
 ```
 
-Or install specific formats only:
+Verify the CLI through the project environment:
+
 ```bash
-pip install 'markitdown[pdf,docx,pptx]'
+uv run markitdown --help
 ```
 
 ## Common Patterns
 
 ### Fetch Documentation
 ```bash
-markitdown https://github.com/user/repo/blob/main/README.md -o readme.md
+uv run markitdown https://github.com/user/repo/blob/main/README.md -o readme.md
 ```
 
 ### Convert PDF
 ```bash
-markitdown document.pdf -o document.md
+uv run markitdown document.pdf -o document.md
 ```
 
 ### Batch Convert
 ```bash
 # Using included script
-python ~/.openclaw/skills/markitdown/scripts/batch_convert.py docs/*.pdf -o markdown/ -v
+uv run .agents/skills/markitdown-skill/scripts/batch_convert.py docs/*.pdf -o markdown/ -v
 
 # Or shell loop
 for file in docs/*.pdf; do
-  markitdown "$file" -o "${file%.pdf}.md"
+  uv run markitdown "$file" -o "${file%.pdf}.md"
 done
 ```
 
@@ -104,7 +99,7 @@ print(result.text_content)
 
 ### "markitdown not found"
 ```bash
-pip install 'markitdown[all]'
+uv sync
 ```
 
 ### OCR Not Working
@@ -120,8 +115,8 @@ brew install tesseract
 
 | Component | Source |
 |-----------|--------|
-| `markitdown` CLI | Microsoft's pip package |
-| `markitdown` Python API | Microsoft's pip package |
+| `markitdown` CLI | Project dependency in `pyproject.toml` |
+| `markitdown` Python API | Project dependency in `pyproject.toml` |
 | `scripts/batch_convert.py` | This skill (utility) |
 | Documentation | This skill |
 
