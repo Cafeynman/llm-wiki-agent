@@ -93,23 +93,29 @@ Use `intake/logs/YYYY-MM-DD.md` for daily source handling logs. Use `reviews/sou
 
 Use Obsidian-compatible Markdown. Prefer `[[wikilinks]]` for internal wiki pages and normal Markdown links for external URLs. Keep filenames human-readable and stable.
 
-In normal Markdown text, traceability links to vault-internal files and notes must use Obsidian wikilinks. Keep raw paths in frontmatter `sources:` as plain strings because YAML frontmatter is metadata, not normal Markdown link text.
+In normal Markdown text, traceability links to vault-internal files and notes must use Obsidian wikilinks. Keep raw paths in frontmatter `sources:` as quoted YAML string values because YAML frontmatter is metadata, not normal Markdown link text.
+
+Preserve source-derived text exactly as content. Do not delete, replace, romanize, slugify, or otherwise normalize special characters just because a target syntax treats them specially. Encode or quote the value only at the output boundary that needs it, such as YAML frontmatter, Markdown table cells, wikilinks, or command examples.
+
+In frontmatter, do not write user-, source-, or filename-derived strings as unquoted YAML plain scalars. Write free-text values such as `title`, `aliases`, source names, paths, URLs, and descriptions as double-quoted YAML strings, escaping `\` as `\\` and `"` as `\"`, or use a YAML serializer and verify the emitted frontmatter parses. YAML indicator characters can break syntax or silently change the parsed value depending on position and context, including `:`, `#`, `*`, `&`, `!`, `|`, `>`, `[`, `]`, `{`, `}`, `,`, `?`, `-`, `%`, `@`, `` ` ``, and quotes. Keep only fixed safe tokens such as `type`, `status`, `confidence`, dates, and booleans unquoted.
+
+Use `type` values from `source`, `entity`, `concept`, `claim`, or `synthesis`; use `status` values from `draft`, `reviewed`, `verified`, `stale`, or `archived`; and use `confidence` values from `low`, `medium`, or `high`.
 
 Recommended wiki frontmatter:
 
 ```yaml
 ---
-title: Page Title
-type: source | entity | concept | claim | synthesis
-status: draft | reviewed | verified | stale | archived
-confidence: low | medium | high
+title: "Page Title"
+type: source
+status: draft
+confidence: medium
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 sources:
-  - raw/digested/example.pdf
-  - intake/processed/source-relative-parent/original-source-base-filename/source.md
+  - "raw/digested/example.pdf"
+  - "intake/processed/source-relative-parent/original-source-base-filename/source.md"
 tags:
-  - llm-wiki
+  - "llm-wiki"
 ---
 ```
 
@@ -131,18 +137,18 @@ Source card template:
 
 ```markdown
 ---
-title: Source Title
+title: "Source Title"
 type: source
 status: draft
 confidence: medium
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 sources:
-  - raw/digested/source-relative-parent/original-filename.ext
-  - intake/processed/source-relative-parent/original-source-base-filename/source.md
-  - reviews/source-review/YYYY-MM-DD.md
+  - "raw/digested/source-relative-parent/original-filename.ext"
+  - "intake/processed/source-relative-parent/original-source-base-filename/source.md"
+  - "reviews/source-review/YYYY-MM-DD.md"
 tags:
-  - llm-wiki
+  - "llm-wiki"
 ---
 
 # Source Title

@@ -32,6 +32,8 @@ A successful provider run must produce:
   - missing content
   - links to generated side outputs when they are necessary for traceability
 
+Providers must preserve source-derived text as content. Do not remove or normalize punctuation, YAML indicator characters, Markdown control characters, or filename characters from extracted titles, headings, paths, or body text. When provider metadata or source-derived strings are later written into YAML frontmatter, Markdown tables, wikilinks, or command examples, the writer must quote, escape, or encode them for that target syntax without changing the underlying value.
+
 ## Provider Limits
 
 A provider must not:

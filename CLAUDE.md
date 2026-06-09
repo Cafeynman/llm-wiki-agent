@@ -71,9 +71,13 @@ Use Obsidian wikilinks for internal pages. In normal Markdown text, use `[[path/
 
 Traceability sections in Markdown must use Obsidian wikilinks for vault-internal files and notes. Plain code-formatted paths may be used in YAML frontmatter or command examples, but not as the primary traceability links in normal Markdown text.
 
+## Source-Derived Text Preservation
+
+Preserve source-derived text exactly as content. Do not delete, replace, romanize, slugify, or otherwise normalize special characters just because a target syntax treats them specially. Encode or quote the value only at the output boundary that needs it, such as YAML frontmatter, Markdown table cells, wikilinks, or command examples.
+
 ## Obsidian Frontmatter Properties
 
-When writing Obsidian frontmatter property values, wrap strings containing `"` in `'`, or wrap strings containing `'` in `"`, and escape required special characters to avoid Obsidian `Invalid properties` errors.
+Do not write user-, source-, or filename-derived strings as unquoted YAML plain scalars in frontmatter. Write free-text values such as `title`, `aliases`, source names, paths, URLs, and descriptions as double-quoted YAML strings, escaping `\` as `\\` and `"` as `\"`, or use a YAML serializer and verify the emitted frontmatter parses. YAML indicator characters can break syntax or silently change the parsed value depending on position and context, including `:`, `#`, `*`, `&`, `!`, `|`, `>`, `[`, `]`, `{`, `}`, `,`, `?`, `-`, `%`, `@`, `` ` ``, and quotes. Keep only fixed safe tokens such as `type`, `status`, `confidence`, dates, and booleans unquoted.
 
 ## Intake Output Names
 
