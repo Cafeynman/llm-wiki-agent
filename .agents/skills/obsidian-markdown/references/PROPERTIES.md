@@ -4,28 +4,30 @@ Properties use YAML frontmatter at the start of a note:
 
 ```yaml
 ---
-title: My Note Title
+title: "My Note Title"
 date: 2024-01-15
 tags:
   - project
   - important
 aliases:
-  - My Note
-  - Alternative Name
+  - "My Note"
+  - "Alternative Name"
 cssclasses:
   - custom-class
-status: in-progress
+status: draft
 rating: 4.5
 completed: false
 due: 2024-02-01T14:30:00
 ---
 ```
 
+Quote free-text values that come from users, sources, filenames, titles, aliases, paths, URLs, or descriptions, or emit frontmatter with a YAML serializer. Fixed safe tokens such as dates, booleans, numbers, and controlled status values may stay unquoted.
+
 ## Property Types
 
 | Type | Example |
 |------|---------|
-| Text | `title: My Title` |
+| Text | `title: "My Title"` |
 | Number | `rating: 4.5` |
 | Checkbox | `completed: true` |
 | Date | `date: 2024-01-15` |

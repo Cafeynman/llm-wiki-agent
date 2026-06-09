@@ -23,7 +23,7 @@ uv run --env-file .env markitdown <input-file> --use-plugins --llm-client openai
 
 ## Output Handling
 
-- Remove inline `data:image/...;base64,...` links from extracted Markdown because they are dead links for this wiki.
+- Preserve provider output that comes from the source body, including inline media references. Do not silently delete `data:image/...;base64,...` links from `source.md`; record them as unprocessed embedded media instead.
 - Record missing figures, scans, screenshots, embedded media, or audio in review notes or manifest metadata.
 - If important non-text content was not processed, route the source to `needs-review` through the normal WIKI process.
 

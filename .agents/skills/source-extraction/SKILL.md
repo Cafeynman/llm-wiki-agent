@@ -25,7 +25,7 @@ The stable intake contract remains in `WIKI.md`. This skill decides how to choos
 4. If the kind is configured as `unsupported`, move through the normal WIKI intake handling for unsupported material.
 5. If the policy is `ask-before-ocr`, `ask-before-transcription`, or `ask-before-transcription-or-frame-ocr`, ask the user before enabling that extraction.
 6. Run the provider only against the original source, never against another provider's generated Markdown.
-7. Write provider output to `intake/tmp/source-relative-parent/original-source-base-filename/source.md`, omitting `source-relative-parent` when the source is directly under the intake root.
+7. Write provider output to `intake/tmp/source-relative-parent/original-source-base-filename/source.md`, omitting `source-relative-parent` when the source is directly under the intake root. The `original-source-base-filename` segment preserves the original base filename exactly after removing only the extension; do not slugify, translate, lowercase, URL encode, or simplify it.
 8. Record provider metadata, warnings, and missing content in the intake manifest or review notes.
 9. Continue to Source Review Gate. The provider does not decide whether the source is `digested`, `needs-review`, `ignored`, or `unsupported`.
 

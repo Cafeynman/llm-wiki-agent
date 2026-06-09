@@ -115,22 +115,22 @@ class ConversionResult:
 
 ```bash
 # Convert to stdout
-markitdown <file>
+uv run markitdown <file>
 
 # Convert to file
-markitdown <file> -o <output.md>
+uv run markitdown <file> -o <output.md>
 
 # Pipe input
-cat <file> | markitdown
+cat <file> | uv run markitdown
 ```
 
 ### Options
 
 ```bash
-markitdown --help
-markitdown --list-plugins
-markitdown --use-plugins <file>
-markitdown <file> -d -e <endpoint>  # Azure Doc Intelligence
+uv run markitdown --help
+uv run markitdown --list-plugins
+uv run markitdown --use-plugins <file>
+uv run markitdown <file> -d -e <endpoint>  # Azure Doc Intelligence
 ```
 
 ## Format-Specific Details
@@ -188,23 +188,14 @@ markitdown <file> -d -e <endpoint>  # Azure Doc Intelligence
 ## Environment Requirements
 
 ### Python Version
-- **Required:** Python 3.10 or higher
-- **Recommended:** Python 3.12
+- **Required:** Python 3.12, matching `pyproject.toml`
+- **Recommended:** the project-managed `uv` environment
 
-### Virtual Environment (Recommended)
+### Project Environment
 
 ```bash
-# Standard Python
-python -m venv .venv
-source .venv/bin/activate
-
-# uv
-uv venv --python=3.12 .venv
-source .venv/bin/activate
-
-# Conda
-conda create -n markitdown python=3.12
-conda activate markitdown
+uv sync
+uv run markitdown --help
 ```
 
 ### System Dependencies
@@ -260,8 +251,8 @@ Search GitHub for: `#markitdown-plugin`
 
 **CLI:**
 ```bash
-markitdown --list-plugins
-markitdown --use-plugins file.pdf
+uv run markitdown --list-plugins
+uv run markitdown --use-plugins file.pdf
 ```
 
 **Python:**
@@ -311,7 +302,7 @@ except Exception as e:
 
 ## Output Format Notes
 
-- **Goal:** LLM-friendly markdown, not pixel-perfect reproduction
+- **Goal:** reviewable Markdown for intake; preserve source-derived titles, headings, paths, and body text under the source-extraction contract
 - **Structure:** Preserves headings, lists, tables, links
 - **Images:** Converted to markdown image syntax
 - **Tables:** Converted to markdown tables (may lose complex formatting)

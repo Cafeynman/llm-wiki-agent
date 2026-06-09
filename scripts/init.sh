@@ -81,7 +81,7 @@ copy_directory_entry() {
     local target_file="$target_full/$relative_file"
     ensure_directory "$(dirname "$target_file")"
     cp -f "$source_file" "$target_file"
-  done < <(find "$source_full" -type f -print0)
+  done < <(find "$source_full" -type f ! -name '*.pyc' ! -path '*/__pycache__/*' -print0)
 }
 
 install_package_files() {

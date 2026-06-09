@@ -290,4 +290,4 @@ MarkItDown preserves:
 - Code blocks
 - Images (as markdown syntax)
 
-**Note:** Optimized for LLM consumption, not pixel-perfect reproduction.
+**Note:** MarkItDown output is reviewable Markdown for intake, not a layout-faithful reproduction. Preserve source-derived titles, headings, paths, and body text under the source-extraction contract.

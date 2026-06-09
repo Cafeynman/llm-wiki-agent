@@ -70,7 +70,12 @@ function Copy-DirectoryEntry {
 
     Ensure-Directory $targetFull
 
-    Get-ChildItem -LiteralPath $sourceFull -File -Recurse -Force | ForEach-Object {
+    Get-ChildItem -LiteralPath $sourceFull -File -Recurse -Force |
+        Where-Object {
+            $_.Name -notlike "*.pyc" -and
+            $_.FullName -notmatch "(^|[\\/])__pycache__([\\/]|$)"
+        } |
+        ForEach-Object {
         $relativeFile = [System.IO.Path]::GetRelativePath($sourceFull, $_.FullName)
         $targetFile = Join-Path $targetFull $relativeFile
         Ensure-Directory (Split-Path -Parent $targetFile)

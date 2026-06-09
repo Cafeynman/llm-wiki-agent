@@ -18,6 +18,8 @@ A provider receives:
 - Project preferences from `PROJECT.md`.
 - Provider-specific options approved for the current task.
 
+The `original-source-base-filename` segment is the original source file's base filename after removing only the extension. Preserve language, case, whitespace, punctuation, and special characters; do not translate, romanize, URL encode, slugify, lowercase, or simplify it.
+
 ## Provider Output
 
 A successful provider run must produce:

@@ -94,7 +94,7 @@ copy_directory_entry() {
     mkdir -p "$(dirname "$target_file")"
     cp -f "$source_file" "$target_file"
     file_count=$((file_count + 1))
-  done < <(find "$source_full" -type f -print0)
+  done < <(find "$source_full" -type f ! -name '*.pyc' ! -path '*/__pycache__/*' -print0)
 }
 
 ensure_project_file() {

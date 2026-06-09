@@ -23,18 +23,9 @@ uv run markitdown document.pdf -o output.md
 uv run markitdown https://example.com -o page.md
 ```
 
-## 3. Add to Agent Instructions (Recommended)
+## 3. Package Usage Note
 
-Add to your `AGENTS.md`:
-
-```markdown
-## Document Conversion
-When fetching documentation or converting files:
-- Use `uv run markitdown <url>` instead of curl/wget for web docs
-- Use `uv run markitdown <file>` to convert PDFs, Word, Excel, etc.
-- Output is clean markdown optimized for LLM analysis
-- In this package, run the CLI as `uv run markitdown ...`
-```
+In this package, run MarkItDown with `uv run markitdown ...` from the package root. MarkItDown produces reviewable Markdown for the intake workflow; source-derived titles, paths, headings, and body text remain governed by the source-extraction provider contract.
 
 ## 4. Install Format-Specific Dependencies
 

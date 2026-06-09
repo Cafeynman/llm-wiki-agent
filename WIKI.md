@@ -205,7 +205,7 @@ Classify the input before acting, then enter the matching path below. The "Start
 | Input type                                                                                               | Start with                           | Continue to                                                                                    |
 | -------------------------------------------------------------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------- |
 | A batch of candidate raw files, `inbox/`, or a triage request                                            | Intake                               | Extract each file to `intake/tmp/`, optionally write a digest, then run Source Review Gate     |
-| One specific raw file in `inbox/`                                                                        | Intake                               | Extract or normalize to `intake/tmp/`, optionally write a digest, then run Source Review Gate  |
+| One specific raw file in `inbox/`                                                                        | Intake                               | Extract or stage Markdown to `intake/tmp/`, optionally write a digest, then run Source Review Gate |
 | A file already under `raw/digested/`, `raw/needs-review/`, `raw/ignored/`, or `raw/unsupported/` that needs reprocessing | Intake | Use the current raw state directory as the intake root, preserve the path below it, extract to `intake/tmp/`, then run Source Review Gate |
 | A new non-Markdown source that needs extraction                                                          | Intake                               | Ensure the original is in `inbox/`, extract to `intake/tmp/`, then run Source Review Gate  |
 | Large, archived, table-heavy, slide, scanned, multimodal, or noisy source                                | Large File and Context Budget Policy | Inspect metadata first; if it cannot be completed in the same pass, move the original to `raw/needs-review/` and record the next review question |
@@ -232,12 +232,12 @@ Use the shortest reliable extraction path allowed by `PROJECT.md` and the select
 
 | File type                   | Temporary extraction handling                                      |
 | --------------------------- | ------------------------------------------------------------------ |
-| Markdown                    | Normalize into `intake/tmp/source-relative-parent/original-source-base-filename/source.md` before review |
+| Markdown                    | Stage or copy to `intake/tmp/source-relative-parent/original-source-base-filename/source.md` without changing source text before review |
 | PDF                         | Convert readable content to Markdown; scanned or image-heavy PDFs become `needs-review` when important content is not processed |
 | Word                        | Convert text, headings, tables, captions, and any supported document content; unprocessed important embedded material becomes `needs-review` |
 | PowerPoint                  | Convert to Markdown and preserve slide structure                   |
 | Excel                       | Convert tables to Markdown and summarize table meaning when needed |
-| HTML                        | Convert to clean Markdown                                          |
+| HTML                        | Extract readable Markdown while preserving extracted title, headings, and body text |
 | CSV / JSON / XML            | Convert to Markdown table, structured summary, or both             |
 | Image                       | Do not treat as first-class intake content by default; move to `raw/needs-review/` and record the missing text extraction or image review step when the image carries source information |
 | Audio                       | Transcribe only when `PROJECT.md` allows `ask-before-transcription` and the user approves; otherwise move to `raw/needs-review/` or `raw/unsupported/` according to the configured policy |
@@ -247,12 +247,12 @@ Use the shortest reliable extraction path allowed by `PROJECT.md` and the select
 
 The intake order is:
 
-`intake/tmp/` is the first Markdown landing area after extraction or normalization. `intake/processed/` is not a scratch area; it is only for Markdown accepted by Source Review Gate and ready for ingest. Any extraction or normalization path that produces accepted Markdown must follow the same lifecycle and output requirements.
+`intake/tmp/` is the first Markdown landing area after extraction or Markdown staging. `intake/processed/` is not a scratch area; it is only for Markdown accepted by Source Review Gate and ready for ingest. Any extraction or Markdown staging path that produces accepted Markdown must follow the same lifecycle and output requirements.
 
 1. Choose the intake root. For first intake, take original files from `inbox/`. For reprocessing, take original files from their current `raw/<state>/` directory.
 2. Compute the source-relative path from the intake root, then inspect and record the complete raw file path, exact filename, file type, size, and basic readability.
 3. For batch intake and other multi-file requests, perform OCR precheck before extraction when any file appears likely to benefit from OCR. Present the grouped recommendation once and wait for the user's decision before enabling OCR.
-4. Use the `source-extraction` skill to select the source kind and provider, then extract or normalize the file to temporary Markdown under `intake/tmp/source-relative-parent/original-source-base-filename/`.
+4. Use the `source-extraction` skill to select the source kind and provider, then extract or stage the file as temporary Markdown under `intake/tmp/source-relative-parent/original-source-base-filename/`.
 5. For archives, create a member listing first. Record each useful member's archive path, filename, detected type, and extraction result. Extract only members that are useful for review.
 6. If extraction fails, move the original file to `raw/unsupported/` while preserving its source-relative path, record the blocker in `intake/logs/YYYY-MM-DD.md`, delete the temporary folder, and stop.
 7. If extraction technically succeeds but the Markdown is garbled, empty, too thin to judge, obviously truncated, structurally broken, or missing important text, move the original to `raw/needs-review/` while preserving its source-relative path, record the extraction-quality question, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and stop.
@@ -268,7 +268,7 @@ After a final outcome is reached for a source, no temporary folder for that sour
 
 ### 4. Source Review Gate
 
-Source Review Gate is an intake step. It runs after extraction or normalization has produced readable temporary Markdown. Its goal is to decide what deserves permanent intake output and wiki ingestion, not to update wiki knowledge pages.
+Source Review Gate is an intake step. It runs after extraction or Markdown staging has produced readable temporary Markdown. Its goal is to decide what deserves permanent intake output and wiki ingestion, not to update wiki knowledge pages.
 
 Before assigning a Source Review Gate outcome, classify extraction quality separately from source value. A source must not be treated as `digested` only because extraction exited successfully.
 
@@ -406,7 +406,7 @@ Initial state:
     └── corrupted.pdf
 ```
 
-Intake first converts or normalizes each original file into temporary Markdown:
+Intake first stages Markdown files or extracts non-Markdown originals into temporary Markdown:
 
 ```text
 .

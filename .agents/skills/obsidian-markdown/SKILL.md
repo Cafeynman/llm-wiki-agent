@@ -77,17 +77,19 @@ See [CALLOUTS.md](references/CALLOUTS.md) for the full list with aliases, nestin
 
 ```yaml
 ---
-title: My Note
+title: "My Note"
 date: 2024-01-15
 tags:
   - project
   - active
 aliases:
-  - Alternative Name
+  - "Alternative Name"
 cssclasses:
   - custom-class
 ---
 ```
+
+Quote free-text frontmatter values that come from users, sources, filenames, titles, aliases, paths, URLs, or descriptions, or write them with a YAML serializer. Fixed safe tokens such as dates, booleans, and controlled status values may stay unquoted.
 
 Default properties: `tags` (searchable labels), `aliases` (alternative note names for link suggestions), `cssclasses` (CSS classes for styling).
 
@@ -156,12 +158,12 @@ Inline footnote.^[This is inline.]
 
 ````markdown
 ---
-title: Project Alpha
+title: "Project Alpha"
 date: 2024-01-15
 tags:
   - project
   - active
-status: in-progress
+status: draft
 ---
 
 # Project Alpha
