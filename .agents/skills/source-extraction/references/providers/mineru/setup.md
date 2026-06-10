@@ -39,12 +39,15 @@ Useful endpoints:
 - `GET https://mineru.net/api/v4/extract/task/{task_id}`
 - `POST https://mineru.net/api/v4/file-urls/batch`
 
-If using token-based mode, keep the token in the project-root `.env` file. Suggested variable names:
+If using token-based mode, keep the token in the project-root `.env` file. Required variable:
 
 - `MINERU_API_TOKEN`
-- `MINERU_BASE_URL` when a custom endpoint is required
 
-Do not store tokens in `PROJECT.md`, `WIKI.md`, `AGENTS.md`, `CLAUDE.md`, manifests, logs, wiki pages, source cards, or skill files.
+Optional variable, only when a private deployment or custom hosted endpoint is required:
+
+- `MINERU_BASE_URL`
+
+Use `.env.example` as the non-secret template. Do not store tokens or private endpoint values in `PROJECT.md`, `WIKI.md`, `AGENTS.md`, `CLAUDE.md`, manifests, logs, wiki pages, source cards, or skill files. Agents may check whether `MINERU_API_TOKEN` and any required `MINERU_BASE_URL` are present, but must not print or persist their values.
 
 ## Official Documentation
 

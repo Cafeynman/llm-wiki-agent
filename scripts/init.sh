@@ -158,7 +158,7 @@ Fields are optional unless required for the current task. Leave a field blank wh
 - Audio extraction policy: ask-before-transcription
 - Video extraction policy: ask-before-transcription-or-frame-ocr
 - Unsupported source kinds:
-- Provider-specific preferences:
+- Provider-specific preferences: non-secret provider choices only; private endpoints and secret values belong in the project-root .env
 EOF
 }
 

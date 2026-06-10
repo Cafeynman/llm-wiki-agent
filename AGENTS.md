@@ -18,7 +18,8 @@ Treat `PROJECT.md` as the changeable context layer and the single place for proj
 
 Use `uv run` for Python commands from the project root.
 Do not call `python` or `pip` directly for project tasks unless the user explicitly asks. Python version is defined in `pyproject.toml`.
-When a task depends on project-local environment variables, prefer `uv run --env-file .env` from the project root, or set `UV_ENV_FILE=.env` in the current shell for repeated `uv run` commands.
+When a task depends on project-local environment variables, use `uv run --env-file .env` from the project root, or set `UV_ENV_FILE=.env` in the current shell for repeated `uv run` commands.
+If a required local variable is missing, stop and ask the user to configure `.env`; do not paste secrets or private service URLs into commands, prompts, manifests, logs, wiki pages, source cards, or project instructions.
 
 Before handling any wiki task, read and follow `WIKI.md`.
 
@@ -89,7 +90,7 @@ Use the same source-relative parent and source-language naming rule for `wiki/so
 
 Before source extraction, use the local `.agents/skills/source-extraction/` skill. Document, webpage, image, audio, and video extraction choices belong in `PROJECT.md`, not in `AGENTS.md` or `CLAUDE.md`.
 
-OCR, image extraction, audio transcription, and video frame/audio extraction must follow `PROJECT.md`; do not enable them automatically. Real API keys and tokens belong only in the local project-root `.env` file and must not be written into project instructions, manifests, logs, wiki pages, source cards, or skill files.
+OCR, image extraction, audio transcription, and video frame/audio extraction must follow `PROJECT.md`; do not enable them automatically. Real API keys, tokens, and private service URLs belong only in the local project-root `.env` file and must not be written into project instructions, manifests, logs, wiki pages, source cards, or skill files. Provider setup documents may name required environment variables, but local values must stay in `.env`.
 
 ## Workflow Router
 

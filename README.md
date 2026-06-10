@@ -42,6 +42,7 @@ cd llm-wiki-agent
 *Note: For a separate Obsidian vault, pass the vault path like `.\scripts\init.ps1 -VaultRoot "C:\path\to\your\vault"`. The target vault becomes the working root and receives the package-managed agent files, local skills, scripts, docs, and runtime structure. Package-managed files are replaced by the package copy; vault-specific preferences belong in `PROJECT.md`.*
 
 Default source extraction preferences are recorded in `PROJECT.md`. On the first source intake, the agent confirms any preference that matters for the task.
+For service-backed providers such as MinerU precise parsing, MinerU private deployments, or OCR backends, copy `.env.example` to `.env` in the initialized working root and fill only the required variables. The real `.env` file is ignored by Git; agents should load it with `uv run --env-file .env` when running provider commands.
 For package upgrades, use the manifest-driven scripts documented in [Usage Guide](docs/usage.md#upgrade-package-files).
 
 **Your Minimal First Run:**
@@ -115,6 +116,7 @@ To get the most out of LLM Wiki Agent, we recommend pairing it with:
 ├── WIKI.md
 ├── LICENSE
 ├── pyproject.toml
+├── .env.example
 ├── scripts/
 │   ├── init.ps1
 │   ├── init.sh

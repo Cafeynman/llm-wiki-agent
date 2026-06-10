@@ -21,6 +21,8 @@ When OCR has been explicitly approved and configured:
 uv run --env-file .env markitdown <input-file> --use-plugins --llm-client openai --llm-model <MARKITDOWN_OCR_MODEL> -o <intake-tmp-dir>/source.md
 ```
 
+For the documented OpenAI-compatible OCR command, `OPENAI_API_KEY` and `MARKITDOWN_OCR_MODEL` are required. If `.env` or either variable is missing, stop before extraction and ask the user to configure it. Do not paste API keys into command examples, prompts, manifests, logs, review notes, wiki pages, or source cards.
+
 ## Output Handling
 
 - Preserve provider output that comes from the source body, including inline media references. Do not silently delete `data:image/...;base64,...` links from `source.md`; record them as unprocessed embedded media instead.

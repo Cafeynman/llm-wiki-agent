@@ -35,3 +35,5 @@ The stable intake contract remains in `WIKI.md`. This skill decides how to choos
 - Provider setup documents may name required environment variables.
 - Agents may check whether required environment variables are present, but must not print, log, or persist their values.
 - When a provider needs local secrets, use the project-root `.env` file and run commands from the project root with `uv run --env-file .env ...` when applicable.
+- If a selected provider mode requires a secret and `.env` or the required variable is missing, stop before extraction and ask the user to configure `.env`.
+- Keep provider-specific variable names in the provider setup document. Keep project-specific non-secret choices in `PROJECT.md`.

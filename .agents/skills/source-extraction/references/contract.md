@@ -36,6 +36,14 @@ A successful provider run must produce:
 
 Providers must preserve source-derived text as content. Do not remove or normalize punctuation, YAML indicator characters, Markdown control characters, or filename characters from extracted titles, headings, paths, or body text. When provider metadata or source-derived strings are later written into YAML frontmatter, Markdown tables, wikilinks, or command examples, the writer must quote, escape, or encode them for that target syntax without changing the underlying value.
 
+## Provider Credentials and Local Service Configuration
+
+Service-backed providers may require local credentials, tokens, API keys, or deployment-specific endpoints. The provider setup document must name the required environment variables and the provider mode that needs them. It must not contain real secret values or private endpoint values.
+
+Secret values and private service URLs belong only in the project-root `.env` file, which is local runtime configuration and not wiki content. Provider commands that run through `uv` and depend on those variables must be run from the project root with `uv run --env-file .env ...`, or with `UV_ENV_FILE=.env` set in the current shell for repeated `uv run` commands.
+
+Agents may verify that a required variable is present, but must report only present or missing status. If `.env` or a required variable is missing, stop before extraction and ask the user to configure it. Do not invent fallback credentials, paste secrets or private service URLs into commands, or write those values into manifests, logs, review notes, wiki pages, source cards, `PROJECT.md`, `WIKI.md`, `AGENTS.md`, or `CLAUDE.md`.
+
 ## Provider Limits
 
 A provider must not:

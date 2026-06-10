@@ -83,6 +83,14 @@ cd llm-wiki-agent
 
 升级会处理 `scripts/upgrade-manifest.txt` 中列出的条目，在缺失时创建 `PROJECT.md`，补齐缺失的运行目录和默认 wiki 文件，并在目标根目录运行 `uv sync`。列出的文件会被覆盖；列出的目录会按包文件合并覆盖，并保留目标目录中额外存在的条目。工作区个性化配置应放在 `PROJECT.md`。
 
+### 本地服务密钥
+
+当 provider 需要本地凭据或部署专属 endpoint 时，请将 `.env.example` 复制为初始化后根目录中的 `.env`，并只填写所选 provider 模式需要的变量。例如 MinerU 精准解析使用 `MINERU_API_TOKEN`，MinerU 私有部署还可能使用 `MINERU_BASE_URL`；MinerU Agent 轻量解析 API 不需要 token。
+
+真实 `.env` 是本地运行配置，已被 Git 忽略，不能写入 `PROJECT.md`, `WIKI.md`, manifest, log, review note, wiki 页面、source card 或提示词。依赖 `.env` 的智能体命令必须从项目根目录通过 `uv run --env-file .env ...` 运行；如果同一个 shell 中要重复执行 `uv run`，也可以先设置 `UV_ENV_FILE=.env`。
+
+初始化和升级脚本只安装不含密钥的 `.env.example` 模板，不会创建或覆盖真实 `.env`。
+
 ---
 
 ## 📂 4. 目录结构与职责

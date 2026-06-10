@@ -83,6 +83,14 @@ Use the upgrade scripts when applying a newer package release to an existing wor
 
 The upgrade covers entries listed in `scripts/upgrade-manifest.txt`, creates `PROJECT.md` when it is missing, reconciles missing runtime directories and default wiki files, and runs `uv sync` in the target root. Listed files are overwritten. Listed directories are merged by overwriting package-managed files while leaving additional target entries in place. Keep workspace-specific configuration in `PROJECT.md`.
 
+### Local Service Secrets
+
+When a provider needs local credentials or deployment-specific endpoints, copy `.env.example` to `.env` in the initialized root and fill only the variables required by the selected provider mode. For example, MinerU precise parsing uses `MINERU_API_TOKEN`, private MinerU deployments may also use `MINERU_BASE_URL`, and the MinerU Agent lightweight API does not need a token.
+
+The real `.env` file is local runtime configuration. It is ignored by Git and must not be written into `PROJECT.md`, `WIKI.md`, manifests, logs, review notes, wiki pages, source cards, or prompts. Agent commands that depend on `.env` must run from the project root with `uv run --env-file .env ...`, or with `UV_ENV_FILE=.env` set in the current shell for repeated `uv run` commands.
+
+Initialization and upgrade scripts install the non-secret `.env.example` template. They do not create or overwrite your real `.env`.
+
 ---
 
 ## 📂 4. Directory Structure
