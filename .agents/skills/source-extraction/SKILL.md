@@ -16,7 +16,7 @@ The stable intake contract remains in `WIKI.md`. This skill decides how to choos
 3. Read `references/source-kinds.md` to classify the original material.
 4. Read `references/provider-registry.md` to select a provider.
 5. For PDF documents, read `references/pdf-preflight.md` before selecting the document provider.
-6. Read only the selected provider's `usage.md`; read its `setup.md` only when setup, configuration, missing tools, or API keys are relevant.
+6. Read only the selected provider's `usage.md`; read its `setup.md` only when setup, configuration, missing tools, or API keys are relevant. If the selected provider has REST API guidance, read its API reference only when API mode or provider smoke checks are relevant.
 
 ## Workflow
 

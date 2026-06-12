@@ -9,7 +9,9 @@ Use MinerU when `PROJECT.md` selects `mineru` for documents, when `PROJECT.md` c
 
 ## Modes
 
-MinerU provides two official CLI extraction modes:
+MinerU can be used through the official CLI or REST APIs. Use `setup.md` for installation and local credential setup. Use `api.md` only when REST API mode, API/key checks, or official endpoint details are relevant.
+
+The official CLI provides two extraction modes:
 
 - `flash-extract`: no token, one input at a time, up to 10 MB and 20 pages, Markdown output only, formula and table recognition on by default, OCR off by default.
 - `extract`: token required, single or batch inputs, up to 200 MB and 200 pages, Markdown plus optional HTML, LaTeX, DOCX, and JSON outputs, model choices such as `vlm`, `pipeline`, and HTML model behavior for HTML inputs.
@@ -17,6 +19,13 @@ MinerU provides two official CLI extraction modes:
 Prefer `flash-extract` for small Markdown-only trials when network use is approved and the source fits its limits. Prefer `extract` when the user configured credentials and needs larger limits, batch processing, model selection, or richer output formats.
 
 Use MinerU web crawling only when the user explicitly chooses it for a webpage. The repository default webpage provider remains Defuddle.
+
+The official REST APIs have two families:
+
+- Precision API: token required, supports single-file or batch workflows and richer outputs.
+- Agent lightweight API: no token, IP-rate-limited, single-file Markdown output for agent workflows.
+
+Do not start either REST API parsing flow during a smoke check. Use the non-submitting checks in `api.md` instead.
 
 ## Provider Choice
 

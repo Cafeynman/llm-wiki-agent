@@ -22,6 +22,24 @@ mineru-open-api version
 
 The upstream skill also documents npm and Go install paths. Prefer the official CLI documentation when install behavior changes.
 
+## Basic Provider Smoke Check
+
+Use the smoke check only when the user wants to verify MinerU API reachability and API key validity. The check must not submit a document URL, request an upload URL, upload a file, poll a real parsing task, or download parsing output.
+
+Run from the project root after `.env` is configured:
+
+```bash
+uv run python .agents/skills/source-extraction/references/providers/mineru/scripts/smoke_check.py
+```
+
+The script reads `MINERU_TOKEN` and optional `MINERU_BASE_URL` from the current environment or `.env`. It reports only whether required values are present and whether the API routes accept the request shape. It must not print secret values or private endpoint URLs.
+
+If `.env` or `MINERU_TOKEN` is missing, send the user the official MinerU API documentation link so they can view or apply for API access:
+
+- <https://mineru.net/apiManage/docs>
+
+Do not ask the user to paste the token into chat. Tell them to configure it locally in `.env`.
+
 ## Flash Extraction
 
 `mineru-open-api flash-extract` does not require an authorization token. It is intended for small files and quick Markdown extraction.
