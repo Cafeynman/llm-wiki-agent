@@ -65,7 +65,7 @@ cd llm-wiki-agent
 
 **它的作用是：**
 1. 将包管理的入口文件、本地技能、脚本和文档安装到目标根目录。
-2. 在缺失时创建 `PROJECT.md`，并将来源提取偏好放在那里，由智能体在需要时确认。
+2. 在缺失时创建 `PROJECT.md`，并将来源提取偏好放在那里，由智能体在需要时确认，包括是否配置 MinerU，以及 MinerU 可用时是否优先使用 MinerU。
 3. 补齐缺失的工作流目录和默认 wiki 文件 (`inbox/`, `raw/`, `intake/`, `reviews/`, `logs/`, `wiki/` 等)，不覆盖已有运行内容。
 4. 在初始化后的根目录运行 `uv sync`，创建或更新 `.venv` 本地运行环境。
 
@@ -85,7 +85,9 @@ cd llm-wiki-agent
 
 ### 本地服务密钥
 
-当 provider 需要本地凭据或部署专属 endpoint 时，请将 `.env.example` 复制为初始化后根目录中的 `.env`，并只填写所选 provider 模式需要的变量。例如 MinerU 精准解析使用 `MINERU_API_TOKEN`，MinerU 私有部署还可能使用 `MINERU_BASE_URL`；MinerU Agent 轻量解析 API 不需要 token。
+当 provider 需要本地凭据或部署专属 endpoint 时，请将 `.env.example` 复制为初始化后根目录中的 `.env`，并只填写所选 provider 模式需要的变量。例如 MinerU 精准解析使用 `MINERU_TOKEN`，MinerU 私有部署还可能使用 `MINERU_BASE_URL`；MinerU `flash-extract` 不需要 token。
+
+首次确认项目上下文时，智能体应询问你是否要配置 MinerU，以及 MinerU 可用时是否优先用于受支持的文档。如果你选择优先 MinerU，智能体会在 `PROJECT.md` 中把文档默认 provider 记录为 MinerU。如果你不配置或不设为优先，MarkItDown 仍是普通文档的默认 provider，MinerU 只用于明确选择或复杂文档提取。
 
 真实 `.env` 是本地运行配置，已被 Git 忽略，不能写入 `PROJECT.md`, `WIKI.md`, manifest, log, review note, wiki 页面、source card 或提示词。依赖 `.env` 的智能体命令必须从项目根目录通过 `uv run --env-file .env ...` 运行；如果同一个 shell 中要重复执行 `uv run`，也可以先设置 `UV_ENV_FILE=.env`。
 

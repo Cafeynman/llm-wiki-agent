@@ -14,6 +14,8 @@ Read `PROJECT.md` for the configurable project context: current subject, goal, a
 
 On the first project-context interaction, if `PROJECT.md` is missing, blank, or still only a template with no confirmed project context, clarify the current project context with the user and write the confirmed context to `PROJECT.md` before making project-specific assumptions. Fields in `PROJECT.md` are optional unless required for the current task; do not block on blank optional fields, and ask only when the task depends on a missing value.
 
+During that first project-context confirmation, ask whether the user wants to configure MinerU credentials and whether MinerU should be preferred when it is available. Do not ask for or record the secret value itself; direct the user to copy `.env.example` to `.env` and fill `MINERU_TOKEN` locally. If the user prefers MinerU when available, set `Default provider for document: mineru` and `Prefer MinerU when available: yes` in `PROJECT.md`; otherwise keep MarkItDown as the document default and set `Prefer MinerU when available: no`.
+
 Treat `PROJECT.md` as the changeable context layer and the single place for project-specific personalization, including special wiki structure requirements, category schemes, naming preferences, and project-specific rules. Do not use it for stable wiki operating rules, runtime commands, repository workflow rules, or the stable wiki contract in `WIKI.md`.
 
 ## Runtime Requirement

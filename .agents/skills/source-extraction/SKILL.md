@@ -15,13 +15,14 @@ The stable intake contract remains in `WIKI.md`. This skill decides how to choos
 2. Read `references/contract.md` before running a provider.
 3. Read `references/source-kinds.md` to classify the original material.
 4. Read `references/provider-registry.md` to select a provider.
-5. Read only the selected provider's `usage.md`; read its `setup.md` only when setup, configuration, missing tools, or API keys are relevant.
+5. For PDF documents, read `references/pdf-preflight.md` before selecting the document provider.
+6. Read only the selected provider's `usage.md`; read its `setup.md` only when setup, configuration, missing tools, or API keys are relevant.
 
 ## Workflow
 
 1. Classify the original material by source kind.
 2. Check `PROJECT.md` for the configured provider or policy for that kind.
-3. On the first source-intake interaction for a project, if the relevant `PROJECT.md` preference is blank, missing, or `Preferences status` is `unconfirmed`, ask the user to confirm it before extraction. After confirmation, update `Preferences status` to `confirmed`.
+3. On the first source-intake interaction for a project, if the relevant `PROJECT.md` preference is blank, missing, or `Preferences status` is `unconfirmed`, ask the user to confirm it before extraction. For document intake, also ask whether the user wants to configure MinerU credentials and whether MinerU should be preferred when it is available. If the user chooses MinerU as the preferred available provider, set `Default provider for document: mineru` and `Prefer MinerU when available: yes`; if not, keep MarkItDown as the document default and set `Prefer MinerU when available: no`. After confirmation, update `Preferences status` and the non-secret provider preferences in `PROJECT.md`.
 4. If the kind is configured as `unsupported`, move through the normal WIKI intake handling for unsupported material.
 5. If the policy is `ask-before-ocr`, `ask-before-transcription`, or `ask-before-transcription-or-frame-ocr`, ask the user before enabling that extraction.
 6. Run the provider only against the original source, never against another provider's generated Markdown.

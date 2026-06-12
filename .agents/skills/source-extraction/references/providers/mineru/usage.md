@@ -1,6 +1,6 @@
 # MinerU Usage
 
-Use MinerU when `PROJECT.md` selects `mineru` for documents, or when the user explicitly chooses MinerU for complex document parsing.
+Use MinerU when `PROJECT.md` selects `mineru` for documents, when `PROJECT.md` confirms `Prefer MinerU when available: yes`, or when the user explicitly chooses MinerU for complex document parsing.
 
 ## Supported Source Kinds
 
@@ -9,38 +9,86 @@ Use MinerU when `PROJECT.md` selects `mineru` for documents, or when the user ex
 
 ## Modes
 
-MinerU provides two API families:
+MinerU provides two official CLI extraction modes:
 
-- Precise parsing API: token required, supports single and batch jobs, up to 200 MB and 200 pages, more output formats, and model choices such as `pipeline`, `vlm`, and `MinerU-HTML`.
-- Agent lightweight parsing API: no token, IP-rate-limited, up to 10 MB and 20 pages, asynchronous submission and polling, Markdown-only output.
+- `flash-extract`: no token, one input at a time, up to 10 MB and 20 pages, Markdown output only, formula and table recognition on by default, OCR off by default.
+- `extract`: token required, single or batch inputs, up to 200 MB and 200 pages, Markdown plus optional HTML, LaTeX, DOCX, and JSON outputs, model choices such as `vlm`, `pipeline`, and HTML model behavior for HTML inputs.
 
-Prefer the Agent lightweight API for small agent workflow trials when network use is approved and the source fits its limits. Prefer the precise API only when the user has configured credentials and needs its larger limits or richer parsing.
+Prefer `flash-extract` for small Markdown-only trials when network use is approved and the source fits its limits. Prefer `extract` when the user configured credentials and needs larger limits, batch processing, model selection, or richer output formats.
 
-Use `MinerU-HTML` only for HTML sources supported by the precise parsing API. The Agent lightweight URL endpoint is for remote files and does not support HTML.
+Use MinerU web crawling only when the user explicitly chooses it for a webpage. The repository default webpage provider remains Defuddle.
+
+## Provider Choice
+
+When both MarkItDown and MinerU are available:
+
+- If `PROJECT.md` confirms `Prefer MinerU when available: yes`, use MinerU for supported document inputs when the required mode is available.
+- If that preference is `no` or `unconfirmed`, keep MarkItDown as the ordinary document default and choose MinerU for scanned PDFs, image-heavy PDFs, dense tables, formulas, multi-column academic layouts, or explicit user requests.
+- If a PDF is being processed, run the lightweight PDF preflight before selecting the provider.
+- Do not switch from MarkItDown to MinerU as an implicit fallback. Explain the observed issue and confirm the provider change unless `PROJECT.md` already authorizes the MinerU preference.
 
 ## Credential Handling
 
-The Agent lightweight API does not require `.env` credentials.
+`flash-extract` does not require `.env` credentials.
 
-The precise parsing API requires `MINERU_API_TOKEN` in the project-root `.env` file. Private deployments or custom hosted services also require `MINERU_BASE_URL` in `.env`. Any `uv` command or helper script that calls this mode must run from the project root with:
+`extract` requires `MINERU_TOKEN` in the project-root `.env` file. Private deployments or custom hosted services also require `MINERU_BASE_URL` in `.env`. Any command that calls this mode must run from the project root with:
 
 ```bash
-uv run --env-file .env <mineru-helper-command>
+uv run --env-file .env mineru-open-api extract <source>
 ```
 
-For repeated `uv run` commands in the same shell, `UV_ENV_FILE=.env` may be set instead. If `.env`, `MINERU_API_TOKEN`, or a required `MINERU_BASE_URL` is missing, stop before extraction and ask the user to configure it. Do not paste tokens or private endpoint URLs into command examples, prompts, manifests, logs, review notes, wiki pages, or source cards.
+For repeated `uv run` commands in the same shell, `UV_ENV_FILE=.env` may be set instead. If `.env`, `MINERU_TOKEN`, or a required `MINERU_BASE_URL` is missing, stop before extraction and ask the user to configure it. Do not paste tokens or private endpoint URLs into command examples, prompts, manifests, logs, review notes, wiki pages, or source cards.
+
+## CLI Examples
+
+Print Markdown to stdout for a small document:
+
+```bash
+mineru-open-api flash-extract "report.pdf"
+```
+
+Save Markdown into the intake temporary directory:
+
+```bash
+mineru-open-api flash-extract "report.pdf" -o "intake/tmp/report"
+```
+
+Run precision extraction after credentials are configured:
+
+```bash
+uv run --env-file .env mineru-open-api extract "report.pdf" -f md -o "intake/tmp/report"
+```
+
+For private deployments, pass the base URL from the environment without printing its value:
+
+```bash
+uv run --env-file .env mineru-open-api extract "report.pdf" -f md -o "intake/tmp/report" --base-url "$MINERU_BASE_URL"
+```
+
+Output rules:
+
+- Without `-o`, extracted text goes to stdout and progress or errors go to stderr.
+- Without `-o`, use only one input and one text output format.
+- Batch mode and binary formats such as DOCX require `-o`.
+- Quote source paths that contain spaces or punctuation.
 
 ## Output Handling
 
-- Save the returned Markdown as `<intake-tmp-dir>/source.md`.
+- Save the returned Markdown as `<intake-tmp-dir>/source.md`, even when the CLI writes a provider-specific filename first.
 - Record the MinerU mode, model version, task id, OCR flag, credential status as present or not required, warnings, missing content, and result URLs in the intake manifest or review notes.
-- If MinerU returns a ZIP, extract only the Markdown needed for `source.md` unless the user explicitly asks to preserve additional artifacts.
-- If MinerU reports file-size, page-count, format, queue, timeout, or parsing failures, follow WIKI handling for `needs-review` or `unsupported` based on whether the source can be retried with user judgment.
+- If MinerU returns extra outputs, preserve only what is needed for `source.md` unless the user explicitly asks to keep additional artifacts.
+- If MinerU reports file-size, page-count, format, queue, timeout, rate-limit, or parsing failures, follow WIKI handling for `needs-review` or `unsupported` based on whether the source can be retried with user judgment.
+- Do not split PDFs automatically. If the selected mode cannot accept the whole file, ask the user to approve a page-range or section split strategy first.
+- If an approved split produces multiple Markdown files, merge them into the original source's `<intake-tmp-dir>/source.md` in page order. Keep per-part Markdown only as traceability side outputs, and record page ranges and part paths in the intake manifest or review notes.
 
 ## OCR and Images
 
-Do not enable MinerU OCR or image extraction automatically. If `PROJECT.md` says `ask-before-ocr`, ask the user before setting OCR options such as `is_ocr`.
+Do not enable MinerU OCR or image extraction automatically. If `PROJECT.md` says `ask-before-ocr`, ask the user before setting OCR options such as `--ocr`.
 
 ## Source
 
-MinerU API behavior should be checked against the official documentation when changing this provider: <https://mineru.net/apiManage/docs>.
+MinerU CLI and API behavior should be checked against the official documentation when changing this provider:
+
+- <https://github.com/opendatalab/MinerU-Ecosystem/tree/main/skills>
+- <https://github.com/opendatalab/MinerU-Ecosystem/tree/main/cli>
+- <https://mineru.net/apiManage/docs>

@@ -36,6 +36,8 @@ A successful provider run must produce:
 
 Providers must preserve source-derived text as content. Do not remove or normalize punctuation, YAML indicator characters, Markdown control characters, or filename characters from extracted titles, headings, paths, or body text. When provider metadata or source-derived strings are later written into YAML frontmatter, Markdown tables, wikilinks, or command examples, the writer must quote, escape, or encode them for that target syntax without changing the underlying value.
 
+When a large original file is split for provider limits, the provider workflow must merge part outputs back into one `source.md` for the original source before Source Review Gate. Part files may be kept only as traceability side outputs with recorded page ranges, provider modes, and merge order.
+
 ## Provider Credentials and Local Service Configuration
 
 Service-backed providers may require local credentials, tokens, API keys, or deployment-specific endpoints. The provider setup document must name the required environment variables and the provider mode that needs them. It must not contain real secret values or private endpoint values.

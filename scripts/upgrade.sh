@@ -134,6 +134,9 @@ Fields are optional unless required for the current task. Leave a field blank wh
 - Preferences status: unconfirmed
 - Default provider for document: markitdown
 - Alternative provider for document: mineru
+- MinerU API key status: unconfirmed
+- Prefer MinerU when available: unconfirmed
+- PDF preflight policy: lightweight
 - Default provider for webpage: defuddle
 - Image extraction policy: ask-before-ocr
 - Audio extraction policy: ask-before-transcription
@@ -229,3 +232,4 @@ echo "Upgraded package files at: $target_path"
 echo "Merged directories: $directory_count"
 echo "Copied files: $file_count"
 echo "Created missing runtime entries: $created_runtime_count"
+echo "Next project-context confirmation should ask whether to configure MinerU and whether to prefer MinerU when available. Store only non-secret choices in PROJECT.md; put any MinerU token in .env as MINERU_TOKEN."

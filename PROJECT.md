@@ -28,6 +28,9 @@ Fields are optional unless required for the current task. Leave a field blank wh
 - Preferences status: unconfirmed
 - Default provider for document: markitdown
 - Alternative provider for document: mineru
+- MinerU API key status: unconfirmed
+- Prefer MinerU when available: unconfirmed
+- PDF preflight policy: lightweight
 - Default provider for webpage: defuddle
 - Image extraction policy: ask-before-ocr
 - Audio extraction policy: ask-before-transcription
