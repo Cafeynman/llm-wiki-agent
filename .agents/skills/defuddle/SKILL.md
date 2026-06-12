@@ -1,11 +1,13 @@
 ---
 name: defuddle
-description: Extract clean markdown content from web pages using Defuddle CLI, removing clutter and navigation to save tokens. Use instead of WebFetch when the user provides a URL to read or analyze, for online documentation, articles, blog posts, or any standard web page. Do NOT use for URLs ending in .md — those are already markdown, use WebFetch directly.
+description: Run the Defuddle CLI as the webpage extraction provider after source-extraction selects `defuddle`, or for non-wiki webpage cleanup when no intake lifecycle applies. For wiki source material, use source-extraction first so PROJECT.md provider policy, Source Review Gate, and the WIKI.md output contract remain in control.
 ---
 
 # Defuddle
 
-Use Defuddle CLI to extract clean readable content from web pages. Prefer over WebFetch for standard web pages — it removes navigation, ads, and clutter, reducing token usage.
+Use Defuddle CLI to extract clean readable Markdown from web pages. In this package, Defuddle is a provider tool; it does not decide whether a source enters `intake/tmp/`, `intake/processed/`, or `wiki/`.
+
+For wiki intake, start with `source-extraction`. Use this skill only after that workflow selects `defuddle` for a webpage source.
 
 If not installed: `npm install -g defuddle`
 
@@ -17,10 +19,10 @@ Always use `--md` for markdown output:
 defuddle parse <url> --md
 ```
 
-Save to file:
+For wiki intake, write to the output path chosen by `source-extraction`:
 
 ```bash
-defuddle parse <url> --md -o content.md
+defuddle parse <url> --md -o intake/tmp/source-relative-parent/original-source-base-filename/source.md
 ```
 
 Extract specific metadata:
