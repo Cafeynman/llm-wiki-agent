@@ -65,7 +65,7 @@ Do not add a date directory under `intake/tmp/` or `intake/processed/`. Processi
 
 If preserving the source-relative output path would collide with an existing path for a distinct source, do not invent a suffix or choose a new title by assumption. Move the duplicate or ambiguous source to `raw/needs-review/`, record the naming collision question, and wait for user judgment.
 
-Use `digest.md` only when it helps review. Use `chunks/` only when the source is too large or structurally complex to handle as one file.
+Use `digest.md` only when it helps review. Use `chunks/` only when the source is too large or structurally complex to handle as one file. Chunking is an intake-output structure, not a raw-file structure: agent-generated Markdown stays under `intake/tmp/` while under review or `intake/processed/` after acceptance, and never goes under `raw/`.
 
 Intake outputs are processing records, not the final place for durable knowledge. Detailed source syntheses, core arguments, concept explanations, and reusable claims belong in `wiki/` pages after ingest, not in `digest.md`, `summary.md`, or `manifest.md`.
 
@@ -323,7 +323,8 @@ Keep accepted intake files distinct:
 - `digest.md` is optional review support. It may contain a compact content map, review cues, likely useful sections, and extraction warnings. It must not record final wiki updates, act as the final value judgment, or duplicate the manifest ledger.
 - `summary.md` is the final intake processing summary. It should say why the source was accepted, how reliable the extraction is, what caveats matter, and what scope should be ingested. It must not become a detailed source note, chapter-by-chapter digest, or final knowledge synthesis.
 - `manifest.md` is the traceability ledger. It should list paths and updates, not content summaries, core viewpoints, detailed quality analysis, or reading recommendations. If quality caveats matter, link to or briefly point at `summary.md` instead of restating them.
-- `chunks/index.md` is the chunk directory. If it already lists chunk titles and ranges, `summary.md` should link to it or state the chunk count rather than copying the full chunk table.
+- `chunks/index.md` is the chunk directory. It must list each chunk path, title or range, source page, slide, section, table, or archive-member range when known, extraction caveats, and review or ingest status. If it already lists chunk titles and ranges, `summary.md` should link to it or state the chunk count rather than copying the full chunk table.
+- For chunked sources, `source.md` remains the canonical extracted-source entrypoint. It may contain the full extracted text when practical. If the full text is too large, `source.md` may be an excerpt-type entrypoint that links to `chunks/index.md` and states that the complete review surface is split under `chunks/`.
 
 Before treating an intake folder as complete, check that `digest.md`, `summary.md`, and `manifest.md` are not all repeating the same source information, quality caveats, value judgment, or processing recommendations. Pick one primary location for each kind of information and link to it from the others only when needed.
 
@@ -363,11 +364,12 @@ Use this policy whenever a raw file, extracted `source.md`, or generated chunk i
 
 1. Inspect metadata before reading full content: exact filename, file type, file size, line count, page or slide count, table dimensions, archive listing, headings, and extraction warnings when available.
 2. Do not load a very large original file or `source.md` into context in one pass. Work from `summary.md`, `manifest.md`, and `chunks/index.md` first.
-3. For large sources, create `chunks/` before ingest. Each chunk must be a coherent unit small enough to read and summarize independently. Prefer semantic boundaries such as headings, chapters, slides, page ranges, sections, tables, or archive members.
-4. Write or update `summary.md` progressively from chunk summaries. The summary should capture the source topic, processing value, extraction caveats, low-value regions, noisy regions, and recommended ingest scope. Do not use `summary.md` as the detailed source synthesis; move durable claims and core viewpoints into `wiki/` during ingest.
-5. During ingest, read only the chunks needed for the current wiki update. Do not read all chunks unless the user explicitly asks for a full-source pass and the available context can support it.
-6. If a large source cannot be fully reviewed in the current pass, move the original out of `inbox/` to `raw/needs-review/`, record the review question, and clean `intake/tmp/`.
-7. If the source is mostly boilerplate, duplicate text, extraction errors, generated logs, raw data dumps, or other noise, do not expand it into the wiki. Record the issue in the review report and move the original to `raw/ignored/`, `raw/needs-review/`, or `raw/unsupported/` according to the blocker.
+3. When extracted `intake/tmp/.../source.md` is too large to review or ingest as one file, create `intake/tmp/.../chunks/` before Source Review Gate. If the source is accepted, promote the chunked folder to `intake/processed/.../`; if it is not accepted, clean the temporary folder with the rest of `intake/tmp/`.
+4. For large sources, create `chunks/` before ingest. Each chunk must be a coherent unit small enough to read and summarize independently. Prefer semantic boundaries such as headings, chapters, slides, page ranges, sections, tables, or archive members.
+5. Write or update `summary.md` progressively from chunk summaries. The summary should capture the source topic, processing value, extraction caveats, low-value regions, noisy regions, and recommended ingest scope. Do not use `summary.md` as the detailed source synthesis; move durable claims and core viewpoints into `wiki/` during ingest.
+6. During ingest, read only the chunks needed for the current wiki update. Do not read all chunks unless the user explicitly asks for a full-source pass and the available context can support it.
+7. If a large source cannot be fully reviewed in the current pass, move the original out of `inbox/` to `raw/needs-review/`, record the review question, and clean `intake/tmp/`.
+8. If the source is mostly boilerplate, duplicate text, extraction errors, generated logs, raw data dumps, or other noise, do not expand it into the wiki. Record the issue in the review report and move the original to `raw/ignored/`, `raw/needs-review/`, or `raw/unsupported/` according to the blocker.
 
 ### 6. Ingest
 
