@@ -87,6 +87,8 @@ The upgrade covers entries listed in `scripts/upgrade-manifest.txt`, creates `PR
 
 When a provider needs local credentials or deployment-specific endpoints, copy `.env.example` to `.env` in the initialized root and fill only the variables required by the selected provider mode. For example, MinerU precision extraction uses `MINERU_TOKEN`, private MinerU deployments may also use `MINERU_BASE_URL`, and MinerU `flash-extract` does not need a token.
 
+After configuring `MINERU_TOKEN`, run the MinerU provider smoke check before the first token-based MinerU extraction. The check verifies API reachability and whether the configured key is accepted; it does not parse a document.
+
 During the first project-context confirmation, or when source-extraction preferences are still unconfirmed, the agent asks whether you want to configure MinerU and whether MinerU should be preferred for supported documents when it is available. If you choose the MinerU preference, the agent records MinerU as the document default in `PROJECT.md`. If you decline, MarkItDown remains the ordinary document default and MinerU stays available for explicitly chosen or complex document extraction.
 
 The real `.env` file is local runtime configuration. It is ignored by Git and must not be written into `PROJECT.md`, `WIKI.md`, manifests, logs, review notes, wiki pages, source cards, or prompts. Agent commands that depend on `.env` must run from the project root with `uv run --env-file .env ...`, or with `UV_ENV_FILE=.env` set in the current shell for repeated `uv run` commands.

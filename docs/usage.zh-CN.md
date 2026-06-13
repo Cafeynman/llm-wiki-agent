@@ -87,6 +87,8 @@ cd llm-wiki-agent
 
 当 provider 需要本地凭据或部署专属 endpoint 时，请将 `.env.example` 复制为初始化后根目录中的 `.env`，并只填写所选 provider 模式需要的变量。例如 MinerU 精准解析使用 `MINERU_TOKEN`，MinerU 私有部署还可能使用 `MINERU_BASE_URL`；MinerU `flash-extract` 不需要 token。
 
+配置 `MINERU_TOKEN` 后，首次使用 token 模式的 MinerU 提取前应先运行 MinerU provider smoke check。这个检查只验证 API 可达性和当前 key 是否被接受，不会解析文档。
+
 首次确认项目上下文时，或来源提取偏好仍未确认时，智能体会询问你是否要配置 MinerU，以及 MinerU 可用时是否优先用于受支持的文档。如果你选择优先 MinerU，智能体会在 `PROJECT.md` 中把文档默认 provider 记录为 MinerU。如果你不配置或不设为优先，MarkItDown 仍是普通文档的默认 provider，MinerU 只用于明确选择或复杂文档提取。
 
 真实 `.env` 是本地运行配置，已被 Git 忽略，不能写入 `PROJECT.md`, `WIKI.md`, manifest, log, review note, wiki 页面、source card 或提示词。依赖 `.env` 的智能体命令必须从项目根目录通过 `uv run --env-file .env ...` 运行；如果同一个 shell 中要重复执行 `uv run`，也可以先设置 `UV_ENV_FILE=.env`。

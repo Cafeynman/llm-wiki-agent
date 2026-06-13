@@ -48,6 +48,8 @@ uv run --env-file .env mineru-open-api extract <source>
 
 For repeated `uv run` commands in the same shell, `UV_ENV_FILE=.env` may be set instead. If `.env`, `MINERU_TOKEN`, or a required `MINERU_BASE_URL` is missing, stop before extraction and ask the user to configure it. Do not paste tokens or private endpoint URLs into command examples, prompts, manifests, logs, review notes, wiki pages, or source cards.
 
+After the user configures `MINERU_TOKEN`, run the smoke check from `setup.md` before the first token-required MinerU extraction in the workspace. Treat the key as pending until the smoke check passes, and stop before extraction if the check fails.
+
 ## CLI Examples
 
 Print Markdown to stdout for a small document:

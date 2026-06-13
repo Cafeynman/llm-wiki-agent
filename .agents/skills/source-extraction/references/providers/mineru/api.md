@@ -39,7 +39,7 @@ Agent lightweight API:
 
 ## Basic Smoke Check
 
-The basic smoke check verifies API reachability and whether the configured precision API key is accepted. It is intentionally not an end-to-end parse.
+The basic smoke check verifies API reachability and whether the configured precision API key is accepted. It is intentionally not an end-to-end parse. Run it after the user confirms `MINERU_TOKEN` has been configured and before the first token-required MinerU extraction in a workspace.
 
 Use:
 
@@ -66,6 +66,8 @@ The check does not:
 - Print API keys, tokens, or private endpoint URLs.
 
 Passing this smoke check means the provider endpoint is reachable and the configured token appears accepted by the precision API route. It does not prove extraction quality, account quota, model availability, OCR behavior, or end-to-end parsing.
+
+Do not mark `MinerU API key status` as `confirmed` in `PROJECT.md` until this check passes. If it fails, keep the status pending or failed, stop before extraction, and send the official API management documentation link to the user.
 
 ## Extraction Boundary
 

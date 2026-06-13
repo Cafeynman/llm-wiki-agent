@@ -24,12 +24,13 @@ The stable intake contract remains in `WIKI.md`. This skill decides how to choos
 1. Classify the original material by source kind.
 2. Check `PROJECT.md` for the configured provider or policy for that kind.
 3. On the first source-intake interaction for a project, if the relevant `PROJECT.md` preference is blank, missing, or `Preferences status` is `unconfirmed`, ask the user to confirm it before extraction. For document intake, also ask whether the user wants to configure MinerU credentials and whether MinerU should be preferred when it is available. These bounded provider questions may use yes/no or short choices, but do not present preset choices for open-ended project context fields such as theme, goal, audience, structure, classification, naming, or project-specific rules. If the user chooses MinerU as the preferred available provider, set `Default provider for document: mineru` and `Prefer MinerU when available: yes`; if not, keep MarkItDown as the document default and set `Prefer MinerU when available: no`. After confirmation, update `Preferences status` and the non-secret provider preferences in `PROJECT.md`.
-4. If the kind is configured as `unsupported`, move through the normal WIKI intake handling for unsupported material.
-5. If the policy is `ask-before-ocr`, `ask-before-transcription`, or `ask-before-transcription-or-frame-ocr`, ask the user before enabling that extraction.
-6. Run the provider only against the original source, never against another provider's generated Markdown.
-7. Write provider output to `intake/tmp/source-relative-parent/original-source-base-filename/source.md`, omitting `source-relative-parent` when the source is directly under the intake root. The `original-source-base-filename` segment preserves the original base filename exactly after removing only the extension; do not slugify, translate, lowercase, URL encode, or simplify it.
-8. Record provider metadata, warnings, missing content, and any chunking decisions in the intake manifest or review notes.
-9. Continue to Source Review Gate. The provider does not decide whether the source is `digested`, `needs-review`, `ignored`, or `unsupported`.
+4. If the user says `MINERU_TOKEN` has been configured, treat `MinerU API key status` as `pending` until the MinerU smoke check passes. Before the first token-required MinerU extraction in a workspace, run the smoke check from the MinerU setup document. Only mark the API key status as `confirmed` after the smoke check passes. If the smoke check fails, stop before extraction, keep the status pending or failed, and send the official MinerU API documentation link to the user.
+5. If the kind is configured as `unsupported`, move through the normal WIKI intake handling for unsupported material.
+6. If the policy is `ask-before-ocr`, `ask-before-transcription`, or `ask-before-transcription-or-frame-ocr`, ask the user before enabling that extraction.
+7. Run the provider only against the original source, never against another provider's generated Markdown.
+8. Write provider output to `intake/tmp/source-relative-parent/original-source-base-filename/source.md`, omitting `source-relative-parent` when the source is directly under the intake root. The `original-source-base-filename` segment preserves the original base filename exactly after removing only the extension; do not slugify, translate, lowercase, URL encode, or simplify it.
+9. Record provider metadata, warnings, missing content, and any chunking decisions in the intake manifest or review notes.
+10. Continue to Source Review Gate. The provider does not decide whether the source is `digested`, `needs-review`, `ignored`, or `unsupported`.
 
 ## Security Rules
 
