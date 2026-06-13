@@ -61,7 +61,7 @@ Omit `source-relative-parent/` only when the source is directly under the intake
 #tag_with_underscores
 ```
 
-Tags can contain: letters (any language), numbers (not first character), underscores `_`, hyphens `-`, forward slashes `/` (for nesting).
+Tags can contain: letters (any language), numbers (not first character), underscores `_`, hyphens `-`, forward slashes `/` (for nesting). Tags must not contain spaces or other whitespace. Use `energy-policy` or `energy/policy`, not `energy policy`.
 
 In frontmatter:
 

@@ -219,5 +219,298 @@ Body.
         )
         self.assertTrue(invalid_reported)
 
+    def test_frontmatter_tags_allow_no_space_tags(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """---
+title: "Note"
+tags:
+  - project
+  - energy-policy
+  - energy/policy
+---
+
+Body.
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print"):
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0, "Lint should accept tags without whitespace.")
+
+    def test_frontmatter_tags_reject_space_in_block_tag(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """---
+title: "Note"
+tags:
+  - "energy policy"
+---
+
+Body.
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 1, "Lint should reject tags that contain spaces.")
+        invalid_reported = any(
+            "tags entry must not contain whitespace" in (call[0][0] if call[0] else "")
+            for call in mock_print.call_args_list
+        )
+        self.assertTrue(invalid_reported)
+
+    def test_frontmatter_tags_reject_space_in_inline_tag(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """---
+title: "Note"
+tags: [project, "energy policy"]
+---
+
+Body.
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 1, "Lint should reject inline tags that contain spaces.")
+        invalid_reported = any(
+            "tags entry must not contain whitespace" in (call[0][0] if call[0] else "")
+            for call in mock_print.call_args_list
+        )
+        self.assertTrue(invalid_reported)
+
+    def test_frontmatter_tags_allow_inline_list_with_comment(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """---
+title: "Note"
+tags: [project, energy-policy] # browsing tags
+---
+
+Body.
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print"):
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0, "Lint should accept inline tag lists with YAML comments.")
+
+    def test_frontmatter_tags_reject_quoted_leading_or_trailing_space(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """---
+title: "Note"
+tags:
+  - " energy"
+  - "policy "
+---
+
+Body.
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 1, "Lint should reject quoted tags with leading or trailing whitespace.")
+        invalid_reported = any(
+            "tags entry must not contain whitespace" in (call[0][0] if call[0] else "")
+            for call in mock_print.call_args_list
+        )
+        self.assertTrue(invalid_reported)
+
+    def test_frontmatter_tags_reject_quoted_inline_leading_space(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """---
+title: "Note"
+tags: [project, " energy"]
+---
+
+Body.
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 1, "Lint should reject quoted inline tags with preserved whitespace.")
+        invalid_reported = any(
+            "tags entry must not contain whitespace" in (call[0][0] if call[0] else "")
+            for call in mock_print.call_args_list
+        )
+        self.assertTrue(invalid_reported)
+
+    def test_table_wikilink_alias_requires_escaped_pipe(self):
+        (self.vault / "wiki" / "target.md").write_text("Target.", encoding="utf-8")
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """| Source | Link |
+| --- | --- |
+| A | [[wiki/target.md|Target]] |
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 1, "Lint should reject unescaped wikilink alias separators in tables.")
+        invalid_reported = any(
+            "wikilink alias separator must be escaped" in (call[0][0] if call[0] else "")
+            for call in mock_print.call_args_list
+        )
+        self.assertTrue(invalid_reported)
+
+    def test_single_column_table_wikilink_alias_requires_escaped_pipe(self):
+        (self.vault / "wiki" / "target.md").write_text("Target.", encoding="utf-8")
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """| Link |
+| --- |
+| [[wiki/target.md|Target]] |
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 1, "Lint should check wikilink aliases in single-column tables.")
+        invalid_reported = any(
+            "wikilink alias separator must be escaped" in (call[0][0] if call[0] else "")
+            for call in mock_print.call_args_list
+        )
+        self.assertTrue(invalid_reported)
+
+    def test_table_wikilink_alias_allows_escaped_pipe(self):
+        (self.vault / "wiki" / "target.md").write_text("Target.", encoding="utf-8")
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """| Source | Link |
+| --- | --- |
+| A | [[wiki/target.md\\|Target]] |
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print"):
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0, "Lint should accept escaped wikilink alias separators in tables.")
+
+    def test_table_wikilink_alias_ignores_inline_code_example(self):
+        (self.vault / "wiki" / "target.md").write_text("Target.", encoding="utf-8")
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """| Example |
+| --- |
+| `[[wiki/target.md|Target]]` |
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print"):
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0, "Lint should ignore wikilink alias examples inside inline code.")
+
+    def test_non_table_wikilink_alias_allows_unescaped_pipe(self):
+        (self.vault / "wiki" / "target.md").write_text("Target.", encoding="utf-8")
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text("See [[wiki/target.md|Target]].", encoding="utf-8")
+
+        with patch("builtins.print"):
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0, "Lint should allow ordinary wikilink aliases outside Markdown tables.")
+
+    def test_bare_traceability_path_requires_wikilink(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text("Reviewed raw/digested/source.pdf for evidence.", encoding="utf-8")
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 1, "Lint should reject bare internal traceability paths in body text.")
+        invalid_reported = any(
+            "internal traceability path must use a wikilink" in (call[0][0] if call[0] else "")
+            for call in mock_print.call_args_list
+        )
+        self.assertTrue(invalid_reported)
+
+    def test_parenthesized_or_bracketed_bare_traceability_path_requires_wikilink(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            "Reviewed (raw/digested/source.pdf) and [intake/processed/source/source.md].",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 1, "Lint should reject parenthesized or bracketed bare paths.")
+        invalid_reported = any(
+            "internal traceability path must use a wikilink" in (call[0][0] if call[0] else "")
+            for call in mock_print.call_args_list
+        )
+        self.assertTrue(invalid_reported)
+
+    def test_traceability_path_ignored_inside_inline_code_and_links(self):
+        (self.vault / "raw" / "digested").mkdir(parents=True)
+        (self.vault / "raw" / "digested" / "source.pdf").touch()
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """Inline example: `raw/digested/source.pdf`.
+Wikilink: [[raw/digested/source.pdf]].
+Markdown link: [source](raw/digested/source.pdf).
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print"):
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0, "Lint should ignore traceability paths inside code and links.")
+
+    def test_traceability_path_ignored_inside_double_backtick_inline_code(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            "Inline example: ``raw/digested/source.pdf``.",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print"):
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0, "Lint should ignore traceability paths inside double-backtick code.")
+
+    def test_traceability_path_ignored_inside_code_block(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """```text
+raw/digested/source.pdf
+```
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print"):
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0, "Lint should ignore traceability path examples inside fenced code.")
+
 if __name__ == "__main__":
     unittest.main()

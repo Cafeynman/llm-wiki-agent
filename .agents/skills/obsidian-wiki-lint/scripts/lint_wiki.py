@@ -12,6 +12,10 @@ from pathlib import Path
 WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
 MD_LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 FRONTMATTER_RE = re.compile(r"\A---\r?\n(.*?)\r?\n---", re.DOTALL)
+TRACEABILITY_PATH_RE = re.compile(
+    r"(?<![\w/.\-])"
+    r"((?:artifacts|intake|logs|questions|raw|reviews|wiki)/[^\s\]\)<>'\"`|]+)"
+)
 INTERNAL_SOURCE_PREFIXES = (
     "artifacts/",
     "intake/",
@@ -75,6 +79,43 @@ def is_quoted_yaml_scalar(value: str) -> bool:
     return len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}
 
 
+def strip_yaml_comment(value: str) -> str:
+    value = value.strip()
+    if is_quoted_yaml_scalar(value):
+        return value
+    return value.split(" #", 1)[0].strip()
+
+
+def iter_markdown_body_lines(content: str) -> list[tuple[int, str]]:
+    frontmatter_match = FRONTMATTER_RE.match(content)
+    frontmatter_lines = len(frontmatter_match.group(0).splitlines()) if frontmatter_match else 0
+    lines: list[tuple[int, str]] = []
+    in_fence = False
+    fence_marker: str | None = None
+
+    for line_no, line in enumerate(content.splitlines(), start=1):
+        if line_no <= frontmatter_lines:
+            continue
+
+        stripped = line.strip()
+        if stripped.startswith(("```", "~~~")):
+            marker = stripped[:3]
+            if not in_fence:
+                in_fence = True
+                fence_marker = marker
+            elif marker == fence_marker:
+                in_fence = False
+                fence_marker = None
+            continue
+
+        if in_fence:
+            continue
+
+        lines.append((line_no, line))
+
+    return lines
+
+
 def is_external_source(value: str) -> bool:
     return value.startswith(("http://", "https://", "mailto:"))
 
@@ -122,6 +163,79 @@ def split_flow_list(value: str) -> list[str] | None:
     return items
 
 
+def has_unescaped_pipe(value: str) -> bool:
+    escaped = False
+    for char in value:
+        if char == "\\" and not escaped:
+            escaped = True
+            continue
+        if char == "|" and not escaped:
+            return True
+        escaped = False
+    return False
+
+
+def mask_inline_code(line: str) -> str:
+    chars = list(line)
+    index = 0
+
+    while index < len(chars):
+        if chars[index] != "`":
+            index += 1
+            continue
+
+        run_start = index
+        while index < len(chars) and chars[index] == "`":
+            index += 1
+        marker = "`" * (index - run_start)
+        closing = line.find(marker, index)
+        if closing == -1:
+            continue
+
+        for mask_index in range(run_start, closing + len(marker)):
+            chars[mask_index] = " "
+        index = closing + len(marker)
+
+    return "".join(chars)
+
+
+def is_table_separator_line(line: str) -> bool:
+    stripped = line.strip()
+    if "|" not in stripped:
+        return False
+
+    cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+    return len(cells) >= 1 and all(re.fullmatch(r":?-{3,}:?", cell) for cell in cells)
+
+
+def is_table_row_line(line: str) -> bool:
+    return "|" in line and bool(line.strip())
+
+
+def table_line_numbers(lines: list[tuple[int, str]]) -> set[int]:
+    table_lines: set[int] = set()
+    for index, (line_no, line) in enumerate(lines):
+        if not is_table_separator_line(line):
+            continue
+
+        if index > 0 and is_table_row_line(lines[index - 1][1]):
+            table_lines.add(lines[index - 1][0])
+        table_lines.add(line_no)
+
+        next_index = index + 1
+        while next_index < len(lines) and is_table_row_line(lines[next_index][1]):
+            table_lines.add(lines[next_index][0])
+            next_index += 1
+
+    return table_lines
+
+
+def mask_inline_exclusions(line: str) -> str:
+    masked = mask_inline_code(line)
+    masked = WIKILINK_RE.sub(" ", masked)
+    return MD_LINK_RE.sub(" ", masked)
+
+
 def lint_source_entry(raw_value: str, rel: str, line_no: int) -> list[str]:
     raw_value = raw_value.strip()
     if not raw_value:
@@ -162,6 +276,30 @@ def lint_sources_value(raw_value: str, rel: str, line_no: int) -> list[str]:
     return errors
 
 
+def lint_tag_entry(raw_value: str, rel: str, line_no: int) -> list[str]:
+    raw_value = strip_yaml_comment(raw_value)
+    if not raw_value or raw_value.startswith("#"):
+        return []
+
+    value = strip_yaml_quotes(raw_value)
+    normalized = value[1:] if value.startswith("#") else value
+    if any(char.isspace() for char in normalized):
+        return [f"{rel}:{line_no}: tags entry must not contain whitespace: {raw_value}"]
+    return []
+
+
+def lint_tags_value(raw_value: str, rel: str, line_no: int) -> list[str]:
+    raw_value = strip_yaml_comment(raw_value)
+    flow_items = split_flow_list(raw_value)
+    if flow_items is None:
+        return lint_tag_entry(raw_value, rel, line_no)
+
+    errors: list[str] = []
+    for item in flow_items:
+        errors.extend(lint_tag_entry(item, rel, line_no))
+    return errors
+
+
 def lint_frontmatter_sources(content: str, rel: str) -> list[str]:
     match = FRONTMATTER_RE.match(content)
     if not match:
@@ -195,6 +333,76 @@ def lint_frontmatter_sources(content: str, rel: str) -> list[str]:
             continue
 
         errors.extend(lint_source_entry(stripped[1:].strip(), rel, line_no))
+
+    return errors
+
+
+def lint_frontmatter_tags(content: str, rel: str) -> list[str]:
+    match = FRONTMATTER_RE.match(content)
+    if not match:
+        return []
+
+    frontmatter = match.group(1)
+    errors: list[str] = []
+    in_tags = False
+    tags_indent = 0
+
+    for line_no, line in enumerate(frontmatter.splitlines(), start=2):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+
+        indent = len(line) - len(line.lstrip())
+        if not in_tags:
+            tags_match = re.match(r"^tags\s*:\s*(.*)$", stripped)
+            if tags_match:
+                inline_value = tags_match.group(1).strip()
+                if inline_value and not inline_value.startswith("#"):
+                    errors.extend(lint_tags_value(inline_value, rel, line_no))
+                    continue
+                in_tags = True
+                tags_indent = indent
+            continue
+
+        if indent <= tags_indent and not stripped.startswith("-"):
+            break
+        if not stripped.startswith("-"):
+            continue
+
+        errors.extend(lint_tag_entry(stripped[1:].strip(), rel, line_no))
+
+    return errors
+
+
+def lint_table_wikilink_aliases(content: str, rel: str) -> list[str]:
+    lines = iter_markdown_body_lines(content)
+    table_lines = table_line_numbers(lines)
+    errors: list[str] = []
+
+    for line_no, line in lines:
+        if line_no not in table_lines:
+            continue
+
+        masked = mask_inline_code(line)
+        for match in WIKILINK_RE.finditer(masked):
+            inner = match.group(1)
+            if has_unescaped_pipe(inner):
+                errors.append(
+                    f"{rel}:{line_no}: wikilink alias separator must be escaped in Markdown tables: {match.group(0)}"
+                )
+
+    return errors
+
+
+def lint_bare_traceability_paths(content: str, rel: str) -> list[str]:
+    errors: list[str] = []
+
+    for line_no, line in iter_markdown_body_lines(content):
+        masked = mask_inline_exclusions(line)
+        for match in TRACEABILITY_PATH_RE.finditer(masked):
+            path = match.group(1).rstrip(".,;:!?")
+            if path:
+                errors.append(f"{rel}:{line_no}: internal traceability path must use a wikilink: {path}")
 
     return errors
 
@@ -237,10 +445,16 @@ def lint(vault: Path, scope: str) -> int:
     incoming: dict[str, list[str]] = defaultdict(list)
     broken: dict[str, list[str]] = defaultdict(list)
     frontmatter_source_errors: list[str] = []
+    frontmatter_tag_errors: list[str] = []
+    table_wikilink_errors: list[str] = []
+    traceability_path_errors: list[str] = []
 
     for rel in scoped_files:
         content = (vault / rel).read_text(encoding="utf-8")
         frontmatter_source_errors.extend(lint_frontmatter_sources(content, rel))
+        frontmatter_tag_errors.extend(lint_frontmatter_tags(content, rel))
+        table_wikilink_errors.extend(lint_table_wikilink_aliases(content, rel))
+        traceability_path_errors.extend(lint_bare_traceability_paths(content, rel))
         for match in WIKILINK_RE.finditer(content):
             raw_target = split_wikilink(match.group(1))
             if not raw_target or raw_target.startswith(("http://", "https://", "mailto:")):
@@ -290,13 +504,46 @@ def lint(vault: Path, scope: str) -> int:
             print(f"Invalid: {error}")
 
     print()
+    print("=== Frontmatter tags ===")
+    if not frontmatter_tag_errors:
+        print("None")
+    else:
+        for error in frontmatter_tag_errors:
+            print(f"Invalid: {error}")
+
+    print()
+    print("=== Markdown tables ===")
+    if not table_wikilink_errors:
+        print("None")
+    else:
+        for error in table_wikilink_errors:
+            print(f"Invalid: {error}")
+
+    print()
+    print("=== Traceability paths ===")
+    if not traceability_path_errors:
+        print("None")
+    else:
+        for error in traceability_path_errors:
+            print(f"Invalid: {error}")
+
+    print()
     print("=== Stats ===")
     print(f"Markdown pages: {len(all_files)}")
     print(f"Scoped pages: {len(scoped_files)}")
     print(f"Broken links: {len(broken)}")
     print(f"Orphan pages: {len(orphans)}")
     print(f"Frontmatter source errors: {len(frontmatter_source_errors)}")
-    return 1 if broken or frontmatter_source_errors else 0
+    print(f"Frontmatter tag errors: {len(frontmatter_tag_errors)}")
+    print(f"Markdown table errors: {len(table_wikilink_errors)}")
+    print(f"Traceability path errors: {len(traceability_path_errors)}")
+    return 1 if (
+        broken
+        or frontmatter_source_errors
+        or frontmatter_tag_errors
+        or table_wikilink_errors
+        or traceability_path_errors
+    ) else 0
 
 
 def main() -> int:

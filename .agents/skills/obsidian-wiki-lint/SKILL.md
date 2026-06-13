@@ -18,8 +18,10 @@ uv run --no-project .agents/skills/obsidian-wiki-lint/scripts/lint_wiki.py --vau
 ## Verification Architecture
 
 When users request complex health checks or business logic validation, follow a two-layer approach:
-1. **Standard Layer (Foundation)**: Always run `lint_wiki.py` first to establish a reliable baseline of structural integrity (broken links and orphans).
+1. **Standard Layer (Foundation)**: Always run `lint_wiki.py` first to establish a reliable baseline of deterministic Obsidian Markdown health checks.
 2. **Project Layer (Custom)**: Write custom one-off scripts to verify project-specific states (e.g., source card counts, synthesis completion, metadata values). Do not mix foundational wiki link parsing with custom business logic.
+
+Keep executable Obsidian Markdown checks owned here. `WIKI.md` may require this lint layer as a gate, but should not duplicate the detailed list of individual checks. General syntax guidance belongs in `obsidian-markdown`; deterministic checks and their test coverage belong in this skill.
 
 ## Core Workflow
 
@@ -33,7 +35,7 @@ When users request complex health checks or business logic validation, follow a 
 
 | Script | Purpose | Writes by default |
 | --- | --- | --- |
-| `lint_wiki.py` | Reports broken wikilinks, orphan pages under a scope, frontmatter `sources:` entries that should be wikilinks, and page counts. | No |
+| `lint_wiki.py` | Reports broken wikilinks, orphan pages under a scope, frontmatter `sources:` entries that should be wikilinks, frontmatter `tags:` values that contain whitespace, unescaped wikilink alias separators in Markdown tables, bare internal traceability paths in body text, and page counts. | No |
 | `fix_truncated_links.py` | Expands wikilinks whose target filename is a unique prefix of an existing Markdown file. | No |
 | `crosslink_concepts.py` | Adds limited links from concept names or aliases to concept notes. | No |
 

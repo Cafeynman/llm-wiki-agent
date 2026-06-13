@@ -302,7 +302,7 @@ When a source is ready to become wiki knowledge:
 2. Read `summary.md`, `manifest.md`, and `chunks/index.md` first when available.
 3. Read the original source only when accuracy or extraction quality needs verification.
 4. Extract durable knowledge: main thesis, key claims, evidence, counterevidence, named entities, important concepts, decisions, recommendations, contradictions, and open questions.
-5. Verify Obsidian Markdown before writing wiki pages: internal links must be wikilinks, wikilink aliases inside tables must escape `|` as `\|`, frontmatter must parse as valid Obsidian properties, bold markers must be balanced, and traceability links must point to existing vault files.
+5. Verify Obsidian Markdown before writing wiki pages. Use the local `obsidian-markdown` skill as the syntax contract and run `obsidian-wiki-lint` as the deterministic lint gate.
 6. Create or update exactly one content-rich source card under `wiki/sources/<source-relative-parent>/original-source-base-filename.md`.
 7. For long books, manuals, standards, reports, or other sources that need a structured reading surface, create or update a source-specific wiki entry only when useful. Put full-source detailed summaries, core viewpoints, knowledge flow, chapter navigation, and chapter-level digests there, for example under `wiki/books/source-relative-parent/original-source-base-filename/`.
 8. Create or update relevant pages in `wiki/entities/`, `wiki/concepts/`, `wiki/claims/`, or `wiki/syntheses/` only when useful.
