@@ -54,7 +54,7 @@ intake/processed/source-relative-parent/original-source-base-filename/
 ├── digest.md        Optional short digest used to support review.
 └── chunks/
     ├── index.md
-    └── 01.md
+    └── 01-source-heading-or-range.md
 ```
 
 If the source has no parent directory under the intake root, omit `source-relative-parent`. The `original-source-base-filename` directory must preserve the original source file's base filename and source language. Except for removing the extension, do not translate, romanize, slugify, lowercase, URL encode, or simplify it. Use the same source-relative parent and source-language base filename for source cards under `wiki/sources/`.
@@ -178,7 +178,7 @@ The intake order is:
 5. For archives, create a member listing first. Record each useful member's archive path, filename, detected type, and extraction result. Extract only members that are useful for review.
 6. If extraction fails, move the original file to `raw/unsupported/` while preserving its source-relative path, record the blocker in `intake/logs/YYYY-MM-DD.md`, delete the temporary folder, and stop.
 7. If extraction technically succeeds but the Markdown is garbled, empty, too thin to judge, obviously truncated, structurally broken, or missing important text, move the original to `raw/needs-review/` while preserving its source-relative path, record the extraction-quality question, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and stop.
-8. Run the source-extraction intake stats check on the temporary `source.md`. Normal files need no stats record. If it reports `large_source`, create semantic chunks under the same temporary intake folder before Source Review Gate when reliable source boundaries exist.
+8. Run the source-extraction intake file audit on the temporary `source.md` just produced by the current intake step. Normal files need no audit record. If it reports `large_source`, create semantic chunks under the same temporary intake folder before Source Review Gate when reliable source boundaries exist.
 9. If a large, ambiguous, encrypted, noisy, multimodal, or user-selection-dependent source cannot be made reviewable through semantic chunks in the same pass, move the original to `raw/needs-review/` while preserving its source-relative path, record the question, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and stop.
 10. Optionally write `digest.md` in the temporary intake folder when a short digest would make review easier; do not make digest mandatory.
 11. Run Source Review Gate on the temporary Markdown, chunks, and optional digest, not on the raw filename alone.
@@ -286,10 +286,10 @@ Do not leave a final accepted source represented as both `raw/digested/` and `ra
 
 Use this policy whenever a raw file, extracted `source.md`, or generated chunk is too large to read comfortably in the current context.
 
-1. Inspect metadata before reading full content: exact filename, file type, file size, line count, page or slide count, table dimensions, archive listing, headings, extraction warnings when available, and the source-extraction intake stats alert if `source.md` has already been produced.
+1. Inspect metadata before reading full content: exact filename, file type, file size, line count, page or slide count, table dimensions, archive listing, headings, extraction warnings when available, and the source-extraction intake file audit alert if `source.md` has already been produced.
 2. Do not load a very large original file or `source.md` into context in one pass. Work from `summary.md`, `manifest.md`, and `chunks/index.md` first.
 3. When extracted `intake/tmp/.../source.md` is too large to review or ingest as one file, create `intake/tmp/.../chunks/` before Source Review Gate. Use source-defined headings or other reliable boundaries when they exist; do not invent generic chapter names. If the source is accepted, promote the chunked folder to `intake/processed/.../`; if it is not accepted, clean the temporary folder with the rest of `intake/tmp/`.
-4. For large sources, create `chunks/` before ingest. Each chunk must be a coherent unit small enough to read and summarize independently. Prefer semantic boundaries such as headings, chapters, subchapters, slides, page ranges, sections, tables, or archive members. Follow `.agents/skills/source-extraction/references/large-source-chunking.md` for thresholds and detailed chunk structure.
+4. For large sources, create `chunks/` before ingest. Each chunk must be a coherent unit small enough to read and summarize independently. Prefer semantic boundaries such as headings, chapters, subchapters, slides, page ranges, sections, tables, or archive members. Follow `.agents/skills/source-extraction/references/large-source-chunking.md` for detailed chunk structure.
 5. Write or update `summary.md` progressively from chunk summaries. The summary should capture the source topic, processing value, extraction caveats, low-value regions, noisy regions, and recommended ingest scope. Do not use `summary.md` as the detailed source synthesis; move durable claims and core viewpoints into `wiki/` during ingest.
 6. During ingest, read only the chunks needed for the current wiki update. Do not read all chunks unless the user explicitly asks for a full-source pass and the available context can support it.
 7. If a large source cannot be fully reviewed in the current pass, move the original out of `inbox/` to `raw/needs-review/`, record the review question, and clean `intake/tmp/`.

@@ -10,10 +10,10 @@ from pathlib import Path
 scripts_dir = Path(__file__).parent.parent / "scripts"
 sys.path.insert(0, str(scripts_dir))
 
-import intake_stats
+import audit_intake_file
 
 
-class TestIntakeStats(unittest.TestCase):
+class TestAuditIntakeFile(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.root = Path(self.temp_dir.name)
@@ -26,12 +26,17 @@ class TestIntakeStats(unittest.TestCase):
         path.write_text(text, encoding="utf-8")
         return path
 
+    def test_content_unit_constant_is_used(self):
+        self.assertEqual(audit_intake_file.CONTENT_UNIT_BYTES, 3)
+        self.assertEqual(audit_intake_file.DEFAULT_LARGE_SOURCE_THRESHOLD, 10000)
+        self.assertEqual(audit_intake_file.content_units("abcd"), 2)
+
     def test_normal_file_is_quiet_by_default(self):
         path = self.write_source("# Overview\n\nShort source.\n")
         stdout = io.StringIO()
 
         with redirect_stdout(stdout):
-            result = intake_stats.main([str(path)])
+            result = audit_intake_file.main([str(path)])
 
         self.assertEqual(result, 0)
         self.assertEqual(stdout.getvalue(), "")
@@ -54,7 +59,7 @@ class TestIntakeStats(unittest.TestCase):
         stdout = io.StringIO()
 
         with redirect_stdout(stdout):
-            result = intake_stats.main([str(path), "--json", "--threshold", "1"])
+            result = audit_intake_file.main([str(path), "--json", "--threshold", "1"])
 
         self.assertEqual(result, 0)
         stats = json.loads(stdout.getvalue())
@@ -72,7 +77,7 @@ class TestIntakeStats(unittest.TestCase):
         stdout = io.StringIO()
 
         with redirect_stdout(stdout):
-            result = intake_stats.main([str(path), "--json"])
+            result = audit_intake_file.main([str(path), "--json"])
 
         self.assertEqual(result, 0)
         self.assertEqual(stdout.getvalue(), "")
@@ -82,7 +87,7 @@ class TestIntakeStats(unittest.TestCase):
         stdout = io.StringIO()
 
         with redirect_stdout(stdout):
-            result = intake_stats.main([str(path), "--threshold", "10"])
+            result = audit_intake_file.main([str(path), "--threshold", "10"])
 
         output = stdout.getvalue()
         self.assertEqual(result, 0)
@@ -95,7 +100,7 @@ class TestIntakeStats(unittest.TestCase):
         stdout = io.StringIO()
 
         with redirect_stdout(stdout):
-            result = intake_stats.main([str(path), "--threshold", "10"])
+            result = audit_intake_file.main([str(path), "--threshold", "10"])
 
         output = stdout.getvalue()
         self.assertEqual(result, 0)
@@ -106,7 +111,7 @@ class TestIntakeStats(unittest.TestCase):
         stdout = io.StringIO()
 
         with redirect_stdout(stdout):
-            result = intake_stats.main([str(path), "--threshold", "10"])
+            result = audit_intake_file.main([str(path), "--threshold", "10"])
 
         output = stdout.getvalue()
         self.assertEqual(result, 0)
@@ -117,7 +122,7 @@ class TestIntakeStats(unittest.TestCase):
         stderr = io.StringIO()
 
         with redirect_stderr(stderr):
-            result = intake_stats.main([str(self.root / "missing.md")])
+            result = audit_intake_file.main([str(self.root / "missing.md")])
 
         self.assertEqual(result, 2)
         self.assertIn("missing file:", stderr.getvalue())

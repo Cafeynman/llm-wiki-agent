@@ -2,14 +2,11 @@
 
 Use this reference when a source is too large to review, ingest, or retrieve as one Markdown file. The stable lifecycle remains in `WIKI.md`; this file gives the detailed chunking procedure.
 
-## Default Thresholds
+## Intake File Audit
 
-Use these as working targets, not hard limits:
+Before chunking, run the bundled intake file audit helper against the current temporary `source.md`. The helper owns the size calculation and reports `large_source` only when a semantic chunking decision is needed.
 
-- Measure extracted Markdown with language-neutral content units. A content unit is `ceil(utf8_byte_length / 3)` for the text being evaluated; the bundled intake stats helper reports this as `content_units`.
-- Target leaf chunk size: 4,000-8,000 content units.
-- Recommend further semantic splitting above about 10,000 content units.
-- Allow oversized chunks when splitting would break a table, formula group, legal clause, continuous argument, long quotation, or source region without a clear semantic boundary.
+Allow oversized chunks when splitting would break a table, formula group, legal clause, continuous argument, long quotation, or source region without a clear semantic boundary.
 
 If a chunk remains oversized, record the reason in `chunks/index.md`; after acceptance, also record it in `manifest.md` when it affects traceability or review.
 

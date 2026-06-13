@@ -8,10 +8,12 @@ from pathlib import Path
 
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 SETEXT_RE = re.compile(r"^(=+|-+)\s*$")
+CONTENT_UNIT_BYTES = 3
+DEFAULT_LARGE_SOURCE_THRESHOLD = 10000
 
 
 def content_units(text: str) -> int:
-    return math.ceil(len(text.encode("utf-8")) / 3)
+    return math.ceil(len(text.encode("utf-8")) / CONTENT_UNIT_BYTES)
 
 
 def extract_headings(text: str) -> list[str]:
@@ -74,10 +76,15 @@ def print_alert(stats: dict, threshold: int) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Report lightweight intake Markdown size alerts.")
+    parser = argparse.ArgumentParser(description="Audit one extracted intake source.md file.")
     parser.add_argument("path", help="Path to an extracted intake source.md file.")
-    parser.add_argument("--threshold", type=int, default=10000, help="Alert threshold in content units.")
-    parser.add_argument("--json", action="store_true", help="Print minimal JSON stats when alerts are present.")
+    parser.add_argument(
+        "--threshold",
+        type=int,
+        default=DEFAULT_LARGE_SOURCE_THRESHOLD,
+        help="Large-source alert threshold in content units.",
+    )
+    parser.add_argument("--json", action="store_true", help="Print minimal audit JSON when alerts are present.")
     args = parser.parse_args(argv)
 
     path = Path(args.path)
