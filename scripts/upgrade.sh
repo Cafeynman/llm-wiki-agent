@@ -110,11 +110,6 @@ This file records the current workspace's configurable project context, includin
 
 Fields are optional unless required for the current task. Leave a field blank when the project has no specific preference; blank fields mean "not specified," not "to be invented."
 
-## Workspace Paths
-
-- Vault root: $target_path
-- Package root: $target_path
-
 ## Context
 
 - Theme:
@@ -232,4 +227,5 @@ echo "Upgraded package files at: $target_path"
 echo "Merged directories: $directory_count"
 echo "Copied files: $file_count"
 echo "Created missing runtime entries: $created_runtime_count"
-echo "Next project-context confirmation should ask whether to configure MinerU and whether to prefer MinerU when available. Store only non-secret choices in PROJECT.md; put any MinerU token in .env as MINERU_TOKEN."
+echo "Next project-context confirmation should ask open-ended questions for theme, goal, audience, structure, classification, naming, and project-specific rules."
+echo "Use short choices only for bounded operational preferences such as MinerU, OCR, transcription, or frame OCR. Store only non-secret choices in PROJECT.md; put any MinerU token in .env as MINERU_TOKEN."

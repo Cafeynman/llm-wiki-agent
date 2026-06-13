@@ -10,7 +10,11 @@ WIKI.md
 
 Read `PROJECT.md` for configurable project context. If it is missing, blank, or still only a template when project context matters, clarify the needed context and write only confirmed values there.
 
+When confirming project context fields such as theme, goal, audience, scope, terminology, wiki structure, classification, naming, project-specific rules, constraints, and open questions, ask open-ended questions. Do not present preset choices, inferred defaults, or suggested category schemes for those fields unless the user asks for examples.
+
 During first project-context confirmation, ask whether the user wants to configure MinerU credentials and whether MinerU should be preferred when available. Record only non-secret choices in `PROJECT.md`; direct the user to copy `.env.example` to `.env` and fill `MINERU_TOKEN` locally when needed.
+
+Use yes/no questions or short choices only for bounded operational preferences such as whether to configure MinerU, whether to prefer MinerU when available, or whether to enable OCR, transcription, or frame OCR.
 
 `PROJECT.md` is the only place for project-specific personalization. Do not use it for stable wiki rules, runtime commands, repository workflow rules, or the stable wiki contract in `WIKI.md`.
 
