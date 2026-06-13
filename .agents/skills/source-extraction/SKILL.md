@@ -16,7 +16,8 @@ The stable intake contract remains in `WIKI.md`. This skill decides how to choos
 3. Read `references/source-kinds.md` to classify the original material.
 4. Read `references/provider-registry.md` to select a provider.
 5. For PDF documents, read `references/pdf-preflight.md` before selecting the document provider.
-6. Read only the selected provider's `usage.md`; read its `setup.md` only when setup, configuration, missing tools, or API keys are relevant. If the selected provider has REST API guidance, read its API reference only when API mode or provider smoke checks are relevant.
+6. For large, structured, or noisy sources that need chunking, read `references/large-source-chunking.md` before finalizing intake output.
+7. Read only the selected provider's `usage.md`; read its `setup.md` only when setup, configuration, missing tools, or API keys are relevant. If the selected provider has REST API guidance, read its API reference only when API mode or provider smoke checks are relevant.
 
 ## Workflow
 
@@ -27,7 +28,7 @@ The stable intake contract remains in `WIKI.md`. This skill decides how to choos
 5. If the policy is `ask-before-ocr`, `ask-before-transcription`, or `ask-before-transcription-or-frame-ocr`, ask the user before enabling that extraction.
 6. Run the provider only against the original source, never against another provider's generated Markdown.
 7. Write provider output to `intake/tmp/source-relative-parent/original-source-base-filename/source.md`, omitting `source-relative-parent` when the source is directly under the intake root. The `original-source-base-filename` segment preserves the original base filename exactly after removing only the extension; do not slugify, translate, lowercase, URL encode, or simplify it.
-8. Record provider metadata, warnings, and missing content in the intake manifest or review notes.
+8. Record provider metadata, warnings, missing content, and any chunking decisions in the intake manifest or review notes.
 9. Continue to Source Review Gate. The provider does not decide whether the source is `digested`, `needs-review`, `ignored`, or `unsupported`.
 
 ## Security Rules

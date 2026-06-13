@@ -87,7 +87,7 @@ cd llm-wiki-agent
 
 当 provider 需要本地凭据或部署专属 endpoint 时，请将 `.env.example` 复制为初始化后根目录中的 `.env`，并只填写所选 provider 模式需要的变量。例如 MinerU 精准解析使用 `MINERU_TOKEN`，MinerU 私有部署还可能使用 `MINERU_BASE_URL`；MinerU `flash-extract` 不需要 token。
 
-首次确认项目上下文时，智能体应询问你是否要配置 MinerU，以及 MinerU 可用时是否优先用于受支持的文档。如果你选择优先 MinerU，智能体会在 `PROJECT.md` 中把文档默认 provider 记录为 MinerU。如果你不配置或不设为优先，MarkItDown 仍是普通文档的默认 provider，MinerU 只用于明确选择或复杂文档提取。
+首次确认项目上下文时，或来源提取偏好仍未确认时，智能体会询问你是否要配置 MinerU，以及 MinerU 可用时是否优先用于受支持的文档。如果你选择优先 MinerU，智能体会在 `PROJECT.md` 中把文档默认 provider 记录为 MinerU。如果你不配置或不设为优先，MarkItDown 仍是普通文档的默认 provider，MinerU 只用于明确选择或复杂文档提取。
 
 真实 `.env` 是本地运行配置，已被 Git 忽略，不能写入 `PROJECT.md`, `WIKI.md`, manifest, log, review note, wiki 页面、source card 或提示词。依赖 `.env` 的智能体命令必须从项目根目录通过 `uv run --env-file .env ...` 运行；如果同一个 shell 中要重复执行 `uv run`，也可以先设置 `UV_ENV_FILE=.env`。
 
@@ -113,21 +113,32 @@ cd llm-wiki-agent
 
 ## 📥 5. 首次摄入文件工作流
 
-遵循以下生命周期来添加新知识：
+精确生命周期规则以 [WIKI.md](../WIKI.md) 为准。第一次小规模摄入通常如下：
 
 1. **放入文件：** 将原始文件放入 `inbox/` (如 `inbox/example.md`)。
 2. **提示智能体：** 询问智能体：*"请根据 AGENTS.md, PROJECT.md 和 WIKI.md 处理 inbox/ 中的文件。"*
-3. **智能体操作：** 
-    - 智能体按照 `PROJECT.md` 将内容提取为 `intake/tmp/source-relative-parent/original-source-base-filename/source.md`。
-    - 它会执行 **来源审查门 (Source Review Gate)**。
-    - 原始文件被移入 `raw/` 下对应的状态子目录，并保留其在 `inbox/` 下的相对路径。
-    - 只有被标记为 `digested` (已通过) 的内容才会被移至 `intake/processed/` 并用于更新 `wiki/`。
+3. **预期结果：**
+    - 对这个示例而言，临时 Markdown 会出现在 `intake/tmp/example/source.md`。如果输入文件位于嵌套目录，输出会保留其来源相对父路径。
+    - **来源审查门 (Source Review Gate)** 会决定最终来源状态。
+    - 原始文件会被移入 `raw/` 下对应的状态子目录，并保留其在 `inbox/` 下的相对路径。
+    - 只有被标记为 `digested` 的内容才会被移至 `intake/processed/` 并用于更新 `wiki/`。
+
+如需查看包含中间状态和最终目录状态的批量示例，请阅读 [来源生命周期示例](source-lifecycle.zh-CN.md)。
+
+用户可以直接使用自然语言提出请求，例如：
+
+- *"处理 raw 文件"*
+- *"审查来源"*
+- *"摄入这个来源"*
+- *"wiki 里关于这个主题是怎么说的？"*
+- *"创建一个 artifact"*
+- *"对 wiki 做健康检查"*
 
 ---
 
 ## 🔍 6. 来源审查门 (Source Review Gate) 结果
 
-来源审查门是决定一个来源是否有资格进入 wiki 的严格边界。
+这里是快速参考。权威的来源审查门规则以 [WIKI.md](../WIKI.md) 为准。
 
 | 审查结果 | 目标路径 | 下一步动作 |
 | --- | --- | --- |
@@ -143,10 +154,10 @@ cd llm-wiki-agent
 
 ## 📜 7. 文本优先边界 (Text-First)
 
-LLM Wiki Agent 严格遵循“文本优先”思维进行操作：
+LLM Wiki Agent 采用文本优先的摄入路径：
 - 所有可读文档 (HTML, PDF, Word, PPT, Excel 等) 在摄入前都会转为 Markdown。
 - 扫描件、图片、音频和视频作为原始来源保留在 `raw/`，但除非已明确配置并批准提取，否则它们**不是**一等公民 (wiki 内容)。
-- 除非已明确配置图片处理机制，否则不要将图片直接复制到 wiki 页面内。
+- 除非已明确配置图片处理机制，否则让图片留在原始来源中，不直接放入 wiki 页面。
 
 ---
 
@@ -157,10 +168,10 @@ LLM Wiki Agent 严格遵循“文本优先”思维进行操作：
 
 智能体会搜索：
 1. `wiki/index.md` & `wiki/overview.md`
-2. `wiki/sources/`, `wiki/entities/`, `wiki/concepts/`, `wiki/claims/`
+2. `wiki/sources/`, `wiki/entities/`, `wiki/concepts/`, `wiki/claims/`, `wiki/syntheses/`
 3. `questions/` 和 `artifacts/`
 
-智能体应当将生成的所有交付物 (报告、模板、草案) 放置在 `artifacts/` 目录中。
+报告、模板、草案等生成交付物应放在 `artifacts/` 目录中。
 
 ---
 

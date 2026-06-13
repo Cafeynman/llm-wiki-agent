@@ -91,6 +91,16 @@ cssclasses:
 
 Quote free-text frontmatter values that come from users, sources, filenames, titles, aliases, paths, URLs, or descriptions, or write them with a YAML serializer. Fixed safe tokens such as dates, booleans, and controlled status values may stay unquoted.
 
+For `sources:` frontmatter, write vault-internal source paths as quoted wikilink strings, for example:
+
+```yaml
+sources:
+  - "[[raw/digested/source-relative-parent/original-filename.ext]]"
+  - "[[intake/processed/source-relative-parent/original-source-base-filename/source.md]]"
+```
+
+Omit `source-relative-parent/` only when the source is directly under the intake root. External URLs remain quoted plain strings.
+
 Default properties: `tags` (searchable labels), `aliases` (alternative note names for link suggestions), `cssclasses` (CSS classes for styling).
 
 See [PROPERTIES.md](references/PROPERTIES.md) for all property types, tag syntax rules, and advanced usage.

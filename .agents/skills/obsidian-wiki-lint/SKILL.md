@@ -33,7 +33,7 @@ When users request complex health checks or business logic validation, follow a 
 
 | Script | Purpose | Writes by default |
 | --- | --- | --- |
-| `lint_wiki.py` | Reports broken wikilinks, orphan pages under a scope, and page counts. | No |
+| `lint_wiki.py` | Reports broken wikilinks, orphan pages under a scope, frontmatter `sources:` entries that should be wikilinks, and page counts. | No |
 | `fix_truncated_links.py` | Expands wikilinks whose target filename is a unique prefix of an existing Markdown file. | No |
 | `crosslink_concepts.py` | Adds limited links from concept names or aliases to concept notes. | No |
 

@@ -8,32 +8,27 @@ WIKI.md
 
 ## Project Profile
 
-Read `PROJECT.md` for the configurable project context: current subject, goal, audience, scope, terminology, wiki structure requirements, classification preferences, naming preferences, project-specific rules, constraints, and open questions.
+Read `PROJECT.md` for configurable project context. If it is missing, blank, or still only a template when project context matters, clarify the needed context and write only confirmed values there.
 
-On the first project-context interaction, if `PROJECT.md` is missing, blank, or still only a template with no confirmed project context, clarify the current project context with the user and write the confirmed context to `PROJECT.md` before making project-specific assumptions. Fields in `PROJECT.md` are optional unless required for the current task; do not block on blank optional fields, and ask only when the task depends on a missing value.
+During first project-context confirmation, ask whether the user wants to configure MinerU credentials and whether MinerU should be preferred when available. Record only non-secret choices in `PROJECT.md`; direct the user to copy `.env.example` to `.env` and fill `MINERU_TOKEN` locally when needed.
 
-During that first project-context confirmation, ask whether the user wants to configure MinerU credentials and whether MinerU should be preferred when it is available. Do not ask for or record the secret value itself; direct the user to copy `.env.example` to `.env` and fill `MINERU_TOKEN` locally. If the user prefers MinerU when available, set `Default provider for document: mineru` and `Prefer MinerU when available: yes` in `PROJECT.md`; otherwise keep MarkItDown as the document default and set `Prefer MinerU when available: no`.
-
-Treat `PROJECT.md` as the changeable context layer and the single place for project-specific personalization, including special wiki structure requirements, category schemes, naming preferences, and project-specific rules. Do not use it for stable wiki operating rules, runtime commands, repository workflow rules, or the stable wiki contract in `WIKI.md`.
+`PROJECT.md` is the only place for project-specific personalization. Do not use it for stable wiki rules, runtime commands, repository workflow rules, or the stable wiki contract in `WIKI.md`.
 
 ## Runtime Requirement
 
-Use `uv run` for Python commands from the project root.
-Do not call `python` or `pip` directly for project tasks unless the user explicitly asks. Python version is defined in `pyproject.toml`.
-When a task depends on project-local environment variables, use `uv run --env-file .env` from the project root, or set `UV_ENV_FILE=.env` in the current shell for repeated `uv run` commands.
-If a required local variable is missing, stop and ask the user to configure `.env`; do not paste secrets or private service URLs into commands, prompts, manifests, logs, wiki pages, source cards, or project instructions.
+Use `uv run` for Python commands from the project root. Do not call `python` or `pip` directly for project tasks unless the user explicitly asks.
+
+When a task depends on project-local environment variables, use `uv run --env-file .env` or set `UV_ENV_FILE=.env` for repeated commands. If a required local variable is missing, stop and ask the user to configure `.env`; do not paste secrets or private service URLs into commands, prompts, manifests, logs, wiki pages, source cards, or project instructions.
 
 Before handling any wiki task, read and follow `WIKI.md`.
 
 ## Initialization Requirement
 
-Before the first wiki task in a workspace, check whether the package-managed entrypoint files and runtime structure exist. If `.venv/` or required runtime paths such as `inbox/`, `raw/`, `intake/`, `reviews/`, `logs/`, `questions/`, `artifacts/`, or `wiki/` are missing, run the initialization script from the package root instead of creating directories by hand.
+Before the first wiki task in a workspace, check whether package-managed entrypoint files and runtime structure exist. If `.venv/` or required runtime paths such as `inbox/`, `raw/`, `intake/`, `reviews/`, `logs/`, `questions/`, `artifacts/`, or `wiki/` are missing, run the initialization script from the package root instead of creating directories by hand.
 
 Use `.\scripts\init.ps1 -VaultRoot .` on Windows and `./scripts/init.sh -VaultRoot .` on macOS or Linux.
 
-When the user wants the wiki structure in a separate Obsidian vault, pass that vault path as `-VaultRoot`. The initialization script installs the package-managed agent entrypoint files, local skills, scripts, and docs into that vault, creates `PROJECT.md` there when it is missing, creates missing runtime directories and default wiki files, and runs `uv sync` from the initialized vault root. Existing package-managed files in the target root are replaced by the package copy; workspace-specific preferences belong in `PROJECT.md`.
-
-After external-vault initialization, treat the initialized vault root as the working package root for future agent tasks.
+When the user wants the wiki structure in a separate Obsidian vault, pass that vault path as `-VaultRoot`. After external-vault initialization, treat the initialized vault root as the working package root. Existing package-managed files are replaced by the package copy; workspace-specific preferences belong in `PROJECT.md`.
 
 ## Skill Source
 
@@ -66,19 +61,13 @@ Keep `WIKI.md`, `AGENTS.md`, and other agent entrypoint files stable and replace
 11. Preserve raw source traceability and do not edit original files under `raw/` unless the user explicitly asks.
 12. Treat the package as text-first: source material must become reviewable Markdown before it enters `intake/processed/` or `wiki/`. Attachments and images may remain part of the preserved original source, but they are not first-class wiki content unless the user explicitly asks for image handling.
 
-## Obsidian Markdown
+## Obsidian Markdown and Frontmatter
 
-Use Obsidian wikilinks for internal pages. In normal Markdown text, use `[[path/to/page|Alias]]`. Inside Markdown table cells, escape the alias separator so the table parser does not split the cell: `[[path/to/page\|Alias]]`. Keep the whole wikilink inside one cell, close it with `]]` before the next table delimiter, and verify each table row has the same number of unescaped `|` separators.
+Use the local `.agents/skills/obsidian-markdown/` skill for Obsidian syntax, table-cell wikilinks, embeds, callouts, and properties. Traceability links to vault-internal files and notes must use Obsidian wikilinks.
 
-Traceability sections in Markdown must use Obsidian wikilinks for vault-internal files and notes. Plain code-formatted paths may be used in YAML frontmatter or command examples, but not as the primary traceability links in normal Markdown text.
+Frontmatter `sources:` entries for vault-internal files must be quoted wikilink strings such as `"[[raw/digested/source-relative-parent/original-filename.ext]]"` or `"[[intake/processed/source-relative-parent/original-source-base-filename/source.md]]"`. Omit `source-relative-parent/` only when the source is directly under the intake root. Free-text values derived from users, sources, filenames, titles, paths, URLs, or descriptions must be quoted or emitted by a YAML serializer; see `.agents/skills/obsidian-markdown/references/PROPERTIES.md`.
 
-## Source-Derived Text Preservation
-
-Preserve source-derived text exactly as content. Do not delete, replace, romanize, slugify, or otherwise normalize special characters just because a target syntax treats them specially. Encode or quote the value only at the output boundary that needs it, such as YAML frontmatter, Markdown table cells, wikilinks, or command examples.
-
-## Obsidian Frontmatter Properties
-
-Do not write user-, source-, or filename-derived strings as unquoted YAML plain scalars in frontmatter. Write free-text values such as `title`, `aliases`, source names, paths, URLs, and descriptions as double-quoted YAML strings, escaping `\` as `\\` and `"` as `\"`, or use a YAML serializer and verify the emitted frontmatter parses. YAML indicator characters can break syntax or silently change the parsed value depending on position and context, including `:`, `#`, `*`, `&`, `!`, `|`, `>`, `[`, `]`, `{`, `}`, `,`, `?`, `-`, `%`, `@`, `` ` ``, and quotes. Keep only fixed safe tokens such as `type`, `status`, `confidence`, dates, and booleans unquoted.
+Preserve source-derived text exactly as content. Encode or quote values only at the output boundary that needs it, such as YAML frontmatter, Markdown table cells, wikilinks, or command examples.
 
 ## Intake Output Names
 
@@ -106,6 +95,12 @@ Use `Maintain Wiki` when the user asks for lint, cleanup, health check, broken l
 
 When a request could fit multiple workflows, start with the smallest workflow that can produce the requested result, then continue only if the task requires it.
 
+## Wiki Agent Behavior
+
+Work like a careful Obsidian wiki maintainer: prefer small traceable updates, preserve useful existing structure, do not invent facts or citations, mark uncertainty clearly, keep raw originals unmodified, and use the shortest workflow that fully satisfies the user's request.
+
+Update `wiki/index.md` and `logs/wiki.md` whenever wiki content changes. Update `wiki/home.md` only when the wiki purpose, main topics, current artifacts, or major open questions change. Create pages when they improve reuse, traceability, or synthesis, not for every named thing.
+
 ## Large Sources
 
-For large files, large extracted Markdown, archives, tables, slide decks, OCR-heavy documents, or noisy sources, follow the `Large File and Context Budget Policy` in `WIKI.md`. Do not load large sources into context in one pass.
+For large, structured, or noisy sources, follow the `Large File and Context Budget Policy` in `WIKI.md`; use `.agents/skills/source-extraction/references/large-source-chunking.md` only for detailed chunking mechanics.

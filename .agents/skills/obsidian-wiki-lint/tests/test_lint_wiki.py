@@ -75,5 +75,149 @@ class TestLintWiki(unittest.TestCase):
         broken_reported = any("Broken: folder.md" in (call[0][0] if call[0] else "") for call in mock_print.call_args_list)
         self.assertTrue(broken_reported, "Should report folder.md as broken since Obsidian expects a note.")
 
+    def test_frontmatter_sources_internal_paths_must_be_wikilinks(self):
+        (self.vault / "raw" / "digested").mkdir(parents=True)
+        (self.vault / "raw" / "digested" / "source.pdf").touch()
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """---
+title: "Note"
+sources:
+  - "raw/digested/source.pdf"
+---
+
+Body.
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 1, "Lint should report internal source paths that are not wikilinks.")
+        invalid_reported = any(
+            "sources entry must be a quoted wikilink" in (call[0][0] if call[0] else "")
+            for call in mock_print.call_args_list
+        )
+        self.assertTrue(invalid_reported)
+
+    def test_frontmatter_sources_allow_wikilinks_and_urls(self):
+        (self.vault / "raw" / "digested").mkdir(parents=True)
+        (self.vault / "raw" / "digested" / "source.pdf").touch()
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """---
+title: "Note"
+sources:
+  - "[[raw/digested/source.pdf]]"
+  - "https://example.com/source"
+---
+
+Body.
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print"):
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0, "Lint should accept wikilinked internal sources and quoted external URLs.")
+
+    def test_frontmatter_sources_reject_unquoted_wikilinks(self):
+        (self.vault / "raw" / "digested").mkdir(parents=True)
+        (self.vault / "raw" / "digested" / "source.pdf").touch()
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """---
+title: "Note"
+sources:
+  - [[raw/digested/source.pdf]]
+---
+
+Body.
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 1, "Lint should reject unquoted wikilink source entries.")
+        invalid_reported = any(
+            "sources entry must be a quoted wikilink" in (call[0][0] if call[0] else "")
+            for call in mock_print.call_args_list
+        )
+        self.assertTrue(invalid_reported)
+
+    def test_frontmatter_sources_allow_inline_sources_list(self):
+        (self.vault / "raw" / "digested").mkdir(parents=True)
+        (self.vault / "raw" / "digested" / "source.pdf").touch()
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """---
+title: "Note"
+sources: ["[[raw/digested/source.pdf]]", "https://example.com/source"]
+---
+
+Body.
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print"):
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0, "Lint should accept quoted inline source lists.")
+
+    def test_frontmatter_sources_reject_unquoted_inline_wikilinks(self):
+        (self.vault / "raw" / "digested").mkdir(parents=True)
+        (self.vault / "raw" / "digested" / "source.pdf").touch()
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """---
+title: "Note"
+sources: [[[raw/digested/source.pdf]]]
+---
+
+Body.
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 1, "Lint should reject unquoted wikilinks in inline source lists.")
+        invalid_reported = any(
+            "sources entry must be a quoted wikilink" in (call[0][0] if call[0] else "")
+            for call in mock_print.call_args_list
+        )
+        self.assertTrue(invalid_reported)
+
+    def test_frontmatter_sources_reject_unquoted_inline_wikilink_scalar(self):
+        (self.vault / "raw" / "digested").mkdir(parents=True)
+        (self.vault / "raw" / "digested" / "source.pdf").touch()
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """---
+title: "Note"
+sources: [[raw/digested/source.pdf]]
+---
+
+Body.
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 1, "Lint should reject an unquoted inline wikilink scalar.")
+        invalid_reported = any(
+            "sources entry must be a quoted wikilink" in (call[0][0] if call[0] else "")
+            for call in mock_print.call_args_list
+        )
+        self.assertTrue(invalid_reported)
+
 if __name__ == "__main__":
     unittest.main()

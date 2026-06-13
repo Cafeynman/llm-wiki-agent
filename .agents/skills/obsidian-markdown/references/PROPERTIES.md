@@ -23,6 +23,17 @@ due: 2024-02-01T14:30:00
 
 Quote free-text values that come from users, sources, filenames, titles, aliases, paths, URLs, or descriptions, or emit frontmatter with a YAML serializer. Fixed safe tokens such as dates, booleans, numbers, and controlled status values may stay unquoted.
 
+For source traceability, vault-internal `sources:` entries must be quoted wikilink strings. External URLs remain quoted plain strings:
+
+```yaml
+sources:
+  - "[[raw/digested/source-relative-parent/original-filename.ext]]"
+  - "[[intake/processed/source-relative-parent/original-source-base-filename/source.md]]"
+  - "https://example.com/source"
+```
+
+Omit `source-relative-parent/` only when the source is directly under the intake root.
+
 ## Property Types
 
 | Type | Example |

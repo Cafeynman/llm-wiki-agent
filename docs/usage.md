@@ -87,7 +87,7 @@ The upgrade covers entries listed in `scripts/upgrade-manifest.txt`, creates `PR
 
 When a provider needs local credentials or deployment-specific endpoints, copy `.env.example` to `.env` in the initialized root and fill only the variables required by the selected provider mode. For example, MinerU precision extraction uses `MINERU_TOKEN`, private MinerU deployments may also use `MINERU_BASE_URL`, and MinerU `flash-extract` does not need a token.
 
-During the first project-context confirmation, the agent should ask whether you want to configure MinerU and whether MinerU should be preferred for supported documents when it is available. If you choose the MinerU preference, the agent records MinerU as the document default in `PROJECT.md`. If you decline, MarkItDown remains the ordinary document default and MinerU stays available for explicitly chosen or complex document extraction.
+During the first project-context confirmation, or when source-extraction preferences are still unconfirmed, the agent asks whether you want to configure MinerU and whether MinerU should be preferred for supported documents when it is available. If you choose the MinerU preference, the agent records MinerU as the document default in `PROJECT.md`. If you decline, MarkItDown remains the ordinary document default and MinerU stays available for explicitly chosen or complex document extraction.
 
 The real `.env` file is local runtime configuration. It is ignored by Git and must not be written into `PROJECT.md`, `WIKI.md`, manifests, logs, review notes, wiki pages, source cards, or prompts. Agent commands that depend on `.env` must run from the project root with `uv run --env-file .env ...`, or with `UV_ENV_FILE=.env` set in the current shell for repeated `uv run` commands.
 
@@ -113,21 +113,32 @@ Initialization and upgrade scripts install the non-secret `.env.example` templat
 
 ## 📥 5. First File Intake Workflow
 
-Follow this lifecycle for adding new knowledge:
+For exact lifecycle rules, follow [WIKI.md](../WIKI.md). A first small intake normally looks like this:
 
 1. **Drop File:** Put an original file into `inbox/` (e.g., `inbox/example.md`).
 2. **Prompt Agent:** Ask the agent: *"Process the files in inbox/ according to AGENTS.md, PROJECT.md, and WIKI.md."*
-3. **Agent Action:** 
-    - The agent follows `PROJECT.md` and extracts content into `intake/tmp/source-relative-parent/original-source-base-filename/source.md`.
-    - It runs the **Source Review Gate**.
-    - Original file moves to a `raw/` state subfolder while preserving its path below `inbox/`.
-    - Only `digested` (approved) content moves to `intake/processed/` and updates `wiki/`.
+3. **Expected Result:**
+    - For this example, temporary Markdown appears at `intake/tmp/example/source.md`. Nested input paths preserve their source-relative parents.
+    - The **Source Review Gate** determines the final source state.
+    - The original file moves to a `raw/` state subfolder while preserving its path below `inbox/`.
+    - Only `digested` content moves to `intake/processed/` and updates `wiki/`.
+
+For a batch walkthrough with intermediate and final directory states, see [Source Lifecycle Example](source-lifecycle.md).
+
+Plain English requests are valid. You can ask for tasks such as:
+
+- *"Process raw files"*
+- *"Review sources"*
+- *"Ingest this source"*
+- *"What does the wiki say about this topic?"*
+- *"Create an artifact"*
+- *"Health-check the wiki"*
 
 ---
 
 ## 🔍 6. Source Review Gate Outcomes
 
-The Source Review Gate is the strict boundary that decides whether a source deserves to enter the wiki.
+This is a quick reference. The authoritative Source Review Gate rules live in [WIKI.md](../WIKI.md).
 
 | Outcome | Destination | Next Action |
 | --- | --- | --- |
@@ -143,10 +154,10 @@ The Source Review Gate is the strict boundary that decides whether a source dese
 
 ## 📜 7. Text-First Boundary
 
-LLM Wiki Agent operates with a strict text-first mindset:
+LLM Wiki Agent is designed around a text-first intake path:
 - All readable documents (HTML, PDF, Word, PPT, Excel, etc.) become Markdown before ingestion.
 - Scans, images, audio, and video stay as original sources in `raw/` but are **not** first-class wiki content unless extraction is explicitly configured and approved.
-- Do not copy images directly into wiki pages unless image handling is explicitly configured.
+- Keep images out of wiki pages unless image handling is explicitly configured.
 
 ---
 
@@ -157,10 +168,10 @@ To use the knowledge base, just ask your agent:
 
 The agent will search:
 1. `wiki/index.md` & `wiki/overview.md`
-2. `wiki/sources/`, `wiki/entities/`, `wiki/concepts/`, `wiki/claims/`
+2. `wiki/sources/`, `wiki/entities/`, `wiki/concepts/`, `wiki/claims/`, `wiki/syntheses/`
 3. `questions/` and `artifacts/`
 
-The agent should place all generated deliverables (reports, templates, drafts) into the `artifacts/` directory.
+Generated deliverables such as reports, templates, and drafts belong in the `artifacts/` directory.
 
 ---
 

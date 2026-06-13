@@ -93,31 +93,13 @@ Use `intake/logs/YYYY-MM-DD.md` for daily source handling logs. Use `reviews/sou
 
 Use Obsidian-compatible Markdown. Prefer `[[wikilinks]]` for internal wiki pages and normal Markdown links for external URLs. Keep filenames human-readable and stable.
 
-In normal Markdown text, traceability links to vault-internal files and notes must use Obsidian wikilinks. Keep raw paths in frontmatter `sources:` as quoted YAML string values because YAML frontmatter is metadata, not normal Markdown link text.
+Traceability links to vault-internal files and notes must use Obsidian wikilinks. In frontmatter `sources:`, write vault-internal paths as quoted wikilink strings, for example `"[[raw/digested/source-relative-parent/original-filename.ext]]"` or `"[[intake/processed/source-relative-parent/original-source-base-filename/source.md]]"`. Omit `source-relative-parent/` only when the source is directly under the intake root. External URLs remain quoted plain strings. See `.agents/skills/obsidian-markdown/references/PROPERTIES.md` for exact YAML quoting rules.
 
 Preserve source-derived text exactly as content. Do not delete, replace, romanize, slugify, or otherwise normalize special characters just because a target syntax treats them specially. Encode or quote the value only at the output boundary that needs it, such as YAML frontmatter, Markdown table cells, wikilinks, or command examples.
 
-In frontmatter, do not write user-, source-, or filename-derived strings as unquoted YAML plain scalars. Write free-text values such as `title`, `aliases`, source names, paths, URLs, and descriptions as double-quoted YAML strings, escaping `\` as `\\` and `"` as `\"`, or use a YAML serializer and verify the emitted frontmatter parses. YAML indicator characters can break syntax or silently change the parsed value depending on position and context, including `:`, `#`, `*`, `&`, `!`, `|`, `>`, `[`, `]`, `{`, `}`, `,`, `?`, `-`, `%`, `@`, `` ` ``, and quotes. Keep only fixed safe tokens such as `type`, `status`, `confidence`, dates, and booleans unquoted.
-
 Use `type` values from `source`, `entity`, `concept`, `claim`, or `synthesis`; use `status` values from `draft`, `reviewed`, `verified`, `stale`, or `archived`; and use `confidence` values from `low`, `medium`, or `high`.
 
-Recommended wiki frontmatter:
-
-```yaml
----
-title: "Page Title"
-type: source
-status: draft
-confidence: medium
-created: YYYY-MM-DD
-updated: YYYY-MM-DD
-sources:
-  - "raw/digested/example.pdf"
-  - "intake/processed/source-relative-parent/original-source-base-filename/source.md"
-tags:
-  - "llm-wiki"
----
-```
+Use `docs/wiki-page-templates.md` for page templates.
 
 Keep pages focused. A page should have one clear purpose. If a page starts covering multiple topics, split it and link the new pages.
 
@@ -133,54 +115,7 @@ A source card is the wiki-facing summary of a source, not an intake receipt. It 
 
 Other wiki pages should normally cite the source card instead of citing raw files directly. The source card carries the full traceability chain back to `raw/digested/`, `intake/processed/`, and `reviews/source-review/`.
 
-Source card template:
-
-```markdown
----
-title: "Source Title"
-type: source
-status: draft
-confidence: medium
-created: YYYY-MM-DD
-updated: YYYY-MM-DD
-sources:
-  - "raw/digested/source-relative-parent/original-filename.ext"
-  - "intake/processed/source-relative-parent/original-source-base-filename/source.md"
-  - "reviews/source-review/YYYY-MM-DD.md"
-tags:
-  - "llm-wiki"
----
-
-# Source Title
-
-## Summary
-
-Explain what the source is about and why it matters to the wiki.
-
-## Key Points
-
-- Point grounded in the source.
-- Point grounded in the source.
-
-## Supported Claims
-
-- Claim or claim page this source can support.
-
-## Scope
-
-State the time period, geography, domain, method, dataset, or context covered by the source.
-
-## Limitations
-
-State missing context, weak extraction, image-only material, uncertain claims, age, bias, or other constraints.
-
-## Traceability
-
-- Original file: [[raw/digested/source-relative-parent/original-filename.ext]]
-- Processed Markdown: [[intake/processed/source-relative-parent/original-source-base-filename/source]]
-- Source review: [[reviews/source-review/YYYY-MM-DD]]
-- Manifest: [[intake/processed/source-relative-parent/original-source-base-filename/manifest]]
-```
+Use the source card template in `docs/wiki-page-templates.md` when creating a new source card.
 
 ## Core Workflows
 
@@ -193,6 +128,8 @@ Maintain Wiki
 ```
 
 Do not run every subroutine in sequence. Choose the shortest path that fully satisfies the user's request.
+
+Usage examples and natural-language prompts belong in `docs/usage.md`; the batch source lifecycle example belongs in `docs/source-lifecycle.md`.
 
 ## Workflow: Add Knowledge
 
@@ -228,22 +165,7 @@ For raw files, use the local `source-extraction` skill to classify the source ki
 
 Before extraction, check whether a batch or file appears likely to benefit from OCR, such as scan-heavy PDFs or image-heavy Word, PowerPoint, and Excel files. If OCR appears available in the current environment, do not enable it automatically. First group the files into `recommend OCR`, `do not recommend OCR`, or `unclear`, then ask the user once whether to enable OCR for the recommended group and how to handle any unclear files.
 
-Use the shortest reliable extraction path allowed by `PROJECT.md` and the selected provider's usage document.
-
-| File type                   | Temporary extraction handling                                      |
-| --------------------------- | ------------------------------------------------------------------ |
-| Markdown                    | Stage or copy to `intake/tmp/source-relative-parent/original-source-base-filename/source.md` without changing source text before review |
-| PDF                         | Convert readable content to Markdown; scanned or image-heavy PDFs become `needs-review` when important content is not processed |
-| Word                        | Convert text, headings, tables, captions, and any supported document content; unprocessed important embedded material becomes `needs-review` |
-| PowerPoint                  | Convert to Markdown and preserve slide structure                   |
-| Excel                       | Convert tables to Markdown and summarize table meaning when needed |
-| HTML                        | Extract readable Markdown while preserving extracted title, headings, and body text |
-| CSV / JSON / XML            | Convert to Markdown table, structured summary, or both             |
-| Image                       | Do not treat as first-class intake content by default; move to `raw/needs-review/` and record the missing text extraction or image review step when the image carries source information |
-| Audio                       | Transcribe only when `PROJECT.md` allows `ask-before-transcription` and the user approves; otherwise move to `raw/needs-review/` or `raw/unsupported/` according to the configured policy |
-| Video                       | Extract audio transcript or frame text only when `PROJECT.md` allows it and the user approves; otherwise move to `raw/needs-review/` or `raw/unsupported/` according to the configured policy |
-| ZIP or other archive        | List members first, record member paths and file types, then selectively convert useful files |
-| Unsupported or damaged file | Move to `raw/unsupported/` and record the reason                   |
+Use the shortest reliable extraction path allowed by `PROJECT.md`, `.agents/skills/source-extraction/references/source-kinds.md`, and the selected provider's usage document.
 
 The intake order is:
 
@@ -323,7 +245,8 @@ Keep accepted intake files distinct:
 - `digest.md` is optional review support. It may contain a compact content map, review cues, likely useful sections, and extraction warnings. It must not record final wiki updates, act as the final value judgment, or duplicate the manifest ledger.
 - `summary.md` is the final intake processing summary. It should say why the source was accepted, how reliable the extraction is, what caveats matter, and what scope should be ingested. It must not become a detailed source note, chapter-by-chapter digest, or final knowledge synthesis.
 - `manifest.md` is the traceability ledger. It should list paths and updates, not content summaries, core viewpoints, detailed quality analysis, or reading recommendations. If quality caveats matter, link to or briefly point at `summary.md` instead of restating them.
-- `chunks/index.md` is the chunk directory. It must list each chunk path, title or range, source page, slide, section, table, or archive-member range when known, extraction caveats, and review or ingest status. If it already lists chunk titles and ranges, `summary.md` should link to it or state the chunk count rather than copying the full chunk table.
+- `chunks/index.md` is the chunk directory entrypoint. It must list each chunk path, title or range, source page, slide, section, table, or archive-member range when known, extraction caveats, and review or ingest status. If it already lists chunk titles and ranges, `summary.md` should link to it or state the chunk count rather than copying the full chunk table.
+- For books, reports, standards, manuals, and other long structured sources, prefer semantic chunking under `chunks/`: major chapters may become first-level subdirectories, subchapters may become nested subdirectories, and each directory should have an `index.md`. Follow `.agents/skills/source-extraction/references/large-source-chunking.md` for thresholds and detailed structure.
 - For chunked sources, `source.md` remains the canonical extracted-source entrypoint. It may contain the full extracted text when practical. If the full text is too large, `source.md` may be an excerpt-type entrypoint that links to `chunks/index.md` and states that the complete review surface is split under `chunks/`.
 
 Before treating an intake folder as complete, check that `digest.md`, `summary.md`, and `manifest.md` are not all repeating the same source information, quality caveats, value judgment, or processing recommendations. Pick one primary location for each kind of information and link to it from the others only when needed.
@@ -365,7 +288,7 @@ Use this policy whenever a raw file, extracted `source.md`, or generated chunk i
 1. Inspect metadata before reading full content: exact filename, file type, file size, line count, page or slide count, table dimensions, archive listing, headings, and extraction warnings when available.
 2. Do not load a very large original file or `source.md` into context in one pass. Work from `summary.md`, `manifest.md`, and `chunks/index.md` first.
 3. When extracted `intake/tmp/.../source.md` is too large to review or ingest as one file, create `intake/tmp/.../chunks/` before Source Review Gate. If the source is accepted, promote the chunked folder to `intake/processed/.../`; if it is not accepted, clean the temporary folder with the rest of `intake/tmp/`.
-4. For large sources, create `chunks/` before ingest. Each chunk must be a coherent unit small enough to read and summarize independently. Prefer semantic boundaries such as headings, chapters, slides, page ranges, sections, tables, or archive members.
+4. For large sources, create `chunks/` before ingest. Each chunk must be a coherent unit small enough to read and summarize independently. Prefer semantic boundaries such as headings, chapters, subchapters, slides, page ranges, sections, tables, or archive members. Follow `.agents/skills/source-extraction/references/large-source-chunking.md` for thresholds and detailed chunk structure.
 5. Write or update `summary.md` progressively from chunk summaries. The summary should capture the source topic, processing value, extraction caveats, low-value regions, noisy regions, and recommended ingest scope. Do not use `summary.md` as the detailed source synthesis; move durable claims and core viewpoints into `wiki/` during ingest.
 6. During ingest, read only the chunks needed for the current wiki update. Do not read all chunks unless the user explicitly asks for a full-source pass and the available context can support it.
 7. If a large source cannot be fully reviewed in the current pass, move the original out of `inbox/` to `raw/needs-review/`, record the review question, and clean `intake/tmp/`.
@@ -390,149 +313,7 @@ When a source is ready to become wiki knowledge:
 
 Do not flatten disagreement into false consensus. If sources conflict, preserve the disagreement and cite both sides.
 
-### 7. Batch File Lifecycle Example
-
-This example shows the intended lifecycle for a pile of files in `inbox/`.
-
-Initial state:
-
-```text
-.
-└── inbox/
-    ├── paper.pdf
-    ├── notes.md
-    ├── bundle/
-    │   └── report.pdf
-    ├── slides.pptx
-    ├── duplicate.html
-    └── corrupted.pdf
-```
-
-Intake first stages Markdown files or extracts non-Markdown originals into temporary Markdown:
-
-```text
-.
-├── inbox/
-│   ├── paper.pdf
-│   ├── notes.md
-│   ├── bundle/
-│   │   └── report.pdf
-│   ├── slides.pptx
-│   ├── duplicate.html
-│   └── corrupted.pdf
-└── intake/
-    └── tmp/
-        ├── paper/
-        │   ├── source.md
-        │   ├── digest.md
-        │   └── chunks/
-        │       ├── index.md
-        │       ├── 01.md
-        │       └── 02.md
-        ├── notes/
-        │   └── source.md
-        ├── bundle/
-        │   └── report/
-        │       └── source.md
-        ├── slides/
-        │   ├── source.md
-        │   └── digest.md
-        └── duplicate/
-            └── source.md
-```
-
-If `corrupted.pdf` cannot be extracted, stop handling that file immediately:
-
-```text
-.
-├── inbox/
-│   ├── paper.pdf
-│   ├── notes.md
-│   ├── bundle/
-│   │   └── report.pdf
-│   ├── slides.pptx
-│   └── duplicate.html
-├── raw/
-│   └── unsupported/
-│       └── corrupted.pdf
-└── intake/
-    └── logs/
-        └── YYYY-MM-DD.md
-```
-
-Then run Source Review Gate on the temporary Markdown and optional digests:
-
-| File             | Review input                                            | Outcome        | Result                                                                        |
-| ---------------- | ------------------------------------------------------- | -------------- | ----------------------------------------------------------------------------- |
-| `paper.pdf`      | `intake/tmp/paper/source.md`, chunks, digest | `digested`     | Promote to `intake/processed/`, move original to `raw/digested/`, clean `intake/tmp/`, update wiki |
-| `notes.md`       | `intake/tmp/notes/source.md`                 | `digested`     | Promote to `intake/processed/`, move original to `raw/digested/`, clean `intake/tmp/`, update wiki |
-| `bundle/report.pdf` | `intake/tmp/bundle/report/source.md`      | `digested`     | Promote to `intake/processed/bundle/report/`, move original to `raw/digested/bundle/report.pdf`, create `wiki/sources/bundle/report.md` |
-| `slides.pptx`    | `intake/tmp/slides/source.md`, digest        | `needs-review` | Move original to `raw/needs-review/`, record the question, clean `intake/tmp/` |
-| `duplicate.html` | `intake/tmp/duplicate/source.md`             | `ignored`      | Move original to `raw/ignored/`, log the reason, clean `intake/tmp/`           |
-| `corrupted.pdf`  | extraction failure                                      | `unsupported`  | Move original to `raw/unsupported/`, log the blocker                          |
-
-Final state after accepted files are ingested:
-
-```text
-.
-├── inbox/
-├── raw/
-│   ├── digested/
-│   │   ├── paper.pdf
-│   │   ├── notes.md
-│   │   └── bundle/
-│   │       └── report.pdf
-│   ├── needs-review/
-│   │   └── slides.pptx
-│   ├── ignored/
-│   │   └── duplicate.html
-│   └── unsupported/
-│       └── corrupted.pdf
-├── intake/
-│   ├── processed/
-│   │   ├── paper/
-│   │   │   ├── source.md
-│   │   │   ├── summary.md
-│   │   │   ├── manifest.md
-│   │   │   ├── digest.md
-│   │   │   └── chunks/
-│   │   │       ├── index.md
-│   │   │       ├── 01.md
-│   │   │       └── 02.md
-│   │   ├── notes/
-│   │   │   ├── source.md
-│   │   │   ├── summary.md
-│   │   │   └── manifest.md
-│   │   └── bundle/
-│   │       └── report/
-│   │           ├── source.md
-│   │           ├── summary.md
-│   │           └── manifest.md
-│   └── logs/
-│       └── YYYY-MM-DD.md
-├── reviews/
-│   └── source-review/
-│       └── YYYY-MM-DD.md
-├── logs/
-│   └── wiki.md
-└── wiki/
-    ├── home.md
-    ├── index.md
-    ├── overview.md
-    ├── sources/
-    │   ├── paper.md
-    │   ├── notes.md
-    │   └── bundle/
-    │       └── report.md
-    └── concepts/
-        └── relevant-concept.md
-```
-
-The important invariant is that source review happens after extraction, because review should judge readable Markdown or digest output. Original files are moved only after extraction and review produce a final decision.
-
-Files in `raw/needs-review/` remain pending until their review question is resolved. They do not update wiki pages, appear as accepted sources, or move to `intake/processed/` until a later review marks them `digested`.
-
-### 8. Reflect
+### 7. Reflect
 
 Use reflect for user-confirmed, discussion-derived knowledge. User ideas, preferences, workflow corrections, and architectural judgments are not source-derived knowledge; treat them as reflection sources.
 
@@ -608,95 +389,3 @@ Use lifecycle status to keep the wiki honest:
 Represent confidence and lifecycle as frontmatter properties, not as tags. Use `confidence:` and `status:` for machine-readable state. Use tags only for topics, domains, or cross-cutting labels that help browsing.
 
 When newer information contradicts older information, preserve the old claim if historically useful, but mark it as superseded and link to the newer claim.
-
-## Agent Behavior
-
-Work like a careful Obsidian wiki maintainer.
-
-1. Prefer small, correct updates over broad rewrites.
-2. Preserve existing useful structure unless it conflicts with the task.
-3. Do not invent facts, citations, dates, or relationships.
-4. Do not hide uncertainty. Mark uncertain claims clearly.
-5. Keep raw originals unmodified and generated Markdown traceable.
-6. Use the three workflow modes consistently.
-7. Use the shortest workflow that fully satisfies the user's request.
-8. Update `wiki/index.md` and `logs/wiki.md` whenever wiki content changes.
-9. Update `wiki/home.md` only when the wiki purpose, main topics, current artifacts, or major open questions change.
-10. Put user-facing deliverables in `artifacts/`.
-11. Do not create pages for every named thing. Create pages when they improve reuse, traceability, or synthesis.
-
-## Natural Language Triggers
-
-Plain English requests are valid. The user does not need exact command syntax.
-
-Add Knowledge triggers:
-
-```text
-review sources
-triage inbox/
-what should I ingest next?
-intake
-process raw files
-convert raw files to markdown
-ingest intake/processed/source-relative-parent/original-source-base-filename/source.md
-process this source
-extract claims
-reflect
-file this back into the wiki
-```
-
-Use Knowledge triggers:
-
-```text
-what does the wiki say about topic?
-what evidence supports this?
-what are the counterarguments?
-synthesize this topic
-write a literature review
-create an artifact
-save this as an artifact
-```
-
-Maintain Wiki triggers:
-
-```text
-lint
-health-check the wiki
-find broken links
-find stale claims
-clean up duplicates
-```
-
-## Minimal First Run
-
-For a new vault, create the core workflow scaffold first:
-
-```text
-.
-├── inbox/
-├── raw/
-│   ├── digested/
-│   ├── needs-review/
-│   ├── ignored/
-│   └── unsupported/
-├── intake/
-│   ├── tmp/
-│   ├── processed/
-│   └── logs/
-├── reviews/
-│   ├── source-review/
-│   └── reflection/
-├── logs/
-│   └── wiki.md
-├── questions/
-├── artifacts/
-└── wiki/
-    ├── home.md
-    ├── index.md
-    ├── overview.md
-    ├── sources/
-    ├── entities/
-    ├── concepts/
-    ├── claims/
-    └── syntheses/
-```
