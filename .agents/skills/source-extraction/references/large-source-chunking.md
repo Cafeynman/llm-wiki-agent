@@ -6,8 +6,9 @@ Use this reference when a source is too large to review, ingest, or retrieve as 
 
 Use these as working targets, not hard limits:
 
-- Target leaf chunk size: 4,000-8,000 Chinese characters, or 2,000-4,000 English words.
-- Recommend further semantic splitting above about 10,000 Chinese characters, or 5,000 English words.
+- Measure extracted Markdown with language-neutral content units. A content unit is `ceil(utf8_byte_length / 3)` for the text being evaluated.
+- Target leaf chunk size: 4,000-8,000 content units.
+- Recommend further semantic splitting above about 10,000 content units.
 - Allow oversized chunks when splitting would break a table, formula group, legal clause, continuous argument, long quotation, or source region without a clear semantic boundary.
 
 If a chunk remains oversized, record the reason in `chunks/index.md`; after acceptance, also record it in `manifest.md` when it affects traceability or review.
@@ -52,9 +53,9 @@ Each nested directory `index.md` should list only its local child chunks and chi
 
 Prefer semantic boundaries in this order:
 
-1. Book parts, major report sections, standards chapters, or manual modules.
-2. Chapters and subchapters.
-3. Headed sections and subsections.
+1. Source-defined parts, major sections, standards chapters, manual modules, or equivalent top-level divisions.
+2. Source-defined chapters and subchapters.
+3. Source-defined headed sections and subsections.
 4. Page ranges only when headings are absent or unreliable.
 5. Tables, figures, appendices, and archive members as standalone chunks when they are independent units.
 
