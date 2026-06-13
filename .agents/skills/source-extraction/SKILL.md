@@ -29,8 +29,10 @@ The stable intake contract remains in `WIKI.md`. This skill decides how to choos
 6. If the policy is `ask-before-ocr`, `ask-before-transcription`, or `ask-before-transcription-or-frame-ocr`, ask the user before enabling that extraction.
 7. Run the provider only against the original source, never against another provider's generated Markdown.
 8. Write provider output to `intake/tmp/source-relative-parent/original-source-base-filename/source.md`, omitting `source-relative-parent` when the source is directly under the intake root. The `original-source-base-filename` segment preserves the original base filename exactly after removing only the extension; do not slugify, translate, lowercase, URL encode, or simplify it.
-9. Record provider metadata, warnings, missing content, and any chunking decisions in the intake manifest or review notes.
-10. Continue to Source Review Gate. The provider does not decide whether the source is `digested`, `needs-review`, `ignored`, or `unsupported`.
+9. Run `uv run --no-project .agents/skills/source-extraction/scripts/intake_stats.py <source.md>` from the package root. Normal files produce no output. If the script reports `large_source`, read `references/large-source-chunking.md` and create semantic chunks before Source Review Gate when the source has reliable boundaries.
+10. If a large source has no reliable boundaries, cannot be chunked without breaking tables or continuous arguments, or requires user judgment before choosing a split, move through the normal `needs-review` handling in `WIKI.md`.
+11. Record provider metadata, warnings, missing content, intake stats alerts, and any chunking decisions in the intake manifest or review notes. Do not persist normal no-alert stats.
+12. Continue to Source Review Gate. The provider does not decide whether the source is `digested`, `needs-review`, `ignored`, or `unsupported`.
 
 ## Security Rules
 

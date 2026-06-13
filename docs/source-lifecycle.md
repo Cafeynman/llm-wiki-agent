@@ -51,6 +51,8 @@ Intake first stages Markdown files or extracts non-Markdown originals into tempo
             `-- source.md
 ```
 
+After each `source.md` is created, run the source-extraction intake stats check. Normal files produce no output. If the check reports `large_source`, create semantic `chunks/` before Source Review Gate when reliable source boundaries exist.
+
 If `corrupted.pdf` cannot be extracted, stop handling that file immediately:
 
 ```text

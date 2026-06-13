@@ -6,7 +6,7 @@ Use this reference when a source is too large to review, ingest, or retrieve as 
 
 Use these as working targets, not hard limits:
 
-- Measure extracted Markdown with language-neutral content units. A content unit is `ceil(utf8_byte_length / 3)` for the text being evaluated.
+- Measure extracted Markdown with language-neutral content units. A content unit is `ceil(utf8_byte_length / 3)` for the text being evaluated; the bundled intake stats helper reports this as `content_units`.
 - Target leaf chunk size: 4,000-8,000 content units.
 - Recommend further semantic splitting above about 10,000 content units.
 - Allow oversized chunks when splitting would break a table, formula group, legal clause, continuous argument, long quotation, or source region without a clear semantic boundary.
@@ -24,18 +24,18 @@ intake/processed/source-relative-parent/original-source-base-filename/
 ├── manifest.md
 └── chunks/
     ├── index.md
-    ├── 01-major-section/
+    ├── 01-actual-top-level-heading/
     │   ├── index.md
-    │   ├── 01-chapter/
+    │   ├── 01-actual-child-heading/
     │   │   ├── index.md
-    │   │   ├── 01-section.md
-    │   │   └── 02-section.md
-    │   └── 02-chapter.md
-    └── 02-major-section/
+    │   │   ├── 01-actual-leaf-heading.md
+    │   │   └── 02-actual-leaf-heading.md
+    │   └── 02-actual-child-heading.md
+    └── 02-actual-top-level-heading/
         └── index.md
 ```
 
-Use stable numeric prefixes to preserve source order. Preserve source-derived titles in headings and index entries; use filenames that are readable and stable without translating or romanizing the source title.
+Use stable numeric prefixes to preserve source order. Replace the `actual-*` placeholders with filenames derived from the source's real headings or ranges. Preserve source-derived titles in headings and index entries; use filenames that are readable and stable without translating or romanizing the source title.
 
 ## Chunk Index Requirements
 
