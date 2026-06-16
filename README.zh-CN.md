@@ -41,8 +41,8 @@ cd llm-wiki-agent
 
 *提示：如果要使用单独的 Obsidian 库，请传递库路径，例如 `.\scripts\init.ps1 -VaultRoot "C:\path\to\your\vault"`。目标库会成为工作根目录，并获得包管理的智能体文件、本地技能、脚本、文档和运行结构。包管理文件会被包副本替换；库级个性化偏好应放在 `PROJECT.md`。*
 
-默认来源提取偏好记录在 `PROJECT.md`。首次确认项目上下文时，智能体会询问是否配置 MinerU，以及 MinerU 可用时是否优先使用 MinerU；选择该偏好时会把 MinerU 记录为文档默认 provider。
-如果使用 MinerU 精准解析、MinerU 私有部署、OCR 后端等需要本地服务配置的 provider，请将 `.env.example` 复制为初始化后工作根目录中的 `.env`，只填写 `MINERU_TOKEN` 等所需变量。真实 `.env` 已被 Git 忽略；智能体运行 provider 命令时应通过 `uv run --env-file .env` 加载它。
+默认来源提取偏好记录在 `PROJECT.md`。首次确认项目上下文时，智能体会询问是否配置 MinerU、API 模式下使用哪个 MinerU profile，以及 MinerU 可用时是否优先使用 MinerU；选择该偏好时会把 MinerU 记录为文档默认 provider。
+如果使用需要本地服务配置的 provider 或 OCR 后端，请将 `.env.example` 复制为初始化后工作根目录中的 `.env`，并只填写所选 provider profile 真正需要的变量。真实 `.env` 已被 Git 忽略；智能体运行 provider 命令时应通过 `uv run --env-file .env` 加载它。
 后续升级包文件时，请使用 [使用指南](docs/usage.zh-CN.md#升级包文件) 中的 manifest 驱动升级脚本。
 
 **你的最小化首次运行：**

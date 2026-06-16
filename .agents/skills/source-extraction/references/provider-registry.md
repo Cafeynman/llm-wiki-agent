@@ -5,7 +5,7 @@ This registry lists the initial supported extraction providers.
 | Provider | Supported source kinds | Recommended use | Setup required |
 | --- | --- | --- | --- |
 | `markitdown` | `document` | Default document provider for local text-first extraction. | Installed through project dependencies. Optional OCR setup only when OCR is explicitly approved. |
-| `mineru` | `document`, selected `image`/scan-heavy inputs when approved | High-structure parsing for complex PDFs, tables, formulas, scans, and multimodal document layouts. Can become the document default when `PROJECT.md` confirms `Prefer MinerU when available: yes`. | `mineru-open-api` CLI. Token-based modes require `.env` variables named in the MinerU setup document. |
+| `mineru` | `document`, selected `image`/scan-heavy inputs when approved | High-structure parsing for complex PDFs, tables, formulas, scans, and multimodal document layouts. Can become the document default when `PROJECT.md` confirms `Prefer MinerU when available: yes`. | CLI and API usage depend on the active MinerU profile. API details live under the MinerU profile references. |
 | `defuddle` | `webpage` | Default webpage provider for extracting clean Markdown from web pages. | Defuddle CLI must be installed. |
 
 ## Recommended Defaults
