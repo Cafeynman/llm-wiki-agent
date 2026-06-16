@@ -103,42 +103,13 @@ ensure_project_file() {
     return
   fi
 
-  cat > "$project_file" <<EOF
-# Project Context
+  local template_file="$package_root/PROJECT.md"
+  if [[ ! -f "$template_file" ]]; then
+    echo "PROJECT template not found in package: $template_file" >&2
+    exit 1
+  fi
 
-This file records the current workspace's configurable project context, including project-specific wiki structure requirements, classification preferences, naming preferences, and project-specific rules. The agent should complete it during the first project-context initialization conversation and update it when the project subject changes.
-
-Fields are optional unless required for the current task. Leave a field blank when the project has no specific preference; blank fields mean "not specified," not "to be invented."
-
-## Context
-
-- Theme:
-- Goal:
-- Audience:
-- Scope:
-- Preferred terms:
-- Wiki structure requirements:
-- Classification preferences:
-- Naming preferences:
-- Project-specific rules:
-- Constraints:
-- Open questions:
-
-## Source Extraction Preferences
-
-- Preferences status: unconfirmed
-- Default provider for document: markitdown
-- Alternative provider for document: mineru
-- MinerU API key status: unconfirmed
-- Prefer MinerU when available: unconfirmed
-- PDF preflight policy: lightweight
-- Default provider for webpage: defuddle
-- Image extraction policy: ask-before-ocr
-- Audio extraction policy: ask-before-transcription
-- Video extraction policy: ask-before-transcription-or-frame-ocr
-- Unsupported source kinds:
-- Provider-specific preferences: non-secret provider choices only; private endpoints and secret values belong in the project-root .env
-EOF
+  cp -f "$template_file" "$project_file"
   created_runtime_count=$((created_runtime_count + 1))
 }
 
@@ -228,4 +199,4 @@ echo "Merged directories: $directory_count"
 echo "Copied files: $file_count"
 echo "Created missing runtime entries: $created_runtime_count"
 echo "Next project-context confirmation should ask open-ended questions for theme, goal, audience, structure, classification, naming, and project-specific rules."
-echo "Use short choices only for bounded operational preferences such as MinerU, OCR, transcription, or frame OCR. Store only non-secret choices in PROJECT.md; put any MinerU token in .env as MINERU_TOKEN."
+echo "Use short choices only for bounded operational preferences such as MinerU, OCR, transcription, or frame OCR. Store only non-secret choices in PROJECT.md; put MinerU tokens in .env as MINERU_TOKEN only when the selected profile actually uses token auth."
