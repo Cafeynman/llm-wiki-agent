@@ -14,10 +14,11 @@ MinerU can be used through the CLI or API profiles. Use `setup.md` for shared in
 API profiles live under `profiles/`. Use the active profile recorded in `PROJECT.md`; when no profile is recorded and API mode matters, clarify the intended profile before extraction.
 
 - `profiles/public-api.md`
+- `profiles/fastapi.md`
 
 Each profile owns its API route family, documented limits, credential rules, smoke check, and script invocation details.
 
-The repository still keeps the CLI available for other MinerU paths. Do not treat the CLI and the `public-api` profile as the same contract. The current API script supports local file upload only.
+The repository still keeps the CLI available for other MinerU paths. Do not treat the CLI, `public-api`, and `fastapi` profiles as the same contract. Current API profiles support local file upload only.
 
 ## Provider Choice
 

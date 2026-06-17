@@ -2,7 +2,7 @@
 
 MinerU may be used through multiple runtime paths. Shared setup notes stay here; API behavior belongs to the selected profile.
 
-## Public API Profile
+## API Profiles
 
 If `PROJECT.md` records:
 
@@ -14,7 +14,17 @@ use the profile reference here:
 
 - `profiles/public-api.md`
 
-That profile owns:
+If `PROJECT.md` records:
+
+```md
+- MinerU profile: fastapi
+```
+
+use the profile reference here:
+
+- `profiles/fastapi.md`
+
+Each profile owns:
 
 - required environment variables
 - API endpoints
@@ -52,3 +62,4 @@ Use the upstream MinerU CLI and API documentation for current limits and paramet
 
 - <https://github.com/opendatalab/MinerU-Ecosystem/tree/main/cli>
 - <https://mineru.net/apiManage/docs>
+- <https://opendatalab.github.io/MinerU/zh/usage/quick_usage/>

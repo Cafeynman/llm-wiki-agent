@@ -5,26 +5,26 @@ Use this reference only when MinerU API mode, API smoke checks, or endpoint deta
 Upstream documentation:
 
 - <https://mineru.net/apiManage/docs>
+- <https://opendatalab.github.io/MinerU/zh/usage/quick_usage/>
 
 Check the upstream documentation before changing endpoint names, request parameters, limits, or response handling. This file records the provider workflow used by this package; the upstream documentation remains the source of truth for current API behavior.
 
 ## User Link Policy
 
-When MinerU API configuration is missing, invalid, or rejected, send the user the upstream API management documentation link so they can view setup instructions, apply for access, or regenerate the API key:
-
-- <https://mineru.net/apiManage/docs>
+When MinerU API configuration is missing, invalid, or rejected, send the user the selected profile's documentation link so they can view setup instructions or verify the active deployment contract.
 
 Do not ask the user to paste secrets into chat. Ask them to copy `.env.example` to `.env` in the project root and fill only the variables required by the selected profile.
 
-When an API request returns an error that appears to be caused by an invalid token, expired access, endpoint drift, or permission limits, include the same link in the user-facing message and ask the user to verify the key or current API instructions there.
+When an API request returns an error that appears to be caused by an invalid token, expired access, endpoint drift, permission limits, or deployment health, include the selected profile documentation link in the user-facing message and ask the user to verify the local configuration or current API instructions there.
 
-## Public API Profile
+## API Profiles
 
-For the implemented API profile path, use:
+For implemented API profile paths, use:
 
 - `profiles/public-api.md`
+- `profiles/fastapi.md`
 
-That profile owns the active route family, request examples, documented limits, smoke-check entrypoint, and the local upload parse script. This file remains a narrow reference and link surface, not the primary home for the profile contract.
+Each profile owns its active route family, request examples, documented limits, smoke-check entrypoint, and local upload parse script. This file remains a narrow reference and link surface, not the primary home for the profile contract.
 
 ## Smoke Checks
 
