@@ -195,4 +195,4 @@ finally {
 
 Write-Host "Initialized package files, uv environment, and wiki structure at: $VaultPath"
 Write-Host "Next project-context confirmation should ask open-ended questions for theme, goal, audience, structure, classification, naming, and project-specific rules."
-Write-Host "Use short choices only for bounded operational preferences such as MinerU, OCR, transcription, or frame OCR. Store only non-secret choices in PROJECT.md; put MinerU tokens in .env as MINERU_TOKEN only when the selected profile actually uses token auth."
+Write-Host "Use short choices only for bounded operational preferences such as MinerU, OCR, transcription, or frame OCR. Store only non-secret choices in PROJECT.md; fill only variables required by the selected profile in .env."

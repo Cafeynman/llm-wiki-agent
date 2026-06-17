@@ -9,9 +9,8 @@ __pycache__/
 .obsidian/
 tmp/
 
-# Local agent tooling and unconfirmed package-local review helpers.
+# Local agent tooling.
 .claudian/
-.agents/skills/wiki-contract-review/
 
 # Local wiki runtime content when using this package directory as VaultRoot.
 inbox/
