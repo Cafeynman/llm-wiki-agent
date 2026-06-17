@@ -140,7 +140,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--env-file", default=".env", help="Path to the project .env file.")
     parser.add_argument("--base-url", default="", help="Override MinerU base URL for this check.")
-    parser.add_argument("--docs-url", default="", help="Documentation URL to print when the selected profile fails.")
+    parser.add_argument("--docs-url", default="", help="Documentation URL configured by the selected profile.")
     parser.add_argument("--requires-token", action="store_true", help="Fail before route checks when no token is configured.")
     parser.add_argument("--timeout", type=float, default=10.0, help="HTTP timeout in seconds.")
     args = parser.parse_args(argv)
@@ -160,21 +160,21 @@ def main(argv: list[str] | None = None) -> int:
         print("upload_link_request_valid=fail detail=missing MinerU base URL for the selected profile")
         print("batch_result_route_valid=fail detail=upload-link request was skipped because base URL is missing")
         if docs_url:
-            print(f"docs_url={docs_url}")
+            print("docs_url_configured=true")
         return 2
 
     if args.requires_token and not token:
         upload_result = {
             "name": "upload_link_request_valid",
             "ok": False,
-            "detail": "MINERU_TOKEN is missing for the selected profile",
+            "detail": "required token is missing for the selected profile",
         }
         results = [
             upload_result,
             {
                 "name": "batch_result_route_valid",
                 "ok": False,
-                "detail": "upload-link request was skipped because MINERU_TOKEN is missing",
+                "detail": "upload-link request was skipped because the required token is missing",
             },
         ]
     else:
@@ -192,7 +192,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if not all(result["ok"] for result in results):
         if docs_url:
-            print(f"docs_url={docs_url}")
+            print("docs_url_configured=true")
         print("next_action=Open the selected profile documentation to verify access rules, then configure local .env values required by that profile.")
         return 1
     return 0

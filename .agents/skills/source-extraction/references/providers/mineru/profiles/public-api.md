@@ -27,13 +27,13 @@ Required for this profile:
 
 - `MINERU_TOKEN`
 
-Optional:
+Profile host:
 
 - `MINERU_BASE_URL`
 
-If `MINERU_BASE_URL` is empty, use the public host:
-
 - `https://mineru.net`
+
+The profile examples pass this host with `--base-url`. If using environment configuration instead, set `MINERU_BASE_URL` explicitly. The generic scripts do not default to a public host.
 
 The generic upload script may also be reused by other MinerU deployments that do not require a token. Do not store real values in skill files, manifests, logs, wiki pages, source cards, `PROJECT.md`, or prompts.
 

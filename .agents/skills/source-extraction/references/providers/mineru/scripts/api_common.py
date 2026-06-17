@@ -74,7 +74,7 @@ def request_json(
     try:
         parsed = json.loads(text) if text else None
     except json.JSONDecodeError as exc:
-        raise RuntimeError(f"invalid JSON response from {url}") from exc
+        raise RuntimeError("invalid JSON response from configured endpoint") from exc
     return status, parsed
 
 

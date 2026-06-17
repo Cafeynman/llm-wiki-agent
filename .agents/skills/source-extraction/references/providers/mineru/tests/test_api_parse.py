@@ -285,6 +285,29 @@ class TestApiParse(unittest.TestCase):
         self.assertTrue(payload["files"][0]["is_ocr"])
         self.assertEqual(payload["files"][0]["page_ranges"], "1-3")
 
+    def test_callback_requires_seed_before_provider_calls(self):
+        env_path = self.write_env("MINERU_TOKEN=test-token\n")
+        input_file = self.write_file("demo.pdf")
+        stderr = io.StringIO()
+
+        with patch("api_parse.create_upload_batch") as create_upload_batch, redirect_stderr(stderr):
+            result = api_parse.main(
+                [
+                    "--file",
+                    str(input_file),
+                    "--env-file",
+                    str(env_path),
+                    "--output-dir",
+                    str(self.root / "out"),
+                    "--callback",
+                    "https://example.test/callback",
+                ]
+            )
+
+        self.assertEqual(result, 2)
+        create_upload_batch.assert_not_called()
+        self.assertIn("--seed is required when --callback is set", stderr.getvalue())
+
     def test_upload_sends_no_explicit_headers(self):
         input_file = self.write_file("demo.pdf", b"12345")
         upload_sequence = RequestsSequence([200])
@@ -693,57 +716,9 @@ class TestApiParse(unittest.TestCase):
         file_a = self.write_file("dir-a/demo.pdf")
         file_b = self.write_file("dir-b/demo.pdf")
         output_dir = self.root / "out"
-        zip_a = self.build_zip_bytes({"result/full.md": "# A\n"})
         stderr = io.StringIO()
-        sequence = UrlopenSequence(
-            [
-                FakeResponse(
-                    json.dumps(
-                        {
-                            "code": 0,
-                            "msg": "ok",
-                            "data": {
-                                "batch_id": "batch-123",
-                                "file_urls": ["https://upload/1", "https://upload/2"],
-                            },
-                        }
-                    ).encode("utf-8")
-                ),
-                FakeResponse(
-                    json.dumps(
-                        {
-                            "code": 0,
-                            "msg": "ok",
-                            "data": {
-                                "batch_id": "batch-123",
-                                "extract_result": [
-                                    {
-                                        "file_name": "demo.pdf",
-                                        "state": "done",
-                                        "data_id": "demo",
-                                        "full_zip_url": "https://cdn/a.zip",
-                                        "err_msg": "",
-                                    },
-                                    {
-                                        "file_name": "demo.pdf",
-                                        "state": "done",
-                                        "data_id": "demo-2",
-                                        "full_zip_url": "https://cdn/b.zip",
-                                        "err_msg": "",
-                                    },
-                                ],
-                            },
-                        }
-                    ).encode("utf-8")
-                ),
-                FakeResponse(zip_a),
-            ]
-        )
-        upload_sequence = RequestsSequence([200, 200])
 
-        with patch("api_common.urlopen", sequence), patch("api_common.requests.put", upload_sequence), patch(
-            "api_parse.time.sleep", lambda _: None
-        ):
+        with patch("api_parse.create_upload_batch") as create_upload_batch:
             with redirect_stderr(stderr):
                 result = api_parse.main(
                     [
@@ -760,9 +735,10 @@ class TestApiParse(unittest.TestCase):
                     ]
                 )
 
-        self.assertEqual(result, 1)
-        self.assertIn("duplicate output directory demo", stderr.getvalue())
-        self.assertTrue((output_dir / "demo" / "source.md").exists())
+        self.assertEqual(result, 2)
+        create_upload_batch.assert_not_called()
+        self.assertIn("duplicate original base filename demo", stderr.getvalue())
+        self.assertFalse((output_dir / "demo" / "source.md").exists())
 
     def test_rejects_more_than_50_files(self):
         env_path = self.write_env("MINERU_TOKEN=test-token\n")
@@ -966,6 +942,136 @@ class TestApiParse(unittest.TestCase):
         self.assertFalse((output_dir / "001-old").exists())
         self.assertTrue((output_dir / "unrelated" / "note.txt").exists())
 
+    def test_missing_full_zip_url_writes_review_metadata(self):
+        env_path = self.write_env("MINERU_TOKEN=test-token\n")
+        input_file = self.write_file("demo.pdf")
+        output_dir = self.root / "out"
+        stderr = io.StringIO()
+        sequence = UrlopenSequence(
+            [
+                FakeResponse(
+                    json.dumps(
+                        {
+                            "code": 0,
+                            "msg": "ok",
+                            "data": {"batch_id": "batch-123", "file_urls": ["https://upload/1"]},
+                        }
+                    ).encode("utf-8")
+                ),
+                FakeResponse(
+                    json.dumps(
+                        {
+                            "code": 0,
+                            "msg": "ok",
+                            "data": {
+                                "batch_id": "batch-123",
+                                "extract_result": [
+                                    {
+                                        "file_name": "demo.pdf",
+                                        "state": "done",
+                                        "data_id": "demo",
+                                        "err_msg": "",
+                                    }
+                                ],
+                            },
+                        }
+                    ).encode("utf-8")
+                ),
+            ]
+        )
+        upload_sequence = RequestsSequence([200])
+
+        with patch("api_common.urlopen", sequence), patch("api_common.requests.put", upload_sequence), patch(
+            "api_parse.time.sleep", lambda _: None
+        ):
+            with redirect_stderr(stderr):
+                result = api_parse.main(
+                    [
+                        "--file",
+                        str(input_file),
+                        "--env-file",
+                        str(env_path),
+                        "--output-dir",
+                        str(output_dir),
+                        "--poll-interval",
+                        "0",
+                    ]
+                )
+
+        self.assertEqual(result, 1)
+        self.assertIn("missing full_zip_url", stderr.getvalue())
+        item_metadata = json.loads((output_dir / "result.json").read_text(encoding="utf-8"))
+        batch_metadata = json.loads((output_dir / "batch.json").read_text(encoding="utf-8"))
+        self.assertTrue(item_metadata["needs_review"])
+        self.assertEqual(item_metadata["extraction_error"], "missing full_zip_url")
+        self.assertTrue(batch_metadata["needs_review"])
+
+    def test_timeout_writes_batch_review_metadata(self):
+        env_path = self.write_env("MINERU_TOKEN=test-token\n")
+        input_file = self.write_file("demo.pdf")
+        output_dir = self.root / "out"
+        stderr = io.StringIO()
+        sequence = UrlopenSequence(
+            [
+                FakeResponse(
+                    json.dumps(
+                        {
+                            "code": 0,
+                            "msg": "ok",
+                            "data": {"batch_id": "batch-123", "file_urls": ["https://upload/1"]},
+                        }
+                    ).encode("utf-8")
+                ),
+                FakeResponse(
+                    json.dumps(
+                        {
+                            "code": 0,
+                            "msg": "ok",
+                            "data": {
+                                "batch_id": "batch-123",
+                                "extract_result": [
+                                    {
+                                        "file_name": "demo.pdf",
+                                        "state": "running",
+                                        "data_id": "demo",
+                                        "err_msg": "",
+                                    }
+                                ],
+                            },
+                        }
+                    ).encode("utf-8")
+                ),
+            ]
+        )
+        upload_sequence = RequestsSequence([200])
+
+        with patch("api_common.urlopen", sequence), patch("api_common.requests.put", upload_sequence), patch(
+            "api_parse.time.sleep", lambda _: None
+        ):
+            with redirect_stderr(stderr):
+                result = api_parse.main(
+                    [
+                        "--file",
+                        str(input_file),
+                        "--env-file",
+                        str(env_path),
+                        "--output-dir",
+                        str(output_dir),
+                        "--poll-interval",
+                        "0",
+                        "--max-polls",
+                        "1",
+                    ]
+                )
+
+        self.assertEqual(result, 1)
+        self.assertIn("batch did not finish after 1 polls", stderr.getvalue())
+        batch_metadata = json.loads((output_dir / "batch.json").read_text(encoding="utf-8"))
+        self.assertEqual(batch_metadata["batch_id"], "batch-123")
+        self.assertTrue(batch_metadata["needs_review"])
+        self.assertEqual(batch_metadata["results"][0]["state"], "running")
+        self.assertTrue(batch_metadata["results"][0]["needs_review"])
+
     def test_failed_item_returns_error(self):
         env_path = self.write_env("MINERU_TOKEN=test-token\n")
         input_file = self.write_file("demo.pdf")
@@ -1023,6 +1129,13 @@ class TestApiParse(unittest.TestCase):
 
         self.assertEqual(result, 1)
         self.assertIn("unsupported file", stderr.getvalue())
+        item_metadata = json.loads((self.root / "out" / "result.json").read_text(encoding="utf-8"))
+        batch_metadata = json.loads((self.root / "out" / "batch.json").read_text(encoding="utf-8"))
+        self.assertEqual(item_metadata["state"], "failed")
+        self.assertEqual(item_metadata["err_msg"], "unsupported file")
+        self.assertEqual(item_metadata["extraction_error"], "unsupported file")
+        self.assertTrue(item_metadata["needs_review"])
+        self.assertTrue(batch_metadata["needs_review"])
 
 
 if __name__ == "__main__":

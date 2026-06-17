@@ -46,8 +46,8 @@ class TestSmokeCheck(unittest.TestCase):
 
         self.assertEqual(result, 1)
         request_json.assert_not_called()
-        self.assertIn("MINERU_TOKEN is missing for the selected profile", stdout.getvalue())
-        self.assertIn("docs_url=https://mineru.net/apiManage/docs", stdout.getvalue())
+        self.assertIn("required token is missing for the selected profile", stdout.getvalue())
+        self.assertIn("docs_url_configured=true", stdout.getvalue())
 
     def test_missing_base_url_fails_before_route_check(self):
         env_path = self.write_env("")

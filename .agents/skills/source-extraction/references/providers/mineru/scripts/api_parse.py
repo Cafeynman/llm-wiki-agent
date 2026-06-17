@@ -36,6 +36,13 @@ DONE_STATE = "done"
 WATERMARK_MARKERS = ("watermark", "水印")
 
 
+class BatchTimeoutError(RuntimeError):
+    def __init__(self, *, batch_id: str, max_polls: int, items: list[dict[str, Any]]):
+        super().__init__(f"batch did not finish after {max_polls} polls")
+        self.batch_id = batch_id
+        self.items = items
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run MinerU API parsing for one or more local files.")
     parser.add_argument(
@@ -48,7 +55,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output-dir", required=True, help="Directory for output files.")
     parser.add_argument("--env-file", default=".env", help="Path to the project .env file.")
     parser.add_argument("--base-url", default="", help="Override MinerU base URL for this run.")
-    parser.add_argument("--docs-url", default="", help="Documentation URL to print when the selected profile fails.")
+    parser.add_argument("--docs-url", default="", help="Documentation URL configured by the selected profile.")
     parser.add_argument("--model-version", default=DEFAULT_MODEL_VERSION, help="API model_version.")
     parser.add_argument("--language", default="", help="Optional language value for OCR-sensitive extraction.")
     parser.add_argument(
@@ -145,11 +152,25 @@ def resolve_data_ids(values: list[str], file_paths: list[Path]) -> list[str]:
     return resolved
 
 
+def require_unique_output_basenames(file_paths: list[Path]) -> None:
+    if len(file_paths) <= 1:
+        return
+    seen: dict[str, Path] = {}
+    for file_path in file_paths:
+        base_name = file_path.stem
+        if base_name in seen:
+            raise RuntimeError(
+                f"duplicate original base filename {base_name}; split the batch so each output directory is unambiguous"
+            )
+        seen[base_name] = file_path
+
+
 def build_file_specs(args: argparse.Namespace, file_paths: list[Path]) -> list[dict[str, Any]]:
     if args.max_files_per_batch > 0 and len(file_paths) > args.max_files_per_batch:
         raise RuntimeError(
             f"this local upload runner accepts up to {args.max_files_per_batch} files per invocation; split the batch and rerun"
         )
+    require_unique_output_basenames(file_paths)
 
     page_ranges = resolve_page_ranges(args.page_ranges, len(file_paths))
     data_ids = resolve_data_ids(args.data_id, file_paths)
@@ -248,15 +269,17 @@ def poll_batch_until_terminal(
     max_polls: int,
     expected_count: int,
 ) -> list[dict[str, Any]]:
+    last_items: list[dict[str, Any]] = []
     for attempt in range(max_polls):
         batch_data = get_batch_result(base_url=base_url, token=token, batch_id=batch_id, timeout=timeout)
         items = extract_result_items(batch_data)
+        last_items = items
         states = [str(item.get("state", "")).strip().lower() for item in items]
         if len(items) >= expected_count and all(state not in RUNNING_STATES for state in states):
             return items
         if attempt < max_polls - 1:
             time.sleep(poll_interval)
-    raise RuntimeError(f"batch did not finish after {max_polls} polls")
+    raise BatchTimeoutError(batch_id=batch_id, max_polls=max_polls, items=last_items)
 
 
 def item_output_dir(output_dir: Path, file_name: str, total: int) -> Path:
@@ -425,13 +448,46 @@ def write_item_metadata(
     (output_dir / "result.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def write_batch_metadata(*, output_dir: Path, batch_id: str, payload: dict[str, Any], items: list[dict[str, Any]]) -> None:
+def write_batch_metadata(
+    *,
+    output_dir: Path,
+    batch_id: str,
+    payload: dict[str, Any],
+    items: list[dict[str, Any]],
+    error: str = "",
+) -> None:
     metadata = {
         "batch_id": batch_id,
         "request": payload,
         "results": items,
+        "needs_review": bool(error or any(item.get("needs_review") for item in items)),
     }
+    if error:
+        metadata["error"] = error
+        metadata["review_reasons"] = [error]
     (output_dir / "batch.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def timeout_metadata_items(*, batch_id: str, payload: dict[str, Any], items: list[dict[str, Any]], error: str) -> list[dict[str, Any]]:
+    model_version = str(payload.get("model_version", ""))
+    if items:
+        return [
+            build_item_metadata(
+                batch_id=batch_id,
+                item=item,
+                model_version=model_version,
+                extraction_error=error,
+            )
+            for item in items
+        ]
+    return [
+        build_item_metadata(
+            batch_id=batch_id,
+            item={"state": "timeout", "err_msg": error},
+            model_version=model_version,
+            extraction_error=error,
+        )
+    ]
 
 
 def process_results(
@@ -490,21 +546,28 @@ def process_results(
         item_dir.mkdir(parents=True, exist_ok=True)
         clean_generated_outputs(item_dir)
 
-        metadata = build_item_metadata(
-            batch_id=batch_id,
-            item=item,
-            model_version=str(payload.get("model_version", "")),
-        )
-
         state = str(item.get("state", "")).strip().lower()
         if state != DONE_STATE:
+            error = str(item.get("err_msg") or state or "unknown error")
+            metadata = build_item_metadata(
+                batch_id=batch_id,
+                item=item,
+                model_version=str(payload.get("model_version", "")),
+                extraction_error=error,
+            )
             write_item_metadata(output_dir=item_dir, metadata=metadata)
             processed_items.append(metadata)
-            failures.append(f"{file_name}: {item.get('err_msg') or state or 'unknown error'}")
+            failures.append(f"{file_name}: {error}")
             continue
 
         zip_url = str(item.get("full_zip_url", "")).strip()
         if not zip_url:
+            metadata = build_item_metadata(
+                batch_id=batch_id,
+                item=item,
+                model_version=str(payload.get("model_version", "")),
+                extraction_error="missing full_zip_url",
+            )
             write_item_metadata(output_dir=item_dir, metadata=metadata)
             processed_items.append(metadata)
             failures.append(f"{file_name}: missing full_zip_url")
@@ -605,10 +668,23 @@ def main(argv: list[str] | None = None) -> int:
             keep_result_zip=args.keep_result_zip,
             keep_all_extracted=args.keep_all_extracted,
         )
+    except BatchTimeoutError as exc:
+        error = str(exc)
+        write_batch_metadata(
+            output_dir=output_dir,
+            batch_id=exc.batch_id,
+            payload=payload,
+            items=timeout_metadata_items(batch_id=exc.batch_id, payload=payload, items=exc.items, error=error),
+            error=error,
+        )
+        print(error, file=sys.stderr)
+        if docs_url:
+            print("docs_url_configured=true", file=sys.stderr)
+        return 1
     except RuntimeError as exc:
         print(str(exc), file=sys.stderr)
         if docs_url:
-            print(f"docs_url={docs_url}", file=sys.stderr)
+            print("docs_url_configured=true", file=sys.stderr)
         return 1
 
     return 0
