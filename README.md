@@ -45,6 +45,8 @@ Default source extraction preferences are recorded in `PROJECT.md`. During first
 For service-backed providers and OCR backends, copy `.env.example` to `.env` in the initialized working root and fill only the variables required by the selected provider profile. The real `.env` file is ignored by Git; agents should load it with `uv run --env-file .env` when running provider commands.
 For package upgrades, use the manifest-driven scripts documented in [Usage Guide](docs/usage.md#upgrade-package-files).
 
+Optional scenario packages under `scenarios/` can adapt an initialized workspace for specialized uses such as exam study; see [Optional Scenario Packages](docs/usage.md#optional-scenario-packages).
+
 **Your Minimal First Run:**
 1. Drop a source file in `inbox/example.md`.
 2. Ask your agent: *"Process the files in inbox/ according to AGENTS.md, PROJECT.md, and WIKI.md."*
@@ -123,6 +125,9 @@ To get the most out of LLM Wiki Agent, we recommend pairing it with:
 │   ├── upgrade-manifest.txt
 │   ├── upgrade.ps1
 │   └── upgrade.sh
+├── scenarios/
+│   ├── README.md
+│   └── exam-study/
 ├── .agents/
 │   └── skills/
 └── docs/

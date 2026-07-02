@@ -69,6 +69,18 @@ After external-vault initialization, open or run the agent from the initialized 
 3. Creates missing workflow directories and default wiki files (`inbox/`, `raw/`, `intake/`, `reviews/`, `logs/`, `wiki/`, etc.) without overwriting existing runtime content.
 4. Runs `uv sync` in the initialized root to create or update the `.venv/` runtime state.
 
+### Optional Scenario Packages
+
+Scenario packages under `scenarios/` provide optional initialization guidance for specialized workspaces. They do not activate during base initialization. After the normal init script finishes, ask the agent to apply a scenario explicitly, for example:
+
+```text
+Initialize this workspace according to scenarios/exam-study/.
+Read the scenario README first, ask me for any missing PROJECT.md fields,
+then use starter-pages.md to create the smallest useful starter pages.
+```
+
+Scenario initialization should update `PROJECT.md` only with confirmed project-specific values, create only the smallest useful starter pages, and leave `WIKI.md` and `AGENTS.md` unchanged.
+
 ### Upgrade Package Files
 
 Use the upgrade scripts when applying a newer package release to an existing workspace:
@@ -81,7 +93,7 @@ Use the upgrade scripts when applying a newer package release to an existing wor
 ./scripts/upgrade.sh -TargetRoot "/path/to/your/workspace"
 ```
 
-The upgrade covers entries listed in `scripts/upgrade-manifest.txt`, creates `PROJECT.md` when it is missing, reconciles missing runtime directories and default wiki files, and runs `uv sync` in the target root. Listed files are overwritten. Listed directories are merged by overwriting package-managed files while leaving additional target entries in place. Keep workspace-specific configuration in `PROJECT.md`.
+The upgrade covers entries listed in `scripts/upgrade-manifest.txt`, creates `PROJECT.md` when it is missing, reconciles missing runtime directories and default wiki files, and runs `uv sync` in the target root. Listed files are overwritten. Listed directories, including `scenarios/`, are merged by overwriting package-managed files while leaving additional target entries in place. Keep workspace-specific configuration in `PROJECT.md`.
 
 ### Local Service Secrets
 

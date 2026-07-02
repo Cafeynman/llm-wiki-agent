@@ -69,6 +69,18 @@ cd llm-wiki-agent
 3. 补齐缺失的工作流目录和默认 wiki 文件 (`inbox/`, `raw/`, `intake/`, `reviews/`, `logs/`, `wiki/` 等)，不覆盖已有运行内容。
 4. 在初始化后的根目录运行 `uv sync`，创建或更新 `.venv` 本地运行环境。
 
+### 可选场景包
+
+`scenarios/` 下的场景包为特定类型的工作区提供可选初始化指导。它们不会在基础初始化时自动生效。普通初始化脚本完成后，需要明确要求智能体应用某个场景，例如：
+
+```text
+根据 scenarios/exam-study/ 初始化当前库。
+先读场景 README，再询问我 PROJECT.md 中需要确认的字段，
+然后用 starter-pages.md 创建最小有用的起始页面。
+```
+
+场景初始化只能把已确认的项目级取值写入 `PROJECT.md`，只创建当前场景需要的最小起始页面，并保持 `WIKI.md` 和 `AGENTS.md` 不变。
+
 ### 升级包文件
 
 将新版本包应用到已有工作区时，使用升级脚本：
@@ -81,7 +93,7 @@ cd llm-wiki-agent
 ./scripts/upgrade.sh -TargetRoot "/path/to/your/workspace"
 ```
 
-升级会处理 `scripts/upgrade-manifest.txt` 中列出的条目，在缺失时创建 `PROJECT.md`，补齐缺失的运行目录和默认 wiki 文件，并在目标根目录运行 `uv sync`。列出的文件会被覆盖；列出的目录会按包文件合并覆盖，并保留目标目录中额外存在的条目。工作区个性化配置应放在 `PROJECT.md`。
+升级会处理 `scripts/upgrade-manifest.txt` 中列出的条目，在缺失时创建 `PROJECT.md`，补齐缺失的运行目录和默认 wiki 文件，并在目标根目录运行 `uv sync`。列出的文件会被覆盖；列出的目录，包括 `scenarios/`，会按包文件合并覆盖，并保留目标目录中额外存在的条目。工作区个性化配置应放在 `PROJECT.md`。
 
 ### 本地服务密钥
 

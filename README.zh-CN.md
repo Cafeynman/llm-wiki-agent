@@ -45,6 +45,8 @@ cd llm-wiki-agent
 如果使用需要本地服务配置的 provider 或 OCR 后端，请将 `.env.example` 复制为初始化后工作根目录中的 `.env`，并只填写所选 provider profile 真正需要的变量。真实 `.env` 已被 Git 忽略；智能体运行 provider 命令时应通过 `uv run --env-file .env` 加载它。
 后续升级包文件时，请使用 [使用指南](docs/usage.zh-CN.md#升级包文件) 中的 manifest 驱动升级脚本。
 
+`scenarios/` 下的可选场景包可将初始化后的工作区适配为考试备考等专门用途；见 [可选场景包](docs/usage.zh-CN.md#可选场景包)。
+
 **你的最小化首次运行：**
 1. 将源文件放入 `inbox/example.md`。
 2. 对智能体说：*"请根据 AGENTS.md, PROJECT.md 和 WIKI.md 处理 inbox/ 中的文件。"*
@@ -123,6 +125,9 @@ cd llm-wiki-agent
 │   ├── upgrade-manifest.txt
 │   ├── upgrade.ps1
 │   └── upgrade.sh
+├── scenarios/
+│   ├── README.md
+│   └── exam-study/
 ├── .agents/
 │   └── skills/
 └── docs/

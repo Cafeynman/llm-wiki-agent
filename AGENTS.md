@@ -18,6 +18,19 @@ Use yes/no questions or short choices only for bounded operational preferences s
 
 `PROJECT.md` is the only place for project-specific personalization. Do not use it for stable wiki rules, runtime commands, repository workflow rules, or the stable wiki contract in `WIKI.md`.
 
+## Scenario Packages
+
+Reusable scenario packages live under `scenarios/`. They are optional initialization guides for specialized workspaces, not active project configuration. Use a scenario package only when the user explicitly asks to initialize or adapt the workspace from a named scenario.
+
+When applying a scenario package:
+
+1. Read `scenarios/<name>/README.md` first.
+2. Use `scenarios/<name>/PROJECT.template.md` only to confirm and update project-specific fields in the root `PROJECT.md`.
+3. Use `scenarios/<name>/starter-pages.md` only to create the smallest useful initial pages for the confirmed project context.
+4. Do not modify `WIKI.md` or `AGENTS.md` as part of scenario initialization.
+5. Do not treat scenario files as active wiki knowledge or runtime state.
+6. If a scenario README defines additional files, follow that scenario's stated structure without generalizing it to other scenarios.
+
 ## Runtime Requirement
 
 Use `uv run` for Python commands from the project root. Do not call `python` or `pip` directly for project tasks unless the user explicitly asks.
