@@ -30,9 +30,10 @@ The stable intake contract remains in `WIKI.md`. This skill decides how to choos
 7. Run the provider only against the original source, never against another provider's generated Markdown.
 8. Write provider output to `intake/tmp/source-relative-parent/original-source-base-filename/source.md`, omitting `source-relative-parent` when the source is directly under the intake root. The `original-source-base-filename` segment preserves the original base filename exactly after removing only the extension; do not slugify, translate, lowercase, URL encode, or simplify it.
 9. Run `uv run --no-project .agents/skills/source-extraction/scripts/audit_intake_file.py <source.md>` from the package root against the `source.md` just produced by this intake step. Normal files produce no output. If the script reports `large_source`, read `references/large-source-chunking.md` and create semantic chunks before Source Review Gate when the source has reliable boundaries.
-10. If a large source has no reliable boundaries, cannot be chunked without breaking tables or continuous arguments, or requires user judgment before choosing a split, move through the normal `needs-review` handling in `WIKI.md`.
-11. Record provider metadata, warnings, missing content, intake file audit alerts, and any chunking decisions in the intake manifest or review notes. Do not persist normal no-alert audit results.
-12. Continue to Source Review Gate. The provider does not decide whether the source is `digested`, `needs-review`, `ignored`, or `unsupported`.
+10. When `chunks/` is generated, run `uv run --no-project .agents/skills/source-extraction/scripts/audit_chunks.py <intake-folder>` from the package root before Source Review Gate. Resolve hard errors before promotion, or move through the normal `needs-review` handling in `WIKI.md`; warnings are extraction or chunking caveats for review notes.
+11. If a large source has no reliable boundaries, cannot be chunked without breaking tables or continuous arguments, or requires user judgment before choosing a split, move through the normal `needs-review` handling in `WIKI.md`.
+12. Record provider metadata, warnings, missing content, intake file audit alerts, chunk audit warnings, and any chunking decisions in the intake manifest or review notes. Do not persist normal no-alert audit results.
+13. Continue to Source Review Gate. The provider does not decide whether the source is `digested`, `needs-review`, `ignored`, or `unsupported`.
 
 ## Security Rules
 

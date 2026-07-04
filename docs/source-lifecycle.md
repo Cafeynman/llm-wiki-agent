@@ -51,7 +51,7 @@ Intake first stages Markdown files or extracts non-Markdown originals into tempo
             `-- source.md
 ```
 
-After each `source.md` is created, run the source-extraction intake file audit on that file. Normal files produce no output. If the audit reports `large_source`, create semantic `chunks/` before Source Review Gate when reliable source boundaries exist.
+After each `source.md` is created, run the source-extraction intake file audit on that file. Normal files produce no output. If the audit reports `large_source`, create semantic `chunks/` before Source Review Gate when reliable source boundaries exist. When chunks are created, run the chunk audit on the temporary intake folder; resolve hard errors before promotion and carry warnings into review notes.
 
 If `corrupted.pdf` cannot be extracted, stop handling that file immediately:
 

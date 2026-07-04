@@ -8,7 +8,34 @@ Before chunking, run the bundled intake file audit helper against the current te
 
 Allow oversized chunks when splitting would break a table, formula group, legal clause, continuous argument, long quotation, or source region without a clear semantic boundary.
 
-If a chunk remains oversized, record the reason in `chunks/index.md`; after acceptance, also record it in `manifest.md` when it affects traceability or review.
+If a leaf chunk remains oversized, record the reason in the nearest `index.md` that lists that leaf chunk. After acceptance, also record it in `manifest.md` when it affects traceability or review.
+
+## Chunk Audit
+
+After creating `chunks/`, run the bundled chunk audit helper against the current intake folder:
+
+```powershell
+uv run --no-project .agents/skills/source-extraction/scripts/audit_chunks.py <intake-folder>
+```
+
+Use `--json` when another script needs structured output. The JSON output uses this stable shape:
+
+```json
+{
+  "schema": 1,
+  "path": "intake/tmp/source/source-name",
+  "content_unit_threshold": 10000,
+  "status": "pass | warn | fail",
+  "errors": [],
+  "warnings": []
+}
+```
+
+Each error or warning has `code`, `path`, and `message`. Exit code `0` means no hard errors were found, even if warnings exist. Exit code `1` means hard errors were found. Exit code `2` means the input path could not be read.
+
+Hard errors are limited to deterministic structure problems: missing `chunks/` or `chunks/index.md`, index entries that point outside `chunks/` or to missing files, leaf chunks not listed by their nearest `index.md`, nested chunk directories without local `index.md`, oversized leaf chunks without a recorded reason, or final `summary.md`/`manifest.md` existing while hard chunk errors remain.
+
+Warnings are review cues, not automatic blockers. They include unresolved local image references, possible table-of-contents-like repeated headings, and possible missing numbered parents such as a `4.1` heading without an observed `4` parent. Source Review Gate still decides whether warnings make the source `digested` or `needs-review`.
 
 ## Directory Shape
 
@@ -33,6 +60,8 @@ intake/processed/source-relative-parent/original-source-base-filename/
 ```
 
 Use stable numeric prefixes to preserve source order. Replace the `actual-*` placeholders with filenames derived from the source's real headings or ranges. Preserve source-derived titles in headings and index entries; use filenames that are readable and stable without translating or romanizing the source title.
+
+When a chunk generation or restructuring script moves Markdown into the final `chunks/` tree, keep existing Markdown image references resolvable from the moved chunk. The chunk audit can warn about unresolved local image references, but the generator owns path preservation or path rewriting.
 
 ## Chunk Index Requirements
 
