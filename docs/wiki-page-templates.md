@@ -6,6 +6,8 @@ Use these templates when creating wiki pages that follow the operating contract 
 
 Create one source card under `wiki/sources/<source-relative-parent>/original-source-base-filename.md` for every `digested` source.
 
+`Source Title` means the source's original-language title unless the source, user, or `PROJECT.md` confirms another naming scheme. Do not translate, romanize, convert to pinyin, slugify, force lowercase, case-normalize, or simplify it just because this template is written in English.
+
 ```markdown
 ---
 title: "Source Title"

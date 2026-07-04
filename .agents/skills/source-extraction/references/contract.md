@@ -18,7 +18,7 @@ A provider receives:
 - Project preferences from `PROJECT.md`.
 - Provider-specific options approved for the current task.
 
-The `original-source-base-filename` segment is the original source file's base filename after removing only the extension. Preserve language, case, whitespace, punctuation, and special characters; do not translate, romanize, URL encode, slugify, lowercase, or simplify it.
+The `original-source-base-filename` segment is the original source file's base filename after removing only the extension. Preserve language, case, whitespace, punctuation, and special characters; do not translate, romanize, convert to pinyin, URL encode, slugify, force lowercase, case-normalize, or simplify it.
 
 ## Provider Output
 
@@ -34,7 +34,7 @@ A successful provider run must produce:
   - missing content
   - links to generated side outputs when they are necessary for traceability
 
-Providers must preserve source-derived text as content. Do not remove or normalize punctuation, YAML indicator characters, Markdown control characters, or filename characters from extracted titles, headings, paths, or body text. When provider metadata or source-derived strings are later written into YAML frontmatter, Markdown tables, wikilinks, or command examples, the writer must quote, escape, or encode them for that target syntax without changing the underlying value.
+Providers must preserve source-derived text and labels as content. Do not remove or normalize punctuation, YAML indicator characters, Markdown control characters, or filename characters from extracted titles, headings, paths, or body text. When provider metadata or source-derived strings are later written into YAML frontmatter, Markdown tables, wikilinks, or command examples, the writer must quote, escape, or encode them for that target syntax without changing the underlying value.
 
 When a large original file is split for provider limits, the provider workflow must merge part outputs back into one `source.md` for the original source before Source Review Gate. Part files may be kept only as traceability side outputs with recorded page ranges, provider modes, and merge order.
 

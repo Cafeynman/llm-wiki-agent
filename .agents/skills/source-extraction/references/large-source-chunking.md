@@ -59,7 +59,7 @@ intake/processed/source-relative-parent/original-source-base-filename/
         └── index.md
 ```
 
-Use stable numeric prefixes to preserve source order. Replace the `actual-*` placeholders with filenames derived from the source's real headings or ranges. Preserve source-derived titles in headings and index entries; use filenames that are readable and stable without translating or romanizing the source title.
+Use stable numeric prefixes to preserve source order. Replace the `actual-*` placeholders with filenames derived from the source's real headings or ranges. Preserve source-derived titles in headings and index entries; use filenames that are readable and stable without translating, romanizing, converting to pinyin, slugifying, forcing lowercase, case-normalizing, or simplifying the source title.
 
 When a chunk generation or restructuring script moves Markdown into the final `chunks/` tree, keep existing Markdown image references resolvable from the moved chunk. The chunk audit can warn about unresolved local image references, but the generator owns path preservation or path rewriting.
 

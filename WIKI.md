@@ -57,7 +57,7 @@ intake/processed/source-relative-parent/original-source-base-filename/
     └── 01-source-heading-or-range.md
 ```
 
-If the source has no parent directory under the intake root, omit `source-relative-parent`. The `original-source-base-filename` directory must preserve the original source file's base filename and source language. Except for removing the extension, do not translate, romanize, slugify, lowercase, URL encode, or simplify it. Use the same source-relative parent and source-language base filename for source cards under `wiki/sources/`.
+If the source has no parent directory under the intake root, omit `source-relative-parent`. The `original-source-base-filename` directory must preserve the original source file's base filename and source language. Except for removing the extension, do not translate, romanize, convert to pinyin, slugify, force lowercase, case-normalize, URL encode, or simplify it. Use the same source-relative parent and source-language base filename for source cards under `wiki/sources/`.
 
 The source-relative path is the path below `inbox/` for first intake, or the path below the current `raw/<state>/` directory for reprocessing. Preserve this relative path when moving originals between raw state directories, when writing `intake/tmp/` or `intake/processed/` outputs, and when creating source cards under `wiki/sources/`. The relative path is traceability, not a wiki taxonomy.
 
@@ -95,7 +95,9 @@ Use Obsidian-compatible Markdown. Prefer `[[wikilinks]]` for internal wiki pages
 
 Traceability links to vault-internal files and notes must use Obsidian wikilinks. In frontmatter `sources:`, write vault-internal paths as quoted wikilink strings, for example `"[[raw/digested/source-relative-parent/original-filename.ext]]"` or `"[[intake/processed/source-relative-parent/original-source-base-filename/source.md]]"`. Omit `source-relative-parent/` only when the source is directly under the intake root. External URLs remain quoted plain strings. See `.agents/skills/obsidian-markdown/references/PROPERTIES.md` for exact YAML quoting rules.
 
-Preserve source-derived text exactly as content. Do not delete, replace, romanize, slugify, or otherwise normalize special characters just because a target syntax treats them specially. Encode or quote the value only at the output boundary that needs it, such as YAML frontmatter, Markdown table cells, wikilinks, or command examples.
+Preserve source-derived text exactly as content. Do not delete, replace, romanize, convert to pinyin, slugify, or otherwise normalize special characters just because a target syntax treats them specially. Encode or quote the value only at the output boundary that needs it, such as YAML frontmatter, Markdown table cells, wikilinks, or command examples.
+
+Preserve source-language names for source-specific artifacts: source cards, source-specific reading pages, chunk files and directories, source-derived page titles, headings, aliases, catalog labels, and index entries. Do not translate, romanize, convert to pinyin, slugify, force lowercase, case-normalize, or simplify source-derived names unless the user explicitly asks or `PROJECT.md` records a confirmed naming preference. For cross-source pages such as entities, concepts, claims, and syntheses, follow `PROJECT.md` naming preferences; if none are confirmed, use the dominant language of the relevant sources, or the user's request language when there is no dominant source language. Add alternative-language names as aliases when they help prevent duplicate pages. Fixed system-role filenames, including `source.md`, `summary.md`, `manifest.md`, `digest.md`, `index.md`, `home.md`, `overview.md`, and `logs/wiki.md`, keep their contract names.
 
 Use `type` values from `source`, `entity`, `concept`, `claim`, or `synthesis`; use `status` values from `draft`, `reviewed`, `verified`, `stale`, or `archived`; and use `confidence` values from `low`, `medium`, or `high`.
 

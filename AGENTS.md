@@ -51,6 +51,10 @@ When the user wants the wiki structure in a separate Obsidian vault, pass that v
 
 When using skills for this project, read the skill files from this repository's `.agents/skills/` directory first. Treat `.agents/skills/` as the project-local source of truth for package skills, and do not prefer global or external skill copies unless the user explicitly asks.
 
+## Delegation Context
+
+When delegating wiki or source-processing work to subagents, Claude Code, AGY, external reviewers, or another runtime, do not assume repository context is inherited. Include the workspace root, the target vault root when different, `AGENTS.md` as the canonical entrypoint, relevant `WIKI.md` contract sections, `PROJECT.md` when naming or extraction preferences matter, relevant local `.agents/skills/` paths, and the source-language naming rule. Do not include secrets, private endpoints, tokens, or credentials in delegated prompts.
+
 ## Replacement Rule
 
 When a user gives a new direction that replaces a prior plan, replace the old plan completely instead of patching around it: define the single new source of truth, remove old wording and workflows, scan the target files for stale terms, and finish only when the old terms are gone.
@@ -88,11 +92,11 @@ Preserve source-derived text exactly as content. Encode or quote values only at 
 
 ## Intake Output Names
 
-When generating intake Markdown from an original file, including MarkItDown, manual normalization, repaired document extraction, or any other provider, the intake directory name must preserve the original file's base filename and source language. Except for removing the extension, do not replace, delete, transcode, URL encode, change case, translate, romanize, or slugify any character.
+When generating intake Markdown from an original file, including MarkItDown, manual normalization, repaired document extraction, or any other provider, the intake directory name must preserve the original file's base filename and source language. Except for removing the extension, do not replace, delete, transcode, URL encode, change case, translate, romanize, convert to pinyin, or slugify any character.
 
 Also preserve the source-relative parent path defined in `WIKI.md` when writing `intake/tmp/`, `intake/processed/`, and `wiki/sources/`. Do not add a date directory under `intake/tmp/` or `intake/processed/`; processing dates belong in manifests, logs, and review records.
 
-Use the same source-relative parent and source-language naming rule for `wiki/sources/` source cards. Do not translate a source title into another language or slug unless the user explicitly asks for that naming scheme.
+Use the same source-relative parent and the `WIKI.md` source-language naming rule for `wiki/sources/` source cards. Do not translate, romanize, convert to pinyin, or slugify a source title unless the user explicitly asks for that naming scheme.
 
 ## Source Extraction Providers
 

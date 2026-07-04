@@ -31,7 +31,9 @@ Keep executable Obsidian Markdown checks owned here. `WIKI.md` may require this 
 4. Add `--write` only when the fix is mechanical and the target scope is correct.
 5. After writes, rerun `lint_wiki.py`.
 
-`lint_wiki.py` treats links ending in `/` or `\` as explicit directory links. Existing directory links are checked for directory existence and do not count as page incoming links. `intake/` links in frontmatter `sources:` are source traceability and are excluded from navigation broken-link reporting; body links to `intake/` remain checked.
+`lint_wiki.py` treats links ending in `/` or `\` as explicit directory links. Existing directory links are checked for directory existence and do not count as page incoming links. Internal vault paths in frontmatter `sources:` must be complete quoted wikilinks. `intake/` wikilinks in frontmatter `sources:` are source traceability and are excluded from navigation broken-link reporting; body links to `intake/` remain checked.
+
+If the requested `--scope` contains no Markdown pages, `lint_wiki.py` exits with code `2`. Treat that as a wrong vault root or scope, not a clean wiki.
 
 ## Scripts
 

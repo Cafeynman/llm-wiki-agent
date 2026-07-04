@@ -45,6 +45,17 @@ class TestLintWiki(unittest.TestCase):
             result = lint_wiki.lint(self.vault, self.scope)
             
         self.assertEqual(result, 1, "Lint should report broken links for missing files.")
+
+    def test_empty_scope_returns_input_error(self):
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 2, "Lint should fail when the requested scope has no Markdown pages.")
+        error_reported = any(
+            "No Markdown pages found under scope: wiki" in (call[0][0] if call[0] else "")
+            for call in mock_print.call_args_list
+        )
+        self.assertTrue(error_reported)
         
     def test_md_link_prevents_orphan(self):
         note_path = self.vault / "wiki" / "entry.md"
@@ -206,6 +217,54 @@ Body.
             result = lint_wiki.lint(self.vault, self.scope)
 
         self.assertEqual(result, 1, "Lint should report internal source paths that are not wikilinks.")
+        invalid_reported = any(
+            "sources entry must be a quoted wikilink" in (call[0][0] if call[0] else "")
+            for call in mock_print.call_args_list
+        )
+        self.assertTrue(invalid_reported)
+
+    def test_frontmatter_sources_intake_paths_must_be_wikilinks(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """---
+title: "Note"
+sources:
+  - intake/processed/source/source.md
+---
+
+Body.
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 1, "Lint should report bare intake source paths in frontmatter.")
+        invalid_reported = any(
+            "sources entry must be a quoted wikilink" in (call[0][0] if call[0] else "")
+            for call in mock_print.call_args_list
+        )
+        self.assertTrue(invalid_reported)
+
+    def test_frontmatter_sources_wikilinks_must_be_complete(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """---
+title: "Note"
+sources:
+  - "[[intake/processed/source/source.md"
+---
+
+Body.
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 1, "Lint should report incomplete wikilinks in frontmatter sources.")
         invalid_reported = any(
             "sources entry must be a quoted wikilink" in (call[0][0] if call[0] else "")
             for call in mock_print.call_args_list

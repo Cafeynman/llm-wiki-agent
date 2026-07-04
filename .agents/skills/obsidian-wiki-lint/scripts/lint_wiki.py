@@ -261,8 +261,8 @@ def lint_source_entry(raw_value: str, rel: str, line_no: int) -> list[str]:
     value = strip_yaml_quotes(raw_value)
     errors: list[str] = []
 
-    if value.startswith("[["):
-        if not quoted:
+    if value.startswith("[[") or value.endswith("]]"):
+        if not quoted or not (value.startswith("[[") and value.endswith("]]")):
             errors.append(f"{rel}:{line_no}: sources entry must be a quoted wikilink: {raw_value}")
         return errors
 
@@ -510,6 +510,11 @@ def lint(vault: Path, scope: str) -> int:
     markdown_files = iter_markdown_files(vault)
     all_files, by_stem = build_lookup(markdown_files, vault)
     scoped_files = sorted(f for f in all_files if f == scope or f.startswith(scope.rstrip("/") + "/"))
+    if not scoped_files:
+        print(f"No Markdown pages found under scope: {scope}")
+        print(f"Markdown pages: {len(all_files)}")
+        print("Scoped pages: 0")
+        return 2
 
     incoming: dict[str, list[str]] = defaultdict(list)
     broken: dict[str, list[str]] = defaultdict(list)

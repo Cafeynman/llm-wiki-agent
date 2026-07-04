@@ -16,6 +16,8 @@ Create and edit valid Obsidian Flavored Markdown. Obsidian extends CommonMark an
 5. **Add callouts** for highlighted information using `> [!type]` syntax. See [CALLOUTS.md](references/CALLOUTS.md) for all callout types.
 6. **Verify** the note renders correctly in Obsidian's reading view.
 
+Follow `WIKI.md` source-language naming when note filenames, frontmatter `title`, headings, aliases, links, or display labels come from source or user terms. Preserve the source/user language for those names, and use aliases for alternative-language terms on cross-source pages.
+
 > When choosing between wikilinks and Markdown links: use `[[wikilinks]]` for notes within the vault (Obsidian tracks renames automatically) and `[text](url)` for external URLs only.
 
 ## Internal Links (Wikilinks)
