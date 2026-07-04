@@ -38,6 +38,7 @@ project-specific context.
   - Weekly study time:
   - Review cadence:
   - Subject priority:
+  - Weak-point priority basis:
   - Availability constraints:
   - Reminder or supervision preference:
 - Project-specific rules:

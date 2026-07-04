@@ -73,6 +73,11 @@ When classification is missing but foundational material exists, enrich the
 question automatically and record the evidence and confidence. When the answer
 is missing, isolate or reject the item instead of guessing.
 
+If the answer exists but the explanation is missing, the item may be accepted
+only when the question text, source, correct answer, and needed context are
+present. Any agent-written explanation must be marked as derived reasoning or
+pending source confirmation, not as an official explanation.
+
 ## Study Planning Loop
 
 The study plan loop coordinates preparation over time. It does not replace the
@@ -81,9 +86,21 @@ source lifecycle or become hidden monitoring.
 - `study-plan.md` records the overall exam preparation plan: exam date, phases,
   subject priorities, weekly rhythm, milestones, and review cadence.
 - `study-dashboard.md` records current execution state: this week's tasks,
-  completed work, delayed work, weak knowledge points, and next actions.
+  completed work, delayed work, weak knowledge points, and next actions. It is
+  the first page to inspect when the user asks to restart or resume review.
+- Weak knowledge points must be evidence-backed. Use user-reported gaps,
+  accepted wrong-question records, reviewed sources, question sample indexes,
+  and stage reviews as evidence; do not invent weakness records from general
+  impressions.
+- When a wrong-question record is accepted, update the subject
+  `wrong-question-index.md`, the linked concept page's error patterns, common
+  traps, judgment steps, or linked questions as applicable, and the dashboard's
+  weak-knowledge and wrong-question signals.
 - Stage review artifacts summarize a period of work and propose plan
   adjustments. They belong under `artifacts/`.
+- Stage review outputs must write their current-state conclusions back to
+  `study-dashboard.md` and their schedule or priority changes back to
+  `study-plan.md`.
 - The agent updates the dashboard and plan from user-reported progress, reviewed
   sources, wrong-question records, question sample indexes, and stage reviews.
 - If the user wants timed reminders, use an explicit automation outside the

@@ -65,6 +65,7 @@ sources: []
 - `accepted`: usable as a formal sample.
 - `needs_enrichment`: classification can likely be enriched from digested foundational material.
 - `enriched_pending_confirmation`: classification was enriched and should be checked.
+- `needs_answer`: answer is missing and the item must stay out of accepted samples.
 - `pending_decision`: needs user judgment.
 - `rejected`: not suitable for this workspace.
 
@@ -104,8 +105,8 @@ sources: []
 
 ## Records
 
-| Date | Source | Knowledge Point | My Answer | Correct Answer | Error Type | Next Judgment Step |
-| --- | --- | --- | --- | --- | --- | --- |
+| ID | Date | Source | Knowledge Point | My Answer | Correct Answer | Error Type | Review Status | Next Judgment Step |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
 
 ## Repeated Error Patterns
 
@@ -209,6 +210,9 @@ sources: []
 
 # Study Dashboard
 
+Use this as the first page when restarting or resuming review. Keep weak-point
+entries tied to concrete evidence instead of general impressions.
+
 ## Current Week
 
 ## Planned Tasks
@@ -222,7 +226,13 @@ sources: []
 
 ## Weak Knowledge Points
 
+| Subject | Knowledge Point | Evidence | Weak Reason | Priority | Next Review Action | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+
 ## Wrong-Question Signals
+
+| ID | Subject | Knowledge Point | Signal | Linked Record | Next Action |
+| --- | --- | --- | --- | --- | --- |
 
 ## Next Actions
 ```
@@ -247,6 +257,10 @@ Skeleton:
 ## Recent Error Patterns
 
 ## Review Questions
+
+## Dashboard Updates
+
+## Study Plan Adjustments
 
 ## Next Session
 ```
