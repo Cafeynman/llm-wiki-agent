@@ -15,6 +15,18 @@ MARKDOWN_IMAGE_RE = re.compile(r"!\[[^\]]*\]\(([^)]+)\)")
 NUMBERED_CHILD_RE = re.compile(r"(?<!\d)(\d+)\.(\d+(?:\.\d+)*)")
 NUMBERED_PARENT_RE = re.compile(r"(?<!\d)(\d+)(?![\d.])")
 EXTERNAL_TARGET_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*:")
+AGENT_ORDER_PREFIX_RE = re.compile(r"^\d{2,}-")
+CHINESE_NUMERAL_CHARS = "零〇一二三四五六七八九十百千万两"
+CHINESE_ORDINAL_UNITS = "章节篇卷编部课讲条款项目回则段"
+INTRINSIC_ORDER_PATTERNS = [
+    re.compile(r"^\(\d+(?:\.\d+)*\)"),
+    re.compile(r"^\d+(?:\.\d+)+(?:$|[.)、_\-\s])"),
+    re.compile(r"^\d+[.)、_\-\s]"),
+    re.compile(rf"^第[0-9{CHINESE_NUMERAL_CHARS}]+(?:部分|[{CHINESE_ORDINAL_UNITS}])(?:$|[.)、_\-\s]|[\u4e00-\u9fff])"),
+    re.compile(rf"^[{CHINESE_NUMERAL_CHARS}]+[.)、_\-\s]"),
+    re.compile(r"^(?i:[ivxlcdm]+)[.)、_\-]"),
+    re.compile(r"^[A-Za-z][.)、_\-]"),
+]
 
 
 def content_path(path: Path, root: Path) -> str:
@@ -129,6 +141,110 @@ def numbered_child_warnings(markdown_files: list[Path], root: Path) -> list[dict
     return warnings
 
 
+def chunk_child_name(path: Path) -> str:
+    if path.is_file() and path.suffix.lower() == ".md":
+        return path.stem
+    return path.name
+
+
+def content_children(directory: Path) -> list[Path]:
+    children: list[Path] = []
+    for child in directory.iterdir():
+        if child.name == "index.md":
+            continue
+        if child.is_file() and child.suffix.lower() == ".md":
+            children.append(child)
+        elif child.is_dir() and (child / "index.md").is_file():
+            children.append(child)
+    return sorted(children, key=lambda path: path.name.lower())
+
+
+def strip_agent_order_prefix(name: str) -> str:
+    return AGENT_ORDER_PREFIX_RE.sub("", name, count=1)
+
+
+def has_intrinsic_order_token(name: str) -> bool:
+    return any(pattern.match(name) for pattern in INTRINSIC_ORDER_PATTERNS)
+
+
+def naming_group_errors(directory: Path, root: Path) -> list[dict]:
+    children = content_children(directory)
+    if len(children) < 2:
+        return []
+
+    records = []
+    for child in children:
+        name = chunk_child_name(child)
+        has_prefix = AGENT_ORDER_PREFIX_RE.match(name) is not None
+        title_name = strip_agent_order_prefix(name) if has_prefix else name
+        records.append(
+            {
+                "name": name,
+                "has_prefix": has_prefix,
+                "has_intrinsic": has_intrinsic_order_token(title_name),
+            }
+        )
+
+    prefixed = [record for record in records if record["has_prefix"]]
+    unprefixed = [record for record in records if not record["has_prefix"]]
+    intrinsic = [record for record in records if record["has_intrinsic"]]
+    redundant_prefixed_intrinsic = [
+        record for record in records if record["has_prefix"] and record["has_intrinsic"]
+    ]
+
+    names = ", ".join(record["name"] for record in records[:5])
+    if redundant_prefixed_intrinsic:
+        return [
+            issue(
+                "redundant_generated_prefix_for_intrinsic_siblings",
+                directory,
+                root,
+                f"direct chunk children include generated prefixes before intrinsic order tokens: {names}",
+            )
+        ]
+
+    if prefixed and unprefixed:
+        return [
+            issue(
+                "mixed_generated_prefix_in_sibling_group",
+                directory,
+                root,
+                f"direct chunk children mix generated order prefixes and unprefixed names: {names}",
+            )
+        ]
+
+    if len(prefixed) == len(records):
+        return []
+
+    if len(intrinsic) == len(records):
+        return []
+    if intrinsic:
+        return [
+            issue(
+                "mixed_intrinsic_and_plain_sibling_names",
+                directory,
+                root,
+                f"direct chunk children mix intrinsic order tokens and plain names without generated prefixes: {names}",
+            )
+        ]
+
+    return [
+        issue(
+            "missing_generated_prefix_for_plain_siblings",
+            directory,
+            root,
+            f"direct chunk children without intrinsic order tokens need generated order prefixes: {names}",
+        )
+    ]
+
+
+def chunk_naming_errors(chunks_dir: Path, root: Path) -> list[dict]:
+    errors: list[dict] = []
+    for directory in [chunks_dir, *[path for path in chunks_dir.rglob("*") if path.is_dir()]]:
+        errors.extend(naming_group_errors(directory, root))
+    return errors
+
+
 def repeated_source_heading_warnings(root: Path) -> list[dict]:
     source_path = root / "source.md"
     if not source_path.is_file():
@@ -193,6 +309,8 @@ def inspect_chunks(root: Path, threshold: int) -> dict:
                         "nested chunk directories with child chunks or directories need a local index.md",
                     )
                 )
+
+        errors.extend(chunk_naming_errors(chunks_dir, root))
 
         leaf_files = [path for path in chunks_dir.rglob("*.md") if path.name != "index.md"]
         for leaf in leaf_files:
