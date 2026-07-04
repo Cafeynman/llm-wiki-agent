@@ -61,7 +61,7 @@ class TestLintWiki(unittest.TestCase):
         for call in mock_print.call_args_list:
             self.assertNotIn("Orphan: wiki/other.md", call[0][0] if call[0] else "")
 
-    def test_folder_flagged_broken(self):
+    def test_folder_without_trailing_slash_flagged_broken(self):
         note_path = self.vault / "wiki" / "note.md"
         note_path.write_text("See [[folder]]", encoding="utf-8")
         
@@ -74,6 +74,117 @@ class TestLintWiki(unittest.TestCase):
         # Ensure it was reported as broken
         broken_reported = any("Broken: folder.md" in (call[0][0] if call[0] else "") for call in mock_print.call_args_list)
         self.assertTrue(broken_reported, "Should report folder.md as broken since Obsidian expects a note.")
+
+    def test_wikilink_directory_with_trailing_slash_not_flagged_broken(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text("See [[wiki/folder/]]", encoding="utf-8")
+
+        (self.vault / "wiki" / "folder").mkdir()
+
+        with patch("builtins.print"):
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0, "Lint should accept explicit directory links that point to existing directories.")
+
+    def test_wikilink_directory_with_backslash_not_flagged_broken(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text("See [[wiki\\folder\\]]", encoding="utf-8")
+
+        (self.vault / "wiki" / "folder").mkdir()
+
+        with patch("builtins.print"):
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0, "Lint should accept backslash-terminated explicit directory links.")
+
+    def test_markdown_directory_link_with_trailing_slash_not_flagged_broken(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text("See [folder](wiki/folder/)", encoding="utf-8")
+
+        (self.vault / "wiki" / "folder").mkdir()
+
+        with patch("builtins.print"):
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0, "Lint should accept Markdown links to existing directories.")
+
+    def test_missing_explicit_directory_flagged_broken_without_appending_markdown_suffix(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text("See [[wiki/missing/]]", encoding="utf-8")
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 1, "Lint should report missing explicit directories.")
+        broken_reported = any(
+            (call[0][0] if call[0] else "") == "Broken: wiki/missing/"
+            for call in mock_print.call_args_list
+        )
+        self.assertTrue(broken_reported, "Missing directory links should be reported without a .md suffix.")
+
+    def test_explicit_directory_link_does_not_resolve_to_sibling_page(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text("See [[wiki/folder/]]", encoding="utf-8")
+
+        (self.vault / "wiki" / "folder").mkdir()
+        (self.vault / "wiki" / "folder.md").write_text("Sibling page.", encoding="utf-8")
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0, "Existing directory links should not be resolved through sibling Markdown pages.")
+        orphan_reported = any(
+            "Orphan: wiki/folder.md" in (call[0][0] if call[0] else "")
+            for call in mock_print.call_args_list
+        )
+        self.assertTrue(orphan_reported, "The sibling page should not receive incoming links from a directory link.")
+
+    def test_encoded_space_directory_links_not_flagged_broken(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            "See [[wiki/My%20Folder/]] and [folder](wiki/My%20Folder/).",
+            encoding="utf-8",
+        )
+
+        (self.vault / "wiki" / "My Folder").mkdir()
+
+        with patch("builtins.print"):
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0, "Lint should decode URL-encoded spaces for explicit directory links.")
+
+    def test_missing_frontmatter_intake_source_not_reported_broken(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """---
+title: "Note"
+sources:
+  - "[[intake/processed/source/source.md]]"
+---
+
+Body.
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print"):
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0, "Missing intake links in frontmatter sources should not be navigation failures.")
+
+    def test_missing_body_intake_link_reported_broken(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text("Processed [[intake/processed/source/source.md]].", encoding="utf-8")
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 1, "Missing intake links in body text should remain traceability failures.")
+        broken_reported = any(
+            "Broken: intake/processed/source/source.md" in (call[0][0] if call[0] else "")
+            for call in mock_print.call_args_list
+        )
+        self.assertTrue(broken_reported)
 
     def test_frontmatter_sources_internal_paths_must_be_wikilinks(self):
         (self.vault / "raw" / "digested").mkdir(parents=True)

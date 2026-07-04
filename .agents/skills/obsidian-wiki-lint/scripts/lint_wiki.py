@@ -8,6 +8,7 @@ import os
 import re
 from collections import defaultdict
 from pathlib import Path
+from urllib.parse import unquote
 
 WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
 MD_LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
@@ -58,8 +59,23 @@ def split_wikilink(inner: str) -> str:
     return target
 
 
+def normalize_link_path(target: str) -> str:
+    target = unquote(target.strip()).replace("\\", "/")
+    while target.startswith("./"):
+        target = target[2:]
+    return target.lstrip("/")
+
+
+def is_explicit_directory_target(target: str) -> bool:
+    return target.strip().endswith(("/", "\\"))
+
+
+def is_intake_target(target: str) -> bool:
+    return normalize_link_path(target).startswith("intake/")
+
+
 def normalize_target(target: str) -> str:
-    target = target.strip().replace("\\", "/")
+    target = normalize_link_path(target)
     if not target:
         return target
     if not target.endswith(".md"):
@@ -337,6 +353,52 @@ def lint_frontmatter_sources(content: str, rel: str) -> list[str]:
     return errors
 
 
+def add_intake_source_link_spans(line: str, offset: int, spans: set[tuple[int, int]]) -> None:
+    for match in WIKILINK_RE.finditer(line):
+        raw_target = split_wikilink(match.group(1))
+        if is_intake_target(raw_target):
+            spans.add((offset + match.start(), offset + match.end()))
+
+
+def frontmatter_intake_source_link_spans(content: str) -> set[tuple[int, int]]:
+    match = FRONTMATTER_RE.match(content)
+    if not match:
+        return set()
+
+    frontmatter = match.group(1)
+    offset = match.start(1)
+    spans: set[tuple[int, int]] = set()
+    in_sources = False
+    sources_indent = 0
+
+    for line in frontmatter.splitlines(keepends=True):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            offset += len(line)
+            continue
+
+        indent = len(line) - len(line.lstrip())
+        if not in_sources:
+            sources_match = re.match(r"^sources\s*:\s*(.*)$", stripped)
+            if sources_match:
+                inline_value = sources_match.group(1).strip()
+                if inline_value and not inline_value.startswith("#"):
+                    add_intake_source_link_spans(line, offset, spans)
+                else:
+                    in_sources = True
+                    sources_indent = indent
+            offset += len(line)
+            continue
+
+        if indent <= sources_indent and not stripped.startswith("-"):
+            break
+        if stripped.startswith("-"):
+            add_intake_source_link_spans(line, offset, spans)
+        offset += len(line)
+
+    return spans
+
+
 def lint_frontmatter_tags(content: str, rel: str) -> list[str]:
     match = FRONTMATTER_RE.match(content)
     if not match:
@@ -417,24 +479,31 @@ def build_lookup(markdown_files: list[Path], vault: Path) -> tuple[set[str], dic
     return all_files, by_stem
 
 
-def resolve_target(vault: Path, target: str, all_files: set[str], by_stem: dict[str, list[str]]) -> str | None:
-    target = target.strip().replace("\\", "/")
+def resolve_target(vault: Path, target: str, all_files: set[str], by_stem: dict[str, list[str]]) -> tuple[str, bool] | None:
+    explicit_directory = is_explicit_directory_target(target)
+    target = normalize_link_path(target)
     if not target:
         return None
+
+    if explicit_directory:
+        if not target.endswith("/"):
+            target += "/"
+        return target, True
+
     if (vault / target).exists() and not (vault / target).is_dir():
         # If it directly exists (e.g. an attachment)
-        return target
+        return target, False
 
     normalized = normalize_target(target)
     if not normalized:
         return None
     if normalized in all_files:
-        return normalized
+        return normalized, False
     if "/" not in normalized:
         matches = by_stem.get(Path(normalized).stem, [])
         if len(matches) == 1:
-            return matches[0]
-    return normalized
+            return matches[0], False
+    return normalized, False
 
 
 def lint(vault: Path, scope: str) -> int:
@@ -451,27 +520,40 @@ def lint(vault: Path, scope: str) -> int:
 
     for rel in scoped_files:
         content = (vault / rel).read_text(encoding="utf-8")
+        ignored_frontmatter_intake_links = frontmatter_intake_source_link_spans(content)
         frontmatter_source_errors.extend(lint_frontmatter_sources(content, rel))
         frontmatter_tag_errors.extend(lint_frontmatter_tags(content, rel))
         table_wikilink_errors.extend(lint_table_wikilink_aliases(content, rel))
         traceability_path_errors.extend(lint_bare_traceability_paths(content, rel))
         for match in WIKILINK_RE.finditer(content):
+            if match.span() in ignored_frontmatter_intake_links:
+                continue
             raw_target = split_wikilink(match.group(1))
             if not raw_target or raw_target.startswith(("http://", "https://", "mailto:")):
                 continue
-            resolved = resolve_target(vault, raw_target, all_files, by_stem)
-            if not resolved:
+            resolution = resolve_target(vault, raw_target, all_files, by_stem)
+            if not resolution:
+                continue
+            resolved, is_directory = resolution
+            if is_directory:
+                if not (vault / resolved.rstrip("/")).is_dir():
+                    broken[resolved].append(rel)
                 continue
             incoming[resolved].append(rel)
             if resolved not in all_files and not (vault / resolved).exists():
                 broken[resolved].append(rel)
 
         for match in MD_LINK_RE.finditer(content):
-            raw_target = match.group(1).split("#", 1)[0].strip().replace("%20", " ")
+            raw_target = match.group(1).split("#", 1)[0].strip()
             if not raw_target or raw_target.startswith(("http://", "https://", "mailto:")):
                 continue
-            resolved = resolve_target(vault, raw_target, all_files, by_stem)
-            if not resolved:
+            resolution = resolve_target(vault, raw_target, all_files, by_stem)
+            if not resolution:
+                continue
+            resolved, is_directory = resolution
+            if is_directory:
+                if not (vault / resolved.rstrip("/")).is_dir():
+                    broken[resolved].append(rel)
                 continue
             incoming[resolved].append(rel)
             if resolved not in all_files and not (vault / resolved).exists():

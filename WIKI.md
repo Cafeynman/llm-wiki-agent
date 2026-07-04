@@ -101,6 +101,8 @@ Use `type` values from `source`, `entity`, `concept`, `claim`, or `synthesis`; u
 
 Use `docs/wiki-page-templates.md` for page templates.
 
+Directory links must explicitly end with `/` or `\`. A directory link points to an existing directory and is not a page link; a link without a trailing slash is treated as a file or note link.
+
 Keep pages focused. A page should have one clear purpose. If a page starts covering multiple topics, split it and link the new pages.
 
 Use `wiki/home.md` as the human-facing main page. It should explain what the wiki is for, main topic areas, important entry points, current artifacts, and major open questions. Do not use it as a changelog.
