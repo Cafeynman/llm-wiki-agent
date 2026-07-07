@@ -11,13 +11,3 @@ tmp/
 
 # Local agent tooling.
 .claudian/
-
-# Local wiki runtime content when using this package directory as VaultRoot.
-inbox/
-raw/
-intake/
-reviews/
-logs/
-questions/
-artifacts/
-wiki/
