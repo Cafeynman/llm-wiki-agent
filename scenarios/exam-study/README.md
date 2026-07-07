@@ -46,12 +46,19 @@ Keep source handling aligned with the normal wiki lifecycle.
   Subject grouping must not rewrite source-card paths.
 - Durable concept knowledge belongs under `wiki/concepts/`.
 - Subject-level question sample indexes and wrong-question indexes may belong
-  under `wiki/syntheses/` when they are canonical learning state.
+  under `wiki/syntheses/` when they are canonical learning state. Keep these
+  indexes thin: each row should contain only identifiers, short classification
+  fields, current review state, next action, and a link to the single-question
+  record page.
+- Complete question text, answers, explanation, classification evidence, error
+  analysis, review notes, and linked concepts belong in single-question record
+  pages, not in the index.
 - Generated practice sets, mock exams, and stage reviews belong under
   `artifacts/`.
 - Missing-answer items must not enter formal question samples or wrong-question
-  records. Put them in `questions/` as pending completion items or reject them
-  from formal acceptance.
+  records. Put unresolved items in `questions/` as the current pending queue or
+  reject them from formal acceptance. Move resolved items out of the queue in
+  the same pass that accepts or rejects them.
 
 ## Question Acceptance
 
@@ -85,17 +92,20 @@ source lifecycle or become hidden monitoring.
 
 - `study-plan.md` records the overall exam preparation plan: exam date, phases,
   subject priorities, weekly rhythm, milestones, and review cadence.
-- `study-dashboard.md` records current execution state: this week's tasks,
-  completed work, delayed work, weak knowledge points, and next actions. It is
-  the first page to inspect when the user asks to restart or resume review.
+- `study-dashboard.md` records current execution state: this week's active
+  tasks, current weak knowledge points, and next actions. It is the first page
+  to inspect when the user asks to restart or resume review. Do not let it
+  become a long-term history page.
 - Weak knowledge points must be evidence-backed. Use user-reported gaps,
   accepted wrong-question records, reviewed sources, question sample indexes,
   and stage reviews as evidence; do not invent weakness records from general
   impressions.
-- When a wrong-question record is accepted, update the subject
-  `wrong-question-index.md`, the linked concept page's error patterns, common
-  traps, judgment steps, or linked questions as applicable, and the dashboard's
-  weak-knowledge and wrong-question signals.
+- When a wrong-question record is accepted, create or update the
+  single-question record page first. Then update the subject
+  `wrong-question-index.md` with a thin row, update the linked concept page only
+  with stable error patterns, common traps, or judgment steps, and update the
+  dashboard only when the current weak-knowledge or next-action state changes.
+  Concept pages should not list complete question history.
 - Stage review artifacts summarize a period of work and propose plan
   adjustments. They belong under `artifacts/`.
 - Stage review outputs must write their current-state conclusions back to
@@ -103,6 +113,8 @@ source lifecycle or become hidden monitoring.
   `study-plan.md`.
 - The agent updates the dashboard and plan from user-reported progress, reviewed
   sources, wrong-question records, question sample indexes, and stage reviews.
+  Completed work, delayed work, and resolved review history belong in dated
+  stage review artifacts, not as permanent dashboard entries.
 - If the user wants timed reminders, use an explicit automation outside the
   scenario package. Do not create reminders during scenario initialization.
 

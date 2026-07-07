@@ -180,10 +180,10 @@ LLM Wiki Agent 采用文本优先的摄入路径：
 要使用知识库，请询问智能体：
 *"wiki 里面关于 <topic> 是怎么说的？"*
 
-智能体会搜索：
-1. `wiki/index.md` & `wiki/overview.md`
-2. `wiki/sources/`, `wiki/entities/`, `wiki/concepts/`, `wiki/claims/`, `wiki/syntheses/`
-3. `questions/` 和 `artifacts/`
+智能体会先用 `wiki/index.md`、`wiki/overview.md`、搜索、标题或链接索引定位相关范围，然后只读取相关页面或章节：
+1. `wiki/index.md` 中的导航条目，以及 `wiki/overview.md` 中的相关综合章节
+2. `wiki/sources/`、`wiki/entities/`、`wiki/concepts/`、`wiki/claims/`、`wiki/syntheses/` 下的相关页面
+3. `questions/` 和 `artifacts/` 中的相关调查记录与交付物
 
 报告、模板、草案等生成交付物应放在 `artifacts/` 目录中。
 

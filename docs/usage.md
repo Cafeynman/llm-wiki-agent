@@ -180,10 +180,12 @@ LLM Wiki Agent is designed around a text-first intake path:
 To use the knowledge base, just ask your agent:
 *"What does the wiki say about <topic>?"*
 
-The agent will search:
-1. `wiki/index.md` & `wiki/overview.md`
-2. `wiki/sources/`, `wiki/entities/`, `wiki/concepts/`, `wiki/claims/`, `wiki/syntheses/`
-3. `questions/` and `artifacts/`
+The agent will first locate the relevant scope with `wiki/index.md`,
+`wiki/overview.md`, search, headings, or linked indexes, then read only the
+relevant pages or sections:
+1. navigation entries in `wiki/index.md` and relevant synthesis sections in `wiki/overview.md`
+2. relevant pages under `wiki/sources/`, `wiki/entities/`, `wiki/concepts/`, `wiki/claims/`, `wiki/syntheses/`
+3. related investigations and deliverables in `questions/` and `artifacts/`
 
 Generated deliverables such as reports, templates, and drafts belong in the `artifacts/` directory.
 

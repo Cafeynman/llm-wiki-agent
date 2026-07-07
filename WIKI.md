@@ -33,7 +33,7 @@ Use this structure unless the user explicitly asks for a different one:
 ├── artifacts/          User-facing deliverables created from wiki knowledge.
 └── wiki/
     ├── home.md         Human-facing main page: purpose, topics, artifacts, open questions.
-    ├── index.md        Catalog of wiki pages and short summaries.
+    ├── index.md        Navigation catalog of wiki pages, one-line purpose, and pointers.
     ├── overview.md     Living synthesis of the whole wiki.
     ├── sources/        One content-rich source card per digested source.
     ├── entities/       People, organizations, projects, tools, files, datasets.
@@ -73,6 +73,36 @@ Intake outputs are processing records, not the final place for durable knowledge
 
 Use `intake/logs/YYYY-MM-DD.md` for daily source handling logs. Use `reviews/source-review/YYYY-MM-DD.md` for daily review decisions. Use `logs/wiki.md` as one append-only high-level operation history grouped by date headings. `logs/wiki.md` may grow over time, so entries should stay concise and should not duplicate detailed intake or source review records. Do not split, summarize, or archive `logs/wiki.md` unless the user explicitly changes the package contract.
 
+## Wiki Surface Budget Policy
+
+Use this policy for growing wiki-maintained surfaces such as `wiki/index.md`,
+`wiki/overview.md`, `logs/wiki.md`, dashboards, and long-running queue or index
+pages.
+
+1. Treat growing surfaces as navigation or current-state surfaces, not as places
+   to store full records, detailed source summaries, full histories, or repeated
+   content from other pages.
+2. Before reading a growing surface, locate the relevant scope with search,
+   headings, date windows, tail reads, linked indexes, manifests, or other local
+   pointers. Do not read the whole surface by default when the task only needs a
+   local update or answer.
+3. When updating a growing surface, change only the affected entry, current
+   section, date heading, or short pointer. Create or update the detailed record
+   page separately when the content does not fit as navigation metadata.
+4. Keep `wiki/index.md` to navigation metadata: page title, type or area, a
+   one-line purpose, and links. Do not use it to repeat source-card summaries,
+   long syntheses, or detailed page content.
+5. Keep `wiki/overview.md` as a concise synthesis organized by stable sections.
+   Read or update only the section relevant to the current task unless the user
+   asks for a whole-wiki review.
+6. For `logs/wiki.md`, use the relevant date heading or the tail of the file for
+   routine appends and recent-operation checks. Do not load the full log unless
+   the user asks for a full log review or the current task requires it.
+7. Dashboards and queue pages should show current state and next action. Move
+   resolved history or detailed records to the appropriate artifact, question,
+   synthesis, source card, or log entry instead of keeping long histories on the
+   current-state page.
+
 ## Source and Traceability Rules
 
 1. Treat user-submitted files in `inbox/` and original files under `raw/` as source truth.
@@ -109,7 +139,7 @@ Keep pages focused. A page should have one clear purpose. If a page starts cover
 
 Use `wiki/home.md` as the human-facing main page. It should explain what the wiki is for, main topic areas, important entry points, current artifacts, and major open questions. Do not use it as a changelog.
 
-Use `wiki/index.md` as the structured catalog and `logs/wiki.md` as the operation history. Do not let either file replace `wiki/home.md`.
+Use `wiki/index.md` as the structured navigation catalog and `logs/wiki.md` as the operation history. Do not let either file replace `wiki/home.md`.
 
 Write deliverables to `artifacts/` when the user asks for a report, brief, outline, draft, comparison table, template, or other reusable output made from wiki knowledge. Track open questions and investigation trails under `questions/`. These files may use frontmatter with `type: artifact` or `type: question`, but they are work products next to the wiki, not canonical wiki knowledge pages.
 
@@ -338,7 +368,10 @@ Never use a reflect callout for source-derived content.
 
 Use this mode when the user asks a question, asks what the wiki says, asks for evidence, asks for a synthesis, or asks for a deliverable.
 
-1. Start with `wiki/index.md` and `wiki/overview.md` when they exist.
+1. Locate the relevant scope with `wiki/index.md`, `wiki/overview.md`, search,
+   headings, or linked indexes when they exist. Treat `wiki/index.md` and
+   `wiki/overview.md` as navigation and synthesis surfaces: read only the
+   relevant entry or section unless the user asks for a whole-wiki review.
 2. Search relevant wiki pages under `wiki/sources/`, `wiki/entities/`, `wiki/concepts/`, `wiki/claims/`, and `wiki/syntheses/`; also check `questions/` and `artifacts/` when prior investigations or deliverables matter.
 3. Read the most relevant pages and their cited sources when accuracy matters.
 4. Answer from compiled wiki knowledge, not from raw search alone.

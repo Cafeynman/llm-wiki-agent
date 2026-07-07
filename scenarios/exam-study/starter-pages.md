@@ -35,7 +35,7 @@ sources: []
 
 ## Judgment Steps
 
-## Linked Questions
+## Related Question Indexes
 
 ## Open Questions
 ```
@@ -74,13 +74,48 @@ accepted sample table.
 
 ## Accepted Samples
 
-| ID | Source | Knowledge Point | Question Type | Acceptance | Confidence | Notes |
-| --- | --- | --- | --- | --- | --- | --- |
+Keep this table as a thin index. Store full question text, answer, explanation,
+classification evidence, and review notes in the linked record page.
 
-## Enrichment Queue
+| ID | Record | Source | Knowledge Point | Question Type | Acceptance | Confidence | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
 
-| ID | Source | Missing Fields | Proposed Enrichment | Evidence | Confidence |
-| --- | --- | --- | --- | --- | --- |
+```
+
+## Question Sample Record
+
+Suggested path:
+
+```text
+wiki/syntheses/<subject>/question-samples/<question-id>.md
+```
+
+Skeleton:
+
+```markdown
+---
+type: synthesis
+status: draft
+confidence: low
+question_acceptance: accepted
+sources: []
+---
+
+# <Question ID> - <Short Question Label>
+
+## Question Text
+
+## Source and Classification
+
+## Correct Answer
+
+## Explanation
+
+## Classification Evidence
+
+## Linked Concepts
+
+## Review Notes
 ```
 
 ## Wrong-Question Index
@@ -105,12 +140,50 @@ sources: []
 
 ## Records
 
-| ID | Date | Source | Knowledge Point | My Answer | Correct Answer | Error Type | Review Status | Next Judgment Step |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+Keep this table as a thin index. Store the full question text, my answer,
+correct answer, explanation, error cause, review notes, and linked concepts in
+the linked record page.
 
-## Repeated Error Patterns
+| ID | Date | Record | Knowledge Point | Error Type | Review Status | Next Judgment Step |
+| --- | --- | --- | --- | --- | --- | --- |
+```
 
-## Review Priorities
+## Wrong-Question Record
+
+Suggested path:
+
+```text
+wiki/syntheses/<subject>/wrong-questions/<wrong-question-id>.md
+```
+
+Skeleton:
+
+```markdown
+---
+type: synthesis
+status: draft
+confidence: low
+question_acceptance: accepted
+sources: []
+---
+
+# <Wrong Question ID> - <Short Question Label>
+
+## Question Text
+
+## My Answer
+
+## Correct Answer
+
+## Explanation
+
+## Error Cause
+
+## Review Points
+
+## Linked Concepts
+
+## Next Judgment Step
 ```
 
 ## Pending Questions
@@ -132,6 +205,9 @@ sources: []
 ---
 
 # Pending Questions
+
+Keep this page as the current unresolved queue. Move resolved items out of this
+page when they become accepted records, rejected items, or stage review notes.
 
 ## Missing Answers
 
@@ -210,8 +286,9 @@ sources: []
 
 # Study Dashboard
 
-Use this as the first page when restarting or resuming review. Keep weak-point
-entries tied to concrete evidence instead of general impressions.
+Use this as the first page when restarting or resuming review. Keep it limited
+to the current week, current weak points, and next actions. Move completed work,
+delayed work, and resolved history into dated stage review artifacts.
 
 ## Current Week
 
@@ -219,10 +296,6 @@ entries tied to concrete evidence instead of general impressions.
 
 | Task | Subject | Source or Knowledge Point | Status | Notes |
 | --- | --- | --- | --- | --- |
-
-## Completed Work
-
-## Delayed Work
 
 ## Weak Knowledge Points
 
