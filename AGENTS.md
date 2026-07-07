@@ -55,9 +55,13 @@ When using skills for this project, read the skill files from this repository's 
 
 When delegating wiki or source-processing work to subagents, Claude Code, AGY, external reviewers, or another runtime, do not assume repository context is inherited. Include the workspace root, the target vault root when different, `AGENTS.md` as the canonical entrypoint, relevant `WIKI.md` contract sections, `PROJECT.md` when naming or extraction preferences matter, relevant local `.agents/skills/` paths, and the source-language naming rule. Do not include secrets, private endpoints, tokens, or credentials in delegated prompts.
 
-## Replacement Rule
+## Replacement and Target-State Writing
 
-When a user gives a new direction that replaces a prior plan, replace the old plan completely instead of patching around it: define the single new source of truth, remove old wording and workflows, scan the target files for stale terms, and finish only when the old terms are gone.
+When the user explicitly gives a new direction that replaces a prior plan, apply it to the affected agent-owned current-state surfaces: operational docs, prompts, workflows, dashboards, queue pages, scenarios, skills, and requested deliverables. Update those surfaces so they describe the confirmed target state directly, and remove stale operational wording that would cause an agent or user to follow the replaced plan.
+
+Do not apply this cleanup to raw sources, preserved source-derived text, quoted material, append-only logs, historical review records, evidence and counterevidence, aliases, lifecycle history, or older claims that remain useful as stale or archived knowledge. Preserve those records and mark their current status when needed.
+
+Prefer direct target-state prose: what the system does, what the user does, and what the final design is. Use negative, contrastive, or corrective phrasing when it states a required constraint, prevents a concrete risk, records source limitations, preserves disagreement, marks superseded knowledge, or answers a user-requested comparison.
 
 ## Document Ownership
 
