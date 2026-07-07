@@ -86,19 +86,24 @@ pages.
    headings, date windows, tail reads, linked indexes, manifests, or other local
    pointers. Do not read the whole surface by default when the task only needs a
    local update or answer.
-3. When updating a growing surface, change only the affected entry, current
+3. Keep searches over growing surfaces narrow or bounded. To check whether a
+   known entry exists, search for the exact ID or link. To measure size, use
+   count-only output. To find an append point, use the relevant heading or a tail
+   window. Do not use broad content-returning searches that can emit an entire
+   table, long queue, or log section.
+4. When updating a growing surface, change only the affected entry, current
    section, date heading, or short pointer. Create or update the detailed record
    page separately when the content does not fit as navigation metadata.
-4. Keep `wiki/index.md` to navigation metadata: page title, type or area, a
+5. Keep `wiki/index.md` to navigation metadata: page title, type or area, a
    one-line purpose, and links. Do not use it to repeat source-card summaries,
    long syntheses, or detailed page content.
-5. Keep `wiki/overview.md` as a concise synthesis organized by stable sections.
+6. Keep `wiki/overview.md` as a concise synthesis organized by stable sections.
    Read or update only the section relevant to the current task unless the user
    asks for a whole-wiki review.
-6. For `logs/wiki.md`, use the relevant date heading or the tail of the file for
+7. For `logs/wiki.md`, use the relevant date heading or the tail of the file for
    routine appends and recent-operation checks. Do not load the full log unless
    the user asks for a full log review or the current task requires it.
-7. Dashboards and queue pages should show current state and next action. Move
+8. Dashboards and queue pages should show current state and next action. Move
    resolved history or detailed records to the appropriate artifact, question,
    synthesis, source card, or log entry instead of keeping long histories on the
    current-state page.
