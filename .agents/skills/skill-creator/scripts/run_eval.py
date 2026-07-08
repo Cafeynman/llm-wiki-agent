@@ -20,16 +20,11 @@ from scripts.utils import parse_skill_md
 
 
 def find_project_root() -> Path:
-    """Find the project root by walking up from cwd looking for .claude/.
-
-    Mimics how Claude Code discovers its project root, so the command file
-    we create ends up where claude -p will look for it.
-    """
-    current = Path.cwd()
-    for parent in [current, *current.parents]:
-        if (parent / ".claude").is_dir():
-            return parent
-    return current
+    """Return an ignored scratch root for Claude Code trigger evals."""
+    configured = os.environ.get("SKILL_CREATOR_EVAL_ROOT")
+    root = Path(configured) if configured else Path.cwd() / "tmp" / "skill-creator-eval"
+    root.mkdir(parents=True, exist_ok=True)
+    return root
 
 
 def run_single_query(
@@ -42,8 +37,8 @@ def run_single_query(
 ) -> bool:
     """Run a single query and return whether the skill was triggered.
 
-    Creates a command file in .claude/commands/ so it appears in Claude's
-    available_skills list, then runs `claude -p` with the raw query.
+    Creates a temporary Claude Code command file in the eval scratch root so it
+    appears in Claude's available_skills list, then runs `claude -p` with the raw query.
     Uses --include-partial-messages to detect triggering early from
     stream events (content_block_start) rather than waiting for the
     full assistant message, which only arrives after tool execution.
@@ -266,6 +261,7 @@ def main():
     parser.add_argument("--runs-per-query", type=int, default=3, help="Number of runs per query")
     parser.add_argument("--trigger-threshold", type=float, default=0.5, help="Trigger rate threshold")
     parser.add_argument("--model", default=None, help="Model to use for claude -p (default: user's configured model)")
+    parser.add_argument("--claude-project-root", default=None, help="Scratch root used for temporary Claude Code command files")
     parser.add_argument("--verbose", action="store_true", help="Print progress to stderr")
     args = parser.parse_args()
 
@@ -278,7 +274,8 @@ def main():
 
     name, original_description, content = parse_skill_md(skill_path)
     description = args.description or original_description
-    project_root = find_project_root()
+    project_root = Path(args.claude_project_root) if args.claude_project_root else find_project_root()
+    project_root.mkdir(parents=True, exist_ok=True)
 
     if args.verbose:
         print(f"Evaluating: {description}", file=sys.stderr)

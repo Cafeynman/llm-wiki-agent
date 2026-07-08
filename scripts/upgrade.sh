@@ -28,6 +28,7 @@ manifest_path="$script_dir/upgrade-manifest.txt"
 file_count=0
 directory_count=0
 created_runtime_count=0
+removed_obsolete_count=0
 same_root=0
 
 ensure_directory() {
@@ -113,6 +114,139 @@ ensure_project_file() {
   created_runtime_count=$((created_runtime_count + 1))
 }
 
+default_gitignore_block() {
+  cat <<'EOF'
+# Local wiki runtime content.
+/inbox/*
+!/inbox/.gitkeep
+/raw/
+/intake/
+/reviews/
+/logs/
+/questions/
+/artifacts/
+/wiki/
+EOF
+}
+
+private_runtime_gitignore_lines=(
+  "/inbox/*"
+  "!/inbox/.gitkeep"
+  "/raw/"
+  "/intake/"
+  "/reviews/"
+  "/logs/"
+  "/questions/"
+  "/artifacts/"
+  "/wiki/"
+)
+
+versioned_runtime_gitignore_lines=(
+  "/inbox/*"
+  "!/inbox/.gitkeep"
+  "/intake/tmp/"
+)
+
+versioned_all_intake_local_gitignore_lines=(
+  "/inbox/*"
+  "!/inbox/.gitkeep"
+  "/intake/"
+)
+
+gitignore_contains_line() {
+  local target_file="$1"
+  local line="$2"
+  tr -d '\r' < "$target_file" | grep -Fxq "$line"
+}
+
+gitignore_contains_all_lines() {
+  local target_file="$1"
+  shift
+
+  local line
+  for line in "$@"; do
+    gitignore_contains_line "$target_file" "$line" || return 1
+  done
+  return 0
+}
+
+ensure_gitignore_trailing_newline() {
+  local target_file="$1"
+  if [[ -s "$target_file" && "$(tail -c 1 "$target_file" | wc -l)" -eq 0 ]]; then
+    printf "\n" >> "$target_file"
+  fi
+}
+
+ensure_gitignore_line() {
+  local target_file="$1"
+  local line="$2"
+  if ! gitignore_contains_line "$target_file" "$line"; then
+    ensure_gitignore_trailing_newline "$target_file"
+    printf "%s\n" "$line" >> "$target_file"
+  fi
+}
+
+has_wiki_runtime_gitignore_policy() {
+  local target_file="$1"
+  gitignore_contains_all_lines "$target_file" "${private_runtime_gitignore_lines[@]}" && return 0
+  gitignore_contains_all_lines "$target_file" "${versioned_runtime_gitignore_lines[@]}" && return 0
+  gitignore_contains_all_lines "$target_file" "${versioned_all_intake_local_gitignore_lines[@]}" && return 0
+  return 1
+}
+
+ensure_gitignore_file() {
+  local target_file="$target_path/.gitignore"
+  local template_file="$package_root/.gitignore"
+
+  if [[ ! -e "$target_file" ]]; then
+    if [[ ! -f "$template_file" ]]; then
+      echo ".gitignore template not found in package: $template_file" >&2
+      exit 1
+    fi
+
+    cp -f "$template_file" "$target_file"
+    created_runtime_count=$((created_runtime_count + 1))
+    return
+  fi
+
+  ensure_gitignore_line "$target_file" ".claude/"
+  ensure_gitignore_line "$target_file" ".claudian/"
+  ensure_gitignore_line "$target_file" ".codex/"
+
+  if ! has_wiki_runtime_gitignore_policy "$target_file"; then
+    ensure_gitignore_trailing_newline "$target_file"
+    printf "\n" >> "$target_file"
+    default_gitignore_block >> "$target_file"
+    created_runtime_count=$((created_runtime_count + 1))
+  fi
+}
+
+remove_obsolete_package_entries() {
+  if [[ "$same_root" -eq 1 ]]; then
+    return
+  fi
+
+  local entries=(
+    ".agents/skills/self-improving-agent"
+  )
+
+  local relative_path
+  for relative_path in "${entries[@]}"; do
+    case "$relative_path" in
+      /*|*..*)
+        echo "Refusing to remove obsolete path outside target root: $relative_path" >&2
+        exit 1
+        ;;
+    esac
+
+    local target_entry="$target_path/$relative_path"
+    if [[ -e "$target_entry" ]]; then
+      rm -rf -- "$target_entry"
+      removed_obsolete_count=$((removed_obsolete_count + 1))
+    fi
+  done
+}
+
 ensure_runtime_structure() {
   local directories=(
     "inbox"
@@ -140,6 +274,7 @@ ensure_runtime_structure() {
   done
 
   ensure_file "$target_path/logs/wiki.md" "# Wiki Log"$'\n'
+  ensure_file "$target_path/inbox/.gitkeep" ""
   ensure_file "$target_path/wiki/home.md" "# Home"$'\n'
   ensure_file "$target_path/wiki/index.md" "# Index"$'\n'
   ensure_file "$target_path/wiki/overview.md" "# Overview"$'\n'
@@ -182,6 +317,8 @@ while IFS= read -r line || [[ -n "$line" ]]; do
 done < "$manifest_path"
 
 ensure_project_file
+ensure_gitignore_file
+remove_obsolete_package_entries
 ensure_runtime_structure
 
 if ! command -v uv >/dev/null 2>&1; then
@@ -198,5 +335,7 @@ echo "Upgraded package files at: $target_path"
 echo "Merged directories: $directory_count"
 echo "Copied files: $file_count"
 echo "Created missing runtime entries: $created_runtime_count"
+echo "Removed obsolete package entries: $removed_obsolete_count"
+echo "Default .gitignore keeps wiki runtime directories local and private. Existing .gitignore files are preserved; missing default runtime ignore rules are appended unless a wiki runtime policy is already present. To version durable wiki content, refer to docs/gitignore-templates.md or docs/gitignore-templates.zh-CN.md."
 echo "Next project-context confirmation should ask open-ended questions for theme, goal, audience, structure, classification, naming, and project-specific rules."
 echo "Use short choices only for bounded operational preferences such as MinerU, OCR, transcription, or frame OCR. Store only non-secret choices in PROJECT.md; fill only variables required by the selected profile in .env."

@@ -7,7 +7,6 @@ file README.zh-CN.md
 file LICENSE
 file pyproject.toml
 file .gitattributes
-file .gitignore
 file .env.example
 dir docs
 dir scenarios

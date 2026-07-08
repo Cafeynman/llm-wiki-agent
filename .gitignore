@@ -9,5 +9,18 @@ __pycache__/
 .obsidian/
 tmp/
 
+# Local wiki runtime content.
+/inbox/*
+!/inbox/.gitkeep
+/raw/
+/intake/
+/reviews/
+/logs/
+/questions/
+/artifacts/
+/wiki/
+
 # Local agent tooling.
+.claude/
 .claudian/
+.codex/

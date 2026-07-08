@@ -44,11 +44,12 @@ cd llm-wiki-agent
 默认来源提取偏好记录在 `PROJECT.md`。首次确认项目上下文时，智能体会询问是否配置 MinerU、API 模式下使用哪个 MinerU profile，以及 MinerU 可用时是否优先使用 MinerU；选择该偏好时会把 MinerU 记录为文档默认 provider。
 如果使用需要本地服务配置的 provider 或 OCR 后端，请将 `.env.example` 复制为初始化后工作根目录中的 `.env`，并只填写所选 provider profile 真正需要的变量。真实 `.env` 已被 Git 忽略；智能体运行 provider 命令时应通过 `uv run --env-file .env` 加载它。
 后续升级包文件时，请使用 [使用指南](docs/usage.zh-CN.md#升级包文件) 中的 manifest 驱动升级脚本。
+默认 `.gitignore` 会让本地 wiki 运行内容保持私有；如果这个 checkout 本身是需要版本化的 wiki 项目，请参考 [Git Ignore 模板](docs/gitignore-templates.zh-CN.md)。
 
 `scenarios/` 下的可选场景包可将初始化后的工作区适配为考试备考等专门用途；见 [可选场景包](docs/usage.zh-CN.md#可选场景包)。
 
 **你的最小化首次运行：**
-1. 将源文件放入 `inbox/example.md`。
+1. 将一个或多个源文件放入 `inbox/` 目录。
 2. 对智能体说：*"请根据 AGENTS.md, PROJECT.md 和 WIKI.md 处理 inbox/ 中的文件。"*
 3. 观察智能体将你的文件处理到 `wiki/` 目录！
 
@@ -65,6 +66,9 @@ cd llm-wiki-agent
 <tr><td>📥</td><td><code>inbox/</code></td><td>源文件的唯一入口</td></tr>
 <tr><td>🗄️</td><td><code>raw/</code></td><td>原始文件的持久化保存地</td></tr>
 <tr><td>⚙️</td><td><code>intake/</code></td><td>生成可审查 Markdown 的处理区</td></tr>
+<tr><td>📝</td><td><code>reviews/</code></td><td>记录来源审查决定与讨论反射</td></tr>
+<tr><td>⏱️</td><td><code>logs/</code></td><td>记录 wiki 操作历史</td></tr>
+<tr><td>❓</td><td><code>questions/</code></td><td>保存悬而未决的调查线索</td></tr>
 <tr><td>🧠</td><td><code>wiki/</code></td><td>写入持久化知识的页面库</td></tr>
 <tr><td>📦</td><td><code>artifacts/</code></td><td>保存面向用户的交付物的目录</td></tr>
 </table>
@@ -107,7 +111,7 @@ cd llm-wiki-agent
 ## 🧩 项目结构
 
 <details>
-<summary>点击查看完整目录结构</summary>
+<summary>点击查看包管理文件和初始化后的运行目录</summary>
 
 ```text
 .
@@ -133,10 +137,32 @@ cd llm-wiki-agent
 └── docs/
     ├── usage.md
     ├── usage.zh-CN.md
+    ├── gitignore-templates.md
+    ├── gitignore-templates.zh-CN.md
+    ├── source-lifecycle.md
+    ├── source-lifecycle.zh-CN.md
+    ├── wiki-page-templates.md
+    ├── wiki-page-templates.zh-CN.md
     ├── references.md
     ├── references.zh-CN.md
     ├── acknowledgements.md
     └── acknowledgements.zh-CN.md
+```
+
+初始化后，工作根目录还会包含由初始化或升级脚本创建的本地运行目录。
+这些目录用于保存当前工作区数据，默认会被 Git 忽略。如果要把持久化 wiki 内容纳入
+Git，请参考 [Git Ignore 模板](docs/gitignore-templates.zh-CN.md)。
+
+```text
+.
+├── inbox/             源文件入口
+├── raw/               按审查状态保存的原始文件
+├── intake/            临时和已接受的 Markdown 提取输出
+├── reviews/           来源审查与讨论反射记录
+├── logs/              Wiki 操作历史
+├── questions/         悬而未决的问题与调查线索
+├── artifacts/         面向用户的交付物
+└── wiki/              持久化知识页面
 ```
 
 </details>

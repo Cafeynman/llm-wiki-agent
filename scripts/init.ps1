@@ -130,6 +130,132 @@ function Ensure-ProjectFile {
     Copy-Item -LiteralPath $templatePath -Destination $projectPath -Force
 }
 
+$DefaultGitIgnoreBlock = @"
+# Local wiki runtime content.
+/inbox/*
+!/inbox/.gitkeep
+/raw/
+/intake/
+/reviews/
+/logs/
+/questions/
+/artifacts/
+/wiki/
+"@
+
+$PrivateRuntimeGitIgnoreLines = @(
+    "/inbox/*",
+    "!/inbox/.gitkeep",
+    "/raw/",
+    "/intake/",
+    "/reviews/",
+    "/logs/",
+    "/questions/",
+    "/artifacts/",
+    "/wiki/"
+)
+
+$VersionedRuntimeGitIgnoreLines = @(
+    "/inbox/*",
+    "!/inbox/.gitkeep",
+    "/intake/tmp/"
+)
+
+$VersionedAllIntakeLocalGitIgnoreLines = @(
+    "/inbox/*",
+    "!/inbox/.gitkeep",
+    "/intake/"
+)
+
+function Test-GitIgnoreContainsLine {
+    param(
+        [string]$GitIgnorePath,
+        [string]$Line
+    )
+
+    if (-not (Test-Path -LiteralPath $GitIgnorePath -PathType Leaf)) {
+        return $false
+    }
+
+    foreach ($existingLine in Get-Content -LiteralPath $GitIgnorePath) {
+        if ($existingLine -ceq $Line) {
+            return $true
+        }
+    }
+    return $false
+}
+
+function Test-GitIgnoreContainsAllLines {
+    param(
+        [string]$GitIgnorePath,
+        [string[]]$Lines
+    )
+
+    foreach ($line in $Lines) {
+        if (-not (Test-GitIgnoreContainsLine $GitIgnorePath $line)) {
+            return $false
+        }
+    }
+    return $true
+}
+
+function Add-GitIgnoreLine {
+    param(
+        [string]$GitIgnorePath,
+        [string]$Line
+    )
+
+    if (-not (Test-GitIgnoreContainsLine $GitIgnorePath $Line)) {
+        $content = Get-Content -LiteralPath $GitIgnorePath -Raw
+        if ($content.Length -gt 0 -and -not $content.EndsWith("`n")) {
+            Add-Content -LiteralPath $GitIgnorePath -Value "" -Encoding UTF8
+        }
+        Add-Content -LiteralPath $GitIgnorePath -Value $Line -Encoding UTF8
+    }
+}
+
+function Test-WikiRuntimeGitIgnorePolicy {
+    param([string]$GitIgnorePath)
+
+    if (-not (Test-Path -LiteralPath $GitIgnorePath -PathType Leaf)) {
+        return $false
+    }
+
+    return (
+        (Test-GitIgnoreContainsAllLines $GitIgnorePath $PrivateRuntimeGitIgnoreLines) -or
+        (Test-GitIgnoreContainsAllLines $GitIgnorePath $VersionedRuntimeGitIgnoreLines) -or
+        (Test-GitIgnoreContainsAllLines $GitIgnorePath $VersionedAllIntakeLocalGitIgnoreLines)
+    )
+}
+
+function Ensure-GitIgnoreFile {
+    param([string]$TargetPath)
+
+    $gitIgnorePath = Join-Path $TargetPath ".gitignore"
+    $templatePath = Join-Path $PackagePath ".gitignore"
+
+    if (-not (Test-Path -LiteralPath $gitIgnorePath)) {
+        if (-not (Test-Path -LiteralPath $templatePath -PathType Leaf)) {
+            throw ".gitignore template not found in package: $templatePath"
+        }
+
+        Copy-Item -LiteralPath $templatePath -Destination $gitIgnorePath -Force
+        return
+    }
+
+    Add-GitIgnoreLine $gitIgnorePath ".claude/"
+    Add-GitIgnoreLine $gitIgnorePath ".claudian/"
+    Add-GitIgnoreLine $gitIgnorePath ".codex/"
+
+    if (-not (Test-WikiRuntimeGitIgnorePolicy $gitIgnorePath)) {
+        $content = Get-Content -LiteralPath $gitIgnorePath -Raw
+        if ($content.Length -gt 0 -and -not $content.EndsWith("`n")) {
+            Add-Content -LiteralPath $gitIgnorePath -Value "" -Encoding UTF8
+        }
+        Add-Content -LiteralPath $gitIgnorePath -Value "`n$DefaultGitIgnoreBlock" -Encoding UTF8
+    }
+}
+
 function Ensure-RuntimeStructure {
     param([string]$TargetPath)
 
@@ -159,6 +285,7 @@ function Ensure-RuntimeStructure {
     }
 
     Ensure-File (Join-Path $TargetPath "logs/wiki.md") "# Wiki Log`n"
+    Ensure-File (Join-Path $TargetPath "inbox/.gitkeep") ""
     Ensure-File (Join-Path $TargetPath "wiki/home.md") "# Home`n"
     Ensure-File (Join-Path $TargetPath "wiki/index.md") "# Index`n"
     Ensure-File (Join-Path $TargetPath "wiki/overview.md") "# Overview`n"
@@ -183,6 +310,7 @@ $VaultPath = (Resolve-Path -LiteralPath $VaultRoot).Path
 
 Install-PackageFiles $VaultPath
 Ensure-ProjectFile $VaultPath
+Ensure-GitIgnoreFile $VaultPath
 Ensure-RuntimeStructure $VaultPath
 
 Push-Location $VaultPath
@@ -194,5 +322,6 @@ finally {
 }
 
 Write-Host "Initialized package files, uv environment, and wiki structure at: $VaultPath"
+Write-Host "Default .gitignore keeps wiki runtime directories local and private. Existing .gitignore files are preserved; missing default runtime ignore rules are appended unless a wiki runtime policy is already present. To version durable wiki content, refer to docs/gitignore-templates.md or docs/gitignore-templates.zh-CN.md."
 Write-Host "Next project-context confirmation should ask open-ended questions for theme, goal, audience, structure, classification, naming, and project-specific rules."
 Write-Host "Use short choices only for bounded operational preferences such as MinerU, OCR, transcription, or frame OCR. Store only non-secret choices in PROJECT.md; fill only variables required by the selected profile in .env."

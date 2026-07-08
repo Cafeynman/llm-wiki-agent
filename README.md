@@ -44,11 +44,12 @@ cd llm-wiki-agent
 Default source extraction preferences are recorded in `PROJECT.md`. During first project-context confirmation, the agent asks whether to configure MinerU, which MinerU profile should be used when API mode is selected, and whether to prefer MinerU when it is available; choosing that preference records MinerU as the document default.
 For service-backed providers and OCR backends, copy `.env.example` to `.env` in the initialized working root and fill only the variables required by the selected provider profile. The real `.env` file is ignored by Git; agents should load it with `uv run --env-file .env` when running provider commands.
 For package upgrades, use the manifest-driven scripts documented in [Usage Guide](docs/usage.md#upgrade-package-files).
+The default `.gitignore` keeps local wiki runtime content private; refer to [Git Ignore Templates](docs/gitignore-templates.md) when this checkout is a versioned wiki project.
 
 Optional scenario packages under `scenarios/` can adapt an initialized workspace for specialized uses such as exam study; see [Optional Scenario Packages](docs/usage.md#optional-scenario-packages).
 
 **Your Minimal First Run:**
-1. Drop a source file in `inbox/example.md`.
+1. Drop one or more source files into `inbox/`.
 2. Ask your agent: *"Process the files in inbox/ according to AGENTS.md, PROJECT.md, and WIKI.md."*
 3. Watch the agent process your file into the `wiki/` directory!
 
@@ -65,6 +66,9 @@ The package gives your agent a strict, clear operating contract:
 <tr><td>📥</td><td><code>inbox/</code></td><td>Where source files enter</td></tr>
 <tr><td>🗄️</td><td><code>raw/</code></td><td>Where original files are preserved</td></tr>
 <tr><td>⚙️</td><td><code>intake/</code></td><td>Where reviewable Markdown is produced</td></tr>
+<tr><td>📝</td><td><code>reviews/</code></td><td>Where review decisions and reflections are recorded</td></tr>
+<tr><td>⏱️</td><td><code>logs/</code></td><td>Where wiki operation history is tracked</td></tr>
+<tr><td>❓</td><td><code>questions/</code></td><td>Where unresolved investigation threads live</td></tr>
 <tr><td>🧠</td><td><code>wiki/</code></td><td>Where durable knowledge is written</td></tr>
 <tr><td>📦</td><td><code>artifacts/</code></td><td>Where user-facing deliverables are saved</td></tr>
 </table>
@@ -104,10 +108,10 @@ To get the most out of LLM Wiki Agent, we recommend pairing it with:
 
 ---
 
-## 🧩 Package Contents
+## 🧩 Package And Runtime Structure
 
 <details>
-<summary>Click to view full directory structure</summary>
+<summary>Click to view package-managed files and initialized runtime directories</summary>
 
 ```text
 .
@@ -133,10 +137,33 @@ To get the most out of LLM Wiki Agent, we recommend pairing it with:
 └── docs/
     ├── usage.md
     ├── usage.zh-CN.md
+    ├── gitignore-templates.md
+    ├── gitignore-templates.zh-CN.md
+    ├── source-lifecycle.md
+    ├── source-lifecycle.zh-CN.md
+    ├── wiki-page-templates.md
+    ├── wiki-page-templates.zh-CN.md
     ├── references.md
     ├── references.zh-CN.md
     ├── acknowledgements.md
     └── acknowledgements.zh-CN.md
+```
+
+After initialization, the working root also contains local runtime directories
+created by the init or upgrade scripts. These directories hold workspace data
+and are ignored by Git by default. To track durable wiki content in Git, refer to
+[Git Ignore Templates](docs/gitignore-templates.md).
+
+```text
+.
+├── inbox/             Source file entry point
+├── raw/               Preserved original files by review state
+├── intake/            Temporary and accepted Markdown extraction output
+├── reviews/           Source review and reflection records
+├── logs/              Wiki operation history
+├── questions/         Open questions and investigation trails
+├── artifacts/         User-facing deliverables
+└── wiki/              Durable knowledge pages
 ```
 
 </details>

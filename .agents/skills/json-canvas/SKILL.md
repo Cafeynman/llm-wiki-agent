@@ -236,7 +236,7 @@ If validation fails, check for duplicate IDs, dangling edge references, or malfo
 
 ## Complete Examples
 
-See [references/EXAMPLES.md](llm-wiki-agent/skills/json-canvas/references/EXAMPLES.md) for full canvas examples including mind maps, project boards, research canvases, and flowcharts.
+See [references/EXAMPLES.md](references/EXAMPLES.md) for full canvas examples including mind maps, project boards, research canvases, and flowcharts.
 
 ## References
 

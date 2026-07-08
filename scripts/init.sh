@@ -131,6 +131,111 @@ ensure_project_file() {
   cp -f "$template_file" "$project_file"
 }
 
+default_gitignore_block() {
+  cat <<'EOF'
+# Local wiki runtime content.
+/inbox/*
+!/inbox/.gitkeep
+/raw/
+/intake/
+/reviews/
+/logs/
+/questions/
+/artifacts/
+/wiki/
+EOF
+}
+
+private_runtime_gitignore_lines=(
+  "/inbox/*"
+  "!/inbox/.gitkeep"
+  "/raw/"
+  "/intake/"
+  "/reviews/"
+  "/logs/"
+  "/questions/"
+  "/artifacts/"
+  "/wiki/"
+)
+
+versioned_runtime_gitignore_lines=(
+  "/inbox/*"
+  "!/inbox/.gitkeep"
+  "/intake/tmp/"
+)
+
+versioned_all_intake_local_gitignore_lines=(
+  "/inbox/*"
+  "!/inbox/.gitkeep"
+  "/intake/"
+)
+
+gitignore_contains_line() {
+  local target_file="$1"
+  local line="$2"
+  tr -d '\r' < "$target_file" | grep -Fxq "$line"
+}
+
+gitignore_contains_all_lines() {
+  local target_file="$1"
+  shift
+
+  local line
+  for line in "$@"; do
+    gitignore_contains_line "$target_file" "$line" || return 1
+  done
+  return 0
+}
+
+ensure_gitignore_trailing_newline() {
+  local target_file="$1"
+  if [[ -s "$target_file" && "$(tail -c 1 "$target_file" | wc -l)" -eq 0 ]]; then
+    printf "\n" >> "$target_file"
+  fi
+}
+
+ensure_gitignore_line() {
+  local target_file="$1"
+  local line="$2"
+  if ! gitignore_contains_line "$target_file" "$line"; then
+    ensure_gitignore_trailing_newline "$target_file"
+    printf "%s\n" "$line" >> "$target_file"
+  fi
+}
+
+has_wiki_runtime_gitignore_policy() {
+  local target_file="$1"
+  gitignore_contains_all_lines "$target_file" "${private_runtime_gitignore_lines[@]}" && return 0
+  gitignore_contains_all_lines "$target_file" "${versioned_runtime_gitignore_lines[@]}" && return 0
+  gitignore_contains_all_lines "$target_file" "${versioned_all_intake_local_gitignore_lines[@]}" && return 0
+  return 1
+}
+
+ensure_gitignore_file() {
+  local target_file="$vault_path/.gitignore"
+  local template_file="$package_root/.gitignore"
+
+  if [[ ! -e "$target_file" ]]; then
+    if [[ ! -f "$template_file" ]]; then
+      echo ".gitignore template not found in package: $template_file" >&2
+      exit 1
+    fi
+
+    cp -f "$template_file" "$target_file"
+    return
+  fi
+
+  ensure_gitignore_line "$target_file" ".claude/"
+  ensure_gitignore_line "$target_file" ".claudian/"
+  ensure_gitignore_line "$target_file" ".codex/"
+
+  if ! has_wiki_runtime_gitignore_policy "$target_file"; then
+    ensure_gitignore_trailing_newline "$target_file"
+    printf "\n" >> "$target_file"
+    default_gitignore_block >> "$target_file"
+  fi
+}
+
 ensure_runtime_structure() {
   local directories=(
     "inbox"
@@ -158,6 +263,7 @@ ensure_runtime_structure() {
   done
 
   ensure_file "$vault_path/logs/wiki.md" "# Wiki Log"$'\n'
+  ensure_file "$vault_path/inbox/.gitkeep" ""
   ensure_file "$vault_path/wiki/home.md" "# Home"$'\n'
   ensure_file "$vault_path/wiki/index.md" "# Index"$'\n'
   ensure_file "$vault_path/wiki/overview.md" "# Overview"$'\n'
@@ -183,6 +289,7 @@ fi
 
 install_package_files
 ensure_project_file
+ensure_gitignore_file
 ensure_runtime_structure
 
 (
@@ -191,5 +298,6 @@ ensure_runtime_structure
 )
 
 echo "Initialized package files, uv environment, and wiki structure at: $vault_path"
+echo "Default .gitignore keeps wiki runtime directories local and private. Existing .gitignore files are preserved; missing default runtime ignore rules are appended unless a wiki runtime policy is already present. To version durable wiki content, refer to docs/gitignore-templates.md or docs/gitignore-templates.zh-CN.md."
 echo "Next project-context confirmation should ask open-ended questions for theme, goal, audience, structure, classification, naming, and project-specific rules."
 echo "Use short choices only for bounded operational preferences such as MinerU, OCR, transcription, or frame OCR. Store only non-secret choices in PROJECT.md; fill only variables required by the selected profile in .env."

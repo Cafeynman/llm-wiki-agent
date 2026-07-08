@@ -67,7 +67,8 @@ After external-vault initialization, open or run the agent from the initialized 
 1. Installs package-managed entrypoint files, local skills, scripts, and docs into the target root.
 2. Creates `PROJECT.md` when it is missing and leaves source extraction preferences there for the agent to confirm when they matter, including whether to configure MinerU, which MinerU profile to use for API mode, and whether to prefer MinerU when it is available.
 3. Creates missing workflow directories and default wiki files (`inbox/`, `raw/`, `intake/`, `reviews/`, `logs/`, `wiki/`, etc.) without overwriting existing runtime content.
-4. Runs `uv sync` in the initialized root to create or update the `.venv/` runtime state.
+4. Seeds `.gitignore` when it is missing, or appends the default private runtime block when no wiki runtime policy is present.
+5. Runs `uv sync` in the initialized root to create or update the `.venv/` runtime state.
 
 ### Optional Scenario Packages
 
@@ -93,7 +94,7 @@ Use the upgrade scripts when applying a newer package release to an existing wor
 ./scripts/upgrade.sh -TargetRoot "/path/to/your/workspace"
 ```
 
-The upgrade covers entries listed in `scripts/upgrade-manifest.txt`, creates `PROJECT.md` when it is missing, reconciles missing runtime directories and default wiki files, and runs `uv sync` in the target root. Listed files are overwritten. Listed directories, including `scenarios/`, are merged by overwriting package-managed files while leaving additional target entries in place. Keep workspace-specific configuration in `PROJECT.md`.
+The upgrade covers entries listed in `scripts/upgrade-manifest.txt`, creates `PROJECT.md` when it is missing, reconciles missing runtime directories and default wiki files, and runs `uv sync` in the target root. Listed files are overwritten. Listed directories, including `scenarios/`, are merged by overwriting package-managed files while leaving additional target entries in place. Existing `.gitignore` files are preserved; when no wiki runtime policy is present, upgrade appends the default private runtime block. Keep workspace-specific configuration in `PROJECT.md`.
 
 ### Local Service Secrets
 
@@ -129,10 +130,10 @@ Initialization and upgrade scripts install the non-secret `.env.example` templat
 
 For exact lifecycle rules, follow [WIKI.md](../WIKI.md). A first small intake normally looks like this:
 
-1. **Drop File:** Put an original file into `inbox/` (e.g., `inbox/example.md`).
+1. **Drop File:** Put one or more original source files into `inbox/`.
 2. **Prompt Agent:** Ask the agent: *"Process the files in inbox/ according to AGENTS.md, PROJECT.md, and WIKI.md."*
 3. **Expected Result:**
-    - For this example, temporary Markdown appears at `intake/tmp/example/source.md`. Nested input paths preserve their source-relative parents.
+    - Temporary Markdown appears at `intake/tmp/<source-relative-parent>/<source-base-filename>/source.md`. Nested input paths preserve their source-relative parents.
     - The **Source Review Gate** determines the final source state.
     - The original file moves to a `raw/` state subfolder while preserving its path below `inbox/`.
     - Only `digested` content moves to `intake/processed/` and updates `wiki/`.
@@ -236,7 +237,7 @@ No. Extracted Markdown first goes to <code>intake/tmp/</code>, then the Source R
 
 <details>
 <summary><b>Should personal wiki content be committed to GitHub?</b></summary>
-No. The default <code>.gitignore</code> ignores local runtime directories like <code>inbox/</code>, <code>raw/</code>, <code>intake/</code>, and <code>wiki/</code>.
+Not by default. The package default keeps local runtime directories private. If this checkout is a personal or team wiki project and durable wiki content should be versioned, refer to <a href="gitignore-templates.md">Git Ignore Templates</a>.
 </details>
 
 ---

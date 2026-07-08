@@ -1,6 +1,6 @@
 # markitdown-skill
 
-📄 OpenClaw agent skill for converting documents to Markdown.
+📄 Agent skill for converting documents to Markdown.
 
 **Documentation and utilities** for Microsoft's [MarkItDown](https://github.com/microsoft/markitdown) library.
 

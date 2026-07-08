@@ -67,7 +67,8 @@ cd llm-wiki-agent
 1. 将包管理的入口文件、本地技能、脚本和文档安装到目标根目录。
 2. 在缺失时创建 `PROJECT.md`，并将来源提取偏好放在那里，由智能体在需要时确认，包括是否配置 MinerU、API 模式下使用哪个 MinerU profile，以及 MinerU 可用时是否优先使用 MinerU。
 3. 补齐缺失的工作流目录和默认 wiki 文件 (`inbox/`, `raw/`, `intake/`, `reviews/`, `logs/`, `wiki/` 等)，不覆盖已有运行内容。
-4. 在初始化后的根目录运行 `uv sync`，创建或更新 `.venv` 本地运行环境。
+4. 在 `.gitignore` 缺失时写入默认模板；如果已有 `.gitignore` 没有 wiki 运行目录策略，则追加默认私有运行目录段落。
+5. 在初始化后的根目录运行 `uv sync`，创建或更新 `.venv` 本地运行环境。
 
 ### 可选场景包
 
@@ -93,7 +94,7 @@ cd llm-wiki-agent
 ./scripts/upgrade.sh -TargetRoot "/path/to/your/workspace"
 ```
 
-升级会处理 `scripts/upgrade-manifest.txt` 中列出的条目，在缺失时创建 `PROJECT.md`，补齐缺失的运行目录和默认 wiki 文件，并在目标根目录运行 `uv sync`。列出的文件会被覆盖；列出的目录，包括 `scenarios/`，会按包文件合并覆盖，并保留目标目录中额外存在的条目。工作区个性化配置应放在 `PROJECT.md`。
+升级会处理 `scripts/upgrade-manifest.txt` 中列出的条目，在缺失时创建 `PROJECT.md`，补齐缺失的运行目录和默认 wiki 文件，并在目标根目录运行 `uv sync`。列出的文件会被覆盖；列出的目录，包括 `scenarios/`，会按包文件合并覆盖，并保留目标目录中额外存在的条目。已有 `.gitignore` 会被保留；如果没有 wiki 运行目录策略，升级会追加默认私有运行目录段落。工作区个性化配置应放在 `PROJECT.md`。
 
 ### 本地服务密钥
 
@@ -129,10 +130,10 @@ cd llm-wiki-agent
 
 精确生命周期规则以 [WIKI.md](../WIKI.md) 为准。第一次小规模摄入通常如下：
 
-1. **放入文件：** 将原始文件放入 `inbox/` (如 `inbox/example.md`)。
+1. **放入文件：** 将一个或多个原始源文件放入 `inbox/`。
 2. **提示智能体：** 询问智能体：*"请根据 AGENTS.md, PROJECT.md 和 WIKI.md 处理 inbox/ 中的文件。"*
 3. **预期结果：**
-    - 对这个示例而言，临时 Markdown 会出现在 `intake/tmp/example/source.md`。如果输入文件位于嵌套目录，输出会保留其来源相对父路径。
+    - 临时 Markdown 会出现在 `intake/tmp/<source-relative-parent>/<source-base-filename>/source.md`。如果输入文件位于嵌套目录，输出会保留其来源相对父路径。
     - **来源审查门 (Source Review Gate)** 会决定最终来源状态。
     - 原始文件会被移入 `raw/` 下对应的状态子目录，并保留其在 `inbox/` 下的相对路径。
     - 只有被标记为 `digested` 的内容才会被移至 `intake/processed/` 并用于更新 `wiki/`。
@@ -234,7 +235,7 @@ LLM Wiki Agent 采用文本优先的摄入路径：
 
 <details>
 <summary><b>我应该把个人 wiki 内容提交到 GitHub 吗？</b></summary>
-不要。默认的 <code>.gitignore</code> 会忽略本地运行目录，比如 <code>inbox/</code>, <code>raw/</code>, <code>intake/</code> 和 <code>wiki/</code>。
+默认不要。包默认配置会让本地运行目录保持私有。如果这个 checkout 是个人或团队 wiki 项目，并且持久化 wiki 内容需要进入版本库，请参考<a href="gitignore-templates.zh-CN.md">Git Ignore 模板</a>。
 </details>
 
 ---

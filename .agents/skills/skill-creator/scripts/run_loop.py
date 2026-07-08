@@ -56,11 +56,13 @@ def run_loop(
     holdout: float,
     model: str,
     verbose: bool,
+    claude_project_root: Path | None = None,
     live_report_path: Path | None = None,
     log_dir: Path | None = None,
 ) -> dict:
     """Run the eval + improvement loop."""
-    project_root = find_project_root()
+    project_root = claude_project_root or find_project_root()
+    project_root.mkdir(parents=True, exist_ok=True)
     name, original_description, content = parse_skill_md(skill_path)
     current_description = description_override or original_description
 
@@ -253,6 +255,7 @@ def main():
     parser.add_argument("--trigger-threshold", type=float, default=0.5, help="Trigger rate threshold")
     parser.add_argument("--holdout", type=float, default=0.4, help="Fraction of eval set to hold out for testing (0 to disable)")
     parser.add_argument("--model", required=True, help="Model for improvement")
+    parser.add_argument("--claude-project-root", default=None, help="Scratch root used for temporary Claude Code command files")
     parser.add_argument("--verbose", action="store_true", help="Print progress to stderr")
     parser.add_argument("--report", default="auto", help="Generate HTML report at this path (default: 'auto' for temp file, 'none' to disable)")
     parser.add_argument("--results-dir", default=None, help="Save all outputs (results.json, report.html, log.txt) to a timestamped subdirectory here")
@@ -302,6 +305,7 @@ def main():
         holdout=args.holdout,
         model=args.model,
         verbose=args.verbose,
+        claude_project_root=Path(args.claude_project_root) if args.claude_project_root else None,
         live_report_path=live_report_path,
         log_dir=log_dir,
     )
