@@ -18,14 +18,11 @@ uv sync
 ```bash
 # Convert a PDF
 uv run markitdown document.pdf -o output.md
-
-# Convert a URL
-uv run markitdown https://example.com -o page.md
 ```
 
 ## 3. Package Usage Note
 
-In this package, run MarkItDown with `uv run markitdown ...` from the package root. MarkItDown produces reviewable Markdown for the intake workflow; source-derived titles, paths, headings, and body text remain governed by the source-extraction provider contract.
+In this package, run MarkItDown with `uv run markitdown ...` from the package root. For wiki intake, start with `source-extraction`; it selects MarkItDown when appropriate, writes `intake/tmp/.../source.md`, and leaves acceptance to Source Review Gate. OCR, image descriptions, audio transcription, video handling, and service-backed providers require `PROJECT.md` policy plus explicit user approval.
 
 ## 4. Install Format-Specific Dependencies
 
@@ -38,6 +35,9 @@ uv sync
 ## 5. System Dependencies (Optional)
 
 ### OCR (for images)
+
+Install this only when an approved OCR path needs it.
+
 ```bash
 # Ubuntu/Debian
 sudo apt-get install tesseract-ocr
@@ -51,9 +51,6 @@ brew install tesseract
 ```bash
 # File conversion
 uv run markitdown file.pdf -o output.md
-
-# URL conversion
-uv run markitdown https://example.com -o page.md
 
 # Batch conversion
 uv run .agents/skills/markitdown-skill/scripts/batch_convert.py docs/*.pdf -o markdown/ -v
@@ -71,7 +68,7 @@ uv sync
 uv sync
 ```
 
-**OCR not working**
+**OCR not working on an approved OCR path**
 ```bash
 sudo apt-get install tesseract-ocr
 ```

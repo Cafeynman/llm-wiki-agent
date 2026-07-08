@@ -1,5 +1,7 @@
 # MarkItDown API Reference
 
+For wiki intake, this reference is provider detail only. Start with `source-extraction`; it owns provider choice, `PROJECT.md` policy checks, OCR/transcription approval, output to `intake/tmp/.../source.md`, and Source Review Gate.
+
 ## MarkItDown Class
 
 ### Constructor
@@ -156,18 +158,20 @@ uv run markitdown <file> -d -e <endpoint>  # Azure Doc Intelligence
 
 ### Images (jpg, png, etc.)
 - **Extracts:** EXIF metadata + OCR text
-- **Requires:** Tesseract OCR system dependency
-- **Enhanced with:** LLM descriptions
+- **Requires:** Tesseract OCR system dependency when that OCR path is approved
+- **Enhanced with:** LLM descriptions only after image extraction is approved
+- **Wiki intake:** Ask for approval first; approved OCR output enters normal intake as `source.md`
 
 ### Audio (wav, mp3)
-- **Extracts:** EXIF metadata + speech transcription
+- **Capability:** EXIF metadata and speech transcription when an approved transcription task needs it
 - **Dependencies:** project dependencies in `pyproject.toml`; refresh with `uv sync`
-- **Note:** System audio libraries may be required
+- **Wiki intake:** Not a default path; use only after transcription approval
 
 ### YouTube
-- **Extracts:** Video transcription (if available)
+- **Capability:** Video transcript retrieval when an approved video task needs it and a transcript is available
 - **Dependencies:** project dependencies in `pyproject.toml`; refresh with `uv sync`
 - **Usage:** `markitdown "https://youtube.com/watch?v=VIDEO_ID"`
+- **Wiki intake:** Not a default path; use only after `source-extraction` policy and user approval
 
 ### HTML
 - **Preserves:** Document structure
@@ -218,13 +222,13 @@ brew install tesseract
 
 ## Azure Document Intelligence
 
-For high-quality PDF conversion with complex layouts:
+For high-quality PDF conversion with complex layouts. In wiki intake, use this only after `source-extraction` selects it and required local `.env` variables are configured.
 
 ### Setup
 
 1. Create Azure Document Intelligence resource
 2. Get endpoint and API key
-3. Set environment variable: `AZURE_DOCUMENT_INTELLIGENCE_KEY=<your-key>`
+3. Set `AZURE_DOCUMENT_INTELLIGENCE_KEY` in the local `.env` file. Do not write real values into docs, manifests, logs, wiki pages, source cards, or prompts.
 
 ### Usage
 
@@ -296,9 +300,9 @@ except Exception as e:
 
 1. **Batch processing:** Reuse MarkItDown instance
 2. **Large files:** Consider chunking or streaming
-3. **OCR:** Reduce image resolution if speed matters
-4. **Audio:** Expect real-time or slower transcription
-5. **Azure Doc Intel:** Best for complex PDFs, costs apply
+3. **OCR:** Reduce image resolution if speed matters after OCR is approved
+4. **Audio:** Use only for approved transcription tasks
+5. **Azure Doc Intel:** Use for approved complex PDFs; costs apply
 
 ## Output Format Notes
 

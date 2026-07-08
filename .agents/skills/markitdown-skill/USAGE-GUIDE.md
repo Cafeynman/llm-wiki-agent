@@ -2,6 +2,8 @@
 
 Detailed examples and patterns for document conversion.
 
+For wiki intake, this guide is provider reference only. Start with `source-extraction`; do not call MarkItDown directly as the intake router. OCR, image descriptions, audio transcription, video handling, and service-backed Azure Document Intelligence require `PROJECT.md` policy plus explicit user approval before extraction.
+
 ## CLI Usage
 
 ### Basic Conversion
@@ -18,6 +20,8 @@ cat document.pdf | uv run markitdown > output.md
 ```
 
 ### Web Content
+
+For wiki web pages, use `source-extraction` with the webpage provider instead of routing through MarkItDown directly.
 
 ```bash
 # Fetch and convert URL
@@ -68,6 +72,8 @@ print(result.text_content)
 
 ### With LLM Image Descriptions
 
+For wiki intake, use this only after `PROJECT.md` policy and explicit user approval allow image extraction.
+
 ```python
 from markitdown import MarkItDown
 from openai import OpenAI
@@ -83,6 +89,8 @@ print(result.text_content)
 ```
 
 ### Azure Document Intelligence
+
+For wiki intake, use this only after `source-extraction` selects it and the required local `.env` variables are configured.
 
 ```python
 from markitdown import MarkItDown
@@ -167,6 +175,8 @@ Output format:
 
 ### Images (OCR)
 
+For wiki intake, OCR is enabled only after `PROJECT.md` policy and explicit user approval. Approved OCR output is written to `intake/tmp/.../source.md` and still goes through Source Review Gate.
+
 ```bash
 # Requires Tesseract OCR
 uv run markitdown scanned-document.jpg -o extracted.md
@@ -174,12 +184,16 @@ uv run markitdown scanned-document.jpg -o extracted.md
 
 ### Audio Transcription
 
+Audio transcription is not a default wiki intake path. Use it only when `PROJECT.md` allows `ask-before-transcription` and the user approves the current task.
+
 ```bash
 uv sync
 uv run markitdown recording.mp3 -o transcript.md
 ```
 
 ### YouTube Videos
+
+Video and YouTube transcription are not default wiki intake paths. Use them only after `source-extraction` policy and explicit user approval; otherwise record the source as `needs-review` or `unsupported`.
 
 ```bash
 uv sync
@@ -276,9 +290,9 @@ async def convert_file(file: UploadFile):
 ## Performance Tips
 
 1. **Reuse MarkItDown instance** for batch processing
-2. **Reduce image resolution** if OCR speed matters
-3. **Use Azure Document Intelligence** for complex PDF layouts
-4. **Audio transcription** is roughly real-time
+2. **Reduce image resolution** if OCR speed matters after OCR is approved
+3. **Use Azure Document Intelligence** for approved complex PDF layouts
+4. **Audio transcription** only for approved transcription tasks
 
 ## Output Format
 

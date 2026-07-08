@@ -9,16 +9,14 @@ Use MinerU when `PROJECT.md` selects `mineru` for documents, when `PROJECT.md` c
 
 ## Profiles and Modes
 
-MinerU can be used through the CLI or API profiles. Use `setup.md` for shared installation and local credential setup.
+MinerU is used through API profiles in this package. Use `setup.md` for shared local environment setup.
 
 API profiles live under `profiles/`. Use the active profile recorded in `PROJECT.md`; when no profile is recorded and API mode matters, clarify the intended profile before extraction.
 
 - `profiles/public-api.md`
 - `profiles/fastapi.md`
 
-Each profile owns its API route family, documented limits, credential rules, smoke check, and script invocation details.
-
-The repository still keeps the CLI available for other MinerU paths. Do not treat the CLI, `public-api`, and `fastapi` profiles as the same contract. Current API profiles support local file upload only.
+Each profile owns its API route family, documented limits, credential rules, smoke check, and script invocation details. Current API profiles support local file upload only.
 
 ## Provider Choice
 
@@ -49,8 +47,7 @@ Do not enable MinerU OCR or image extraction automatically. If `PROJECT.md` says
 
 ## Source
 
-MinerU CLI and API behavior should be checked against the upstream documentation when changing this provider:
+MinerU API behavior should be checked against the upstream documentation when changing this provider:
 
 - <https://github.com/opendatalab/MinerU-Ecosystem/tree/main/skills>
-- <https://github.com/opendatalab/MinerU-Ecosystem/tree/main/cli>
 - <https://mineru.net/apiManage/docs>

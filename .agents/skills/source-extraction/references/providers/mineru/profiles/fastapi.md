@@ -51,8 +51,8 @@ Core options:
 | Script flag | FastAPI field | Notes |
 | --- | --- | --- |
 | `--backend` | `backend` | `pipeline`, `vlm-engine`, `vlm-http-client`, `hybrid-engine`, or `hybrid-http-client` |
-| `--lang-list` | `lang_list` | Repeat the flag for multiple language values; primarily useful for pipeline OCR |
-| `--parse-method` | `parse_method` | `auto`, `txt`, or `ocr`; pipeline/hybrid-oriented |
+| `--lang-list` | `lang_list` | Repeat the flag for multiple language values; use for OCR only after OCR is approved |
+| `--parse-method` | `parse_method` | `auto`, `txt`, or `ocr`; use `ocr` only after OCR is approved |
 | `--effort` | `effort` | `medium` or `high`; hybrid-oriented |
 | `--server-url` or `MINERU_FASTAPI_SERVER_URL` | `server_url` | Required only for `*-http-client` backends that need an OpenAI-compatible VLM server |
 
@@ -77,6 +77,8 @@ Output controls:
 | `--return-original-file` / `--no-return-original-file` | `return_original_file` |
 | `--client-side-output-generation` / `--no-client-side-output-generation` | `client_side_output_generation` |
 
+Treat `--image-analysis`, `--return-images`, and OCR-oriented parse options as approval-only. Do not add them to a wiki intake command unless `PROJECT.md` allows the relevant OCR/image extraction policy and the user has approved the current task.
+
 Page range controls:
 
 | Script flag | FastAPI field |
@@ -95,13 +97,13 @@ uv run --env-file .env python .agents/skills/source-extraction/references/provid
 Synchronous parse:
 
 ```bash
-uv run --env-file .env python .agents/skills/source-extraction/references/providers/mineru/scripts/fastapi_parse.py --mode sync --file "path/to/document.pdf" --output-dir "tmp/mineru-fastapi-document" --backend "hybrid-http-client" --effort "high" --parse-method "auto" --formula-enable --table-enable --image-analysis --return-md --return-images --response-format-zip --no-return-original-file --user-agent "curl/8.0"
+uv run --env-file .env python .agents/skills/source-extraction/references/providers/mineru/scripts/fastapi_parse.py --mode sync --file "path/to/document.pdf" --output-dir "tmp/mineru-fastapi-document" --backend "hybrid-http-client" --effort "high" --parse-method "auto" --formula-enable --table-enable --return-md --response-format-zip --no-return-original-file --user-agent "curl/8.0"
 ```
 
 Asynchronous parse for larger files:
 
 ```bash
-uv run --env-file .env python .agents/skills/source-extraction/references/providers/mineru/scripts/fastapi_parse.py --mode async --file "path/to/large-document.pdf" --output-dir "tmp/mineru-fastapi-large-document" --backend "hybrid-http-client" --effort "high" --parse-method "auto" --formula-enable --table-enable --image-analysis --return-md --return-images --response-format-zip --no-return-original-file --poll-interval 10 --max-wait 3600 --user-agent "curl/8.0"
+uv run --env-file .env python .agents/skills/source-extraction/references/providers/mineru/scripts/fastapi_parse.py --mode async --file "path/to/large-document.pdf" --output-dir "tmp/mineru-fastapi-large-document" --backend "hybrid-http-client" --effort "high" --parse-method "auto" --formula-enable --table-enable --return-md --response-format-zip --no-return-original-file --poll-interval 10 --max-wait 3600 --user-agent "curl/8.0"
 ```
 
 For an English paper or formula-heavy document, `--backend "vlm-engine"` is usually a smaller invocation and does not need `--server-url`.
@@ -131,7 +133,7 @@ Common deployment-specific failures:
 - `413 Request Entity Too Large`: use async mode or adjust the gateway upload limit.
 - `403` or HTML response: gateway/WAF filtering may be involved; retry later, set `MINERU_FASTAPI_USER_AGENT`, or ask the service owner to adjust filtering.
 - Timeout in sync mode: retry with `--mode async`.
-- Missing images in Markdown output: rerun with `--return-images --response-format-zip`.
+- Missing images in Markdown output: if image extraction is approved, rerun with `--return-images --response-format-zip`; otherwise record the missing images for Source Review Gate.
 
 ## Sources
 

@@ -15,6 +15,8 @@ This skill provides:
 
 In this package, the actual document conversion is done by Microsoft's `markitdown` CLI through the project `uv` environment.
 
+For wiki intake, start with `source-extraction`; it selects MarkItDown according to `PROJECT.md`, writes reviewable Markdown to `intake/tmp/.../source.md`, and leaves acceptance to Source Review Gate. Use the direct examples below only for non-wiki conversion or after `source-extraction` has selected MarkItDown.
+
 ## Install
 
 From the package root:
@@ -27,13 +29,10 @@ uv run markitdown --help
 ## Quick Start
 
 ```bash
-# Convert PDF
+# Convert a local document outside wiki intake
 uv run markitdown document.pdf -o output.md
 
-# Fetch web docs
-uv run markitdown https://example.com/docs -o docs.md
-
-# Batch convert
+# Batch convert outside wiki intake
 uv run .agents/skills/markitdown-skill/scripts/batch_convert.py docs/*.pdf -o markdown/
 ```
 
@@ -45,10 +44,10 @@ uv run .agents/skills/markitdown-skill/scripts/batch_convert.py docs/*.pdf -o ma
 | Word (.docx) | Headings, lists, tables |
 | PowerPoint | Slides, text |
 | Excel | Tables, sheets |
-| Images | OCR + metadata |
-| Audio | Speech transcription |
+| Images | OCR only after `PROJECT.md` policy and user approval |
+| Audio | Not a default wiki path; transcription only after approval |
 | HTML | Structure preservation |
-| YouTube | Video transcription |
+| YouTube | Not a default wiki path; handle through source-extraction policy |
 
 ## Documentation
 

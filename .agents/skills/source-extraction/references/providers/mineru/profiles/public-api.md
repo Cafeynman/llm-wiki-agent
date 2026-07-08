@@ -113,14 +113,14 @@ Common request parameters exposed by the current script:
 - `no_cache`
 - `cache_tolerance`
 
-Current CLI surface:
+Current parse script options:
 
 - `--file` repeated for one or more local files
 - `--model-version`
 - `--language`
 - `--enable-formula` or `--no-enable-formula`
 - `--enable-table` or `--no-enable-table`
-- `--is-ocr`
+- `--is-ocr` only after OCR is approved
 - `--page-ranges`
 - `--data-id`
 - `--extra-format`
@@ -152,7 +152,7 @@ This check verifies the public API host is reachable and whether the configured 
 Run:
 
 ```bash
-uv run --env-file .env python .agents/skills/source-extraction/references/providers/mineru/scripts/api_parse.py --file "attachments/test-files/mineru-api/1512.03385-resnet.pdf" --output-dir "tmp/mineru-api-resnet" --base-url "https://mineru.net" --docs-url "https://mineru.net/apiManage/docs" --max-files-per-batch 50 --max-file-mb 200
+uv run --env-file .env python .agents/skills/source-extraction/references/providers/mineru/scripts/api_parse.py --file ".agents/skills/source-extraction/references/providers/mineru/tests/fixtures/1512.03385-resnet.pdf" --output-dir "tmp/mineru-api-resnet" --base-url "https://mineru.net" --docs-url "https://mineru.net/apiManage/docs" --max-files-per-batch 50 --max-file-mb 200
 ```
 
 For batch upload, repeat `--file`. One-file runs write directly into `--output-dir`. Multi-file runs create one subdirectory per file, named with the original file base filename, plus a root-level `batch.json`.
@@ -184,6 +184,6 @@ If `full.md` contains watermark-like text such as `watermark` or `水印`, `resu
 
 This repository keeps a stable public PDF fixture for this profile at:
 
-- `attachments/test-files/mineru-api/1512.03385-resnet.pdf`
+- `.agents/skills/source-extraction/references/providers/mineru/tests/fixtures/1512.03385-resnet.pdf`
 
 The fixture is for repeatable local upload checks.
