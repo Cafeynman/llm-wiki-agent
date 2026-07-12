@@ -270,6 +270,22 @@ class TestAuditChunks(unittest.TestCase):
             [item["code"] for item in stats["errors"]],
         )
 
+    def test_numeric_sequence_continues_from_99_to_100(self):
+        self.write("source.md", "# Source\n\nSee [chunks](chunks/index.md).\n")
+        entries = []
+        for ordinal in range(1, 100):
+            name = f"{ordinal:02d}"
+            entries.append(f"- [Section {ordinal}]({name}.md)")
+            self.write(f"chunks/{name}.md", f"# Section {ordinal}\n\nBody\n")
+        entries.append("- [Section 100](100/index.md)")
+        self.write("chunks/index.md", "# Chunks\n\n" + "\n".join(entries) + "\n")
+        self.write("chunks/100/index.md", "# Section 100\n")
+
+        result, stats = self.run_json()
+
+        self.assertEqual(result, 0)
+        self.assertEqual(stats["status"], "pass")
+
 
 if __name__ == "__main__":
     unittest.main()
