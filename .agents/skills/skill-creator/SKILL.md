@@ -73,7 +73,6 @@ Write for the current repository's agent contract first. In this repository, loc
 When a step depends on a runtime capability, phrase it conditionally:
 
 - If subagents are available, use them for independent validation.
-- If a browser or reviewer UI is available, use the bundled viewer.
 - If only shell commands are available, use deterministic scripts and direct file inspection.
 - If a command is runtime-specific, name the runtime and keep the command out of the generic path.
 
