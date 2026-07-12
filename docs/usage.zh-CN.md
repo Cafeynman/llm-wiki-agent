@@ -32,7 +32,7 @@
 ## ⚙️ 2. 环境要求
 
 开始前，请确保你拥有：
-- [uv](https://docs.astral.sh/uv/)，用于 Python 环境管理 (初始化脚本会运行 `uv sync`)。
+- [uv](https://docs.astral.sh/uv/)，用于 Python 环境管理 (初始化脚本会依据锁文件并使用官方 PyPI 索引运行 `uv sync --locked`)。
 - PowerShell (Windows) 或 Bash (macOS/Linux) 用于执行初始化脚本。
 - 当你要使用默认网页提取器时，需要 Node.js/npm 或已安装的 Defuddle CLI。
 - Obsidian，或任何标准的 Markdown 编辑器。
@@ -68,7 +68,7 @@ cd llm-wiki-agent
 2. 在缺失时创建 `PROJECT.md`，并将来源提取偏好放在那里，由智能体在需要时确认，包括是否配置 MinerU、API 模式下使用哪个 MinerU profile，以及 MinerU 可用时是否优先使用 MinerU。
 3. 补齐缺失的工作流目录和默认 wiki 文件 (`inbox/`, `raw/`, `intake/`, `reviews/`, `logs/`, `wiki/` 等)，不覆盖已有运行内容。
 4. 在 `.gitignore` 缺失时写入默认模板；如果已有 `.gitignore` 没有 wiki 运行目录策略，则追加默认私有运行目录段落。
-5. 在初始化后的根目录运行 `uv sync`，创建或更新 `.venv` 本地运行环境。
+5. 在初始化后的根目录运行 `uv sync --locked --default-index https://pypi.org/simple`，根据已提交的锁文件创建或更新 `.venv` 本地运行环境。
 
 ### 可选场景包
 
@@ -94,7 +94,7 @@ cd llm-wiki-agent
 ./scripts/upgrade.sh -TargetRoot "/path/to/your/workspace"
 ```
 
-升级会处理 `scripts/upgrade-manifest.txt` 中列出的条目，在缺失时创建 `PROJECT.md`，补齐缺失的运行目录和默认 wiki 文件，并在目标根目录运行 `uv sync`。列出的文件会被覆盖；列出的目录，包括 `scenarios/`，会按包文件合并覆盖，并保留目标目录中额外存在的条目。已有 `.gitignore` 会被保留；如果没有 wiki 运行目录策略，升级会追加默认私有运行目录段落。工作区个性化配置应放在 `PROJECT.md`。
+升级会处理 `scripts/upgrade-manifest.txt` 中列出的条目，在缺失时创建 `PROJECT.md`，补齐缺失的运行目录和默认 wiki 文件，并在目标根目录运行 `uv sync --locked --default-index https://pypi.org/simple`。列出的文件会被覆盖；列出的目录，包括 `scenarios/`，会按包文件合并覆盖，并保留目标目录中额外存在的条目。已有 `.gitignore` 会被保留；缺失的本地基线规则会被补齐，只有在不存在 wiki 运行目录策略时才会追加默认私有运行目录段落。工作区个性化配置应放在 `PROJECT.md`。
 
 ### 本地服务密钥
 

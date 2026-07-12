@@ -170,6 +170,21 @@ versioned_all_intake_local_gitignore_lines=(
   "/intake/"
 )
 
+required_local_gitignore_lines=(
+  ".env"
+  "**/.env"
+  ".venv/"
+  "__pycache__/"
+  "*.py[cod]"
+  ".pytest_cache/"
+  ".ruff_cache/"
+  ".mypy_cache/"
+  "tmp/"
+  ".claude/"
+  ".claudian/"
+  ".codex/"
+)
+
 gitignore_contains_line() {
   local target_file="$1"
   local line="$2"
@@ -225,9 +240,10 @@ ensure_gitignore_file() {
     return
   fi
 
-  ensure_gitignore_line "$target_file" ".claude/"
-  ensure_gitignore_line "$target_file" ".claudian/"
-  ensure_gitignore_line "$target_file" ".codex/"
+  local line
+  for line in "${required_local_gitignore_lines[@]}"; do
+    ensure_gitignore_line "$target_file" "$line"
+  done
 
   if ! has_wiki_runtime_gitignore_policy "$target_file"; then
     ensure_gitignore_trailing_newline "$target_file"
@@ -294,10 +310,10 @@ ensure_runtime_structure
 
 (
   cd "$vault_path"
-  uv sync
+  uv sync --locked --default-index https://pypi.org/simple
 )
 
 echo "Initialized package files, uv environment, and wiki structure at: $vault_path"
-echo "Default .gitignore keeps wiki runtime directories local and private. Existing .gitignore files are preserved; missing default runtime ignore rules are appended unless a wiki runtime policy is already present. To version durable wiki content, refer to docs/gitignore-templates.md or docs/gitignore-templates.zh-CN.md."
+echo "Default .gitignore keeps wiki runtime directories local and private. Existing files are preserved; missing local baseline rules are appended, and the default runtime block is appended only when no wiki runtime policy is present. To version durable wiki content, refer to docs/gitignore-templates.md or docs/gitignore-templates.zh-CN.md."
 echo "Next project-context confirmation should ask open-ended questions for theme, goal, audience, structure, classification, naming, and project-specific rules."
 echo "Use short choices only for bounded operational preferences such as MinerU, OCR, transcription, or frame OCR. Store only non-secret choices in PROJECT.md; fill only variables required by the selected profile in .env."

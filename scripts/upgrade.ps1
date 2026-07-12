@@ -12,7 +12,6 @@ $ManifestPath = Join-Path $ScriptDir "upgrade-manifest.txt"
 $script:FileCount = 0
 $script:DirectoryCount = 0
 $script:CreatedRuntimeCount = 0
-$script:RemovedObsoleteCount = 0
 $script:SameRoot = $false
 
 function Ensure-Directory {
@@ -153,6 +152,21 @@ $VersionedAllIntakeLocalGitIgnoreLines = @(
     "/intake/"
 )
 
+$RequiredLocalGitIgnoreLines = @(
+    ".env",
+    "**/.env",
+    ".venv/",
+    "__pycache__/",
+    "*.py[cod]",
+    ".pytest_cache/",
+    ".ruff_cache/",
+    ".mypy_cache/",
+    "tmp/",
+    ".claude/",
+    ".claudian/",
+    ".codex/"
+)
+
 function Test-GitIgnoreContainsLine {
     param(
         [string]$GitIgnorePath,
@@ -230,9 +244,9 @@ function Ensure-GitIgnoreFile {
         return
     }
 
-    Add-GitIgnoreLine $gitIgnorePath ".claude/"
-    Add-GitIgnoreLine $gitIgnorePath ".claudian/"
-    Add-GitIgnoreLine $gitIgnorePath ".codex/"
+    foreach ($line in $RequiredLocalGitIgnoreLines) {
+        Add-GitIgnoreLine $gitIgnorePath $line
+    }
 
     if (-not (Test-WikiRuntimeGitIgnorePolicy $gitIgnorePath)) {
         $content = Get-Content -LiteralPath $gitIgnorePath -Raw
@@ -241,32 +255,6 @@ function Ensure-GitIgnoreFile {
         }
         Add-Content -LiteralPath $gitIgnorePath -Value "`n$DefaultGitIgnoreBlock" -Encoding UTF8
         $script:CreatedRuntimeCount += 1
-    }
-}
-
-function Remove-ObsoletePackageEntries {
-    param([string]$TargetPath)
-
-    if ($script:SameRoot) {
-        return
-    }
-
-    $targetRootFull = [System.IO.Path]::GetFullPath($TargetPath)
-    $entries = @(
-        ".agents/skills/self-improving-agent"
-    )
-
-    foreach ($relativePath in $entries) {
-        $target = [System.IO.Path]::GetFullPath((Join-Path $TargetPath $relativePath))
-        $insideTarget = $target.StartsWith($targetRootFull + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)
-        if (-not $insideTarget) {
-            throw "Refusing to remove obsolete path outside target root: $relativePath"
-        }
-
-        if (Test-Path -LiteralPath $target) {
-            Remove-Item -LiteralPath $target -Recurse -Force
-            $script:RemovedObsoleteCount += 1
-        }
     }
 }
 
@@ -336,7 +324,6 @@ Get-Content -LiteralPath $ManifestPath | ForEach-Object {
 
 Ensure-ProjectFile $TargetPath
 Ensure-GitIgnoreFile $TargetPath
-Remove-ObsoletePackageEntries $TargetPath
 Ensure-RuntimeStructure $TargetPath
 
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
@@ -345,7 +332,7 @@ if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
 
 Push-Location $TargetPath
 try {
-    uv sync
+    uv sync --locked --default-index https://pypi.org/simple
 }
 finally {
     Pop-Location
@@ -355,7 +342,6 @@ Write-Host "Upgraded package files at: $TargetPath"
 Write-Host "Merged directories: $script:DirectoryCount"
 Write-Host "Copied files: $script:FileCount"
 Write-Host "Created missing runtime entries: $script:CreatedRuntimeCount"
-Write-Host "Removed obsolete package entries: $script:RemovedObsoleteCount"
-Write-Host "Default .gitignore keeps wiki runtime directories local and private. Existing .gitignore files are preserved; missing default runtime ignore rules are appended unless a wiki runtime policy is already present. To version durable wiki content, refer to docs/gitignore-templates.md or docs/gitignore-templates.zh-CN.md."
+Write-Host "Default .gitignore keeps wiki runtime directories local and private. Existing files are preserved; missing local baseline rules are appended, and the default runtime block is appended only when no wiki runtime policy is present. To version durable wiki content, refer to docs/gitignore-templates.md or docs/gitignore-templates.zh-CN.md."
 Write-Host "Next project-context confirmation should ask open-ended questions for theme, goal, audience, structure, classification, naming, and project-specific rules."
 Write-Host "Use short choices only for bounded operational preferences such as MinerU, OCR, transcription, or frame OCR. Store only non-secret choices in PROJECT.md; fill only variables required by the selected profile in .env."

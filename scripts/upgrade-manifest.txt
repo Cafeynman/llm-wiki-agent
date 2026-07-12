@@ -6,6 +6,7 @@ file README.md
 file README.zh-CN.md
 file LICENSE
 file pyproject.toml
+file uv.lock
 file .gitattributes
 file .env.example
 dir docs

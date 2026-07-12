@@ -6,8 +6,9 @@ wiki 项目，并且用户明确希望提交 wiki 内容时，才参考“可版
 两个模板都应继续忽略 `.env`, `.venv/`, 缓存，以及 `.claude/`, `.claudian/`,
 `.codex/` 等本地工具状态。只替换 `.gitignore` 中的 `# Local wiki runtime content.`
 这一段。
-初始化和升级脚本会在 `.gitignore` 缺失时写入默认模板。如果已有 `.gitignore`
-没有 wiki 运行目录策略，它们会追加默认私有运行目录段落，不会覆盖文件中已有内容。
+初始化和升级脚本会在 `.gitignore` 缺失时写入默认模板。如果已有 `.gitignore`，
+它们会补齐下方缺失的本地基线规则，不会覆盖已有内容；只有在不存在可识别的 wiki
+运行目录策略时，才会追加默认私有运行目录段落。
 
 ## 私有本地运行模式
 
@@ -15,6 +16,20 @@ wiki 项目，并且用户明确希望提交 wiki 内容时，才参考“可版
 交付物都保留在本地。
 
 ```gitignore
+# Required local baseline.
+.env
+**/.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+tmp/
+.claude/
+.claudian/
+.codex/
+
 # Local wiki runtime content.
 /inbox/*
 !/inbox/.gitkeep
@@ -33,6 +48,20 @@ wiki 项目，并且用户明确希望提交 wiki 内容时，才参考“可版
 它仍然默认保留临时 inbox、原始来源文件和临时提取输出为本地内容。
 
 ```gitignore
+# Required local baseline.
+.env
+**/.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+tmp/
+.claude/
+.claudian/
+.codex/
+
 # Local source intake and temporary extraction state.
 /inbox/*
 !/inbox/.gitkeep

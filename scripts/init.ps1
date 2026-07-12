@@ -167,6 +167,21 @@ $VersionedAllIntakeLocalGitIgnoreLines = @(
     "/intake/"
 )
 
+$RequiredLocalGitIgnoreLines = @(
+    ".env",
+    "**/.env",
+    ".venv/",
+    "__pycache__/",
+    "*.py[cod]",
+    ".pytest_cache/",
+    ".ruff_cache/",
+    ".mypy_cache/",
+    "tmp/",
+    ".claude/",
+    ".claudian/",
+    ".codex/"
+)
+
 function Test-GitIgnoreContainsLine {
     param(
         [string]$GitIgnorePath,
@@ -243,9 +258,9 @@ function Ensure-GitIgnoreFile {
         return
     }
 
-    Add-GitIgnoreLine $gitIgnorePath ".claude/"
-    Add-GitIgnoreLine $gitIgnorePath ".claudian/"
-    Add-GitIgnoreLine $gitIgnorePath ".codex/"
+    foreach ($line in $RequiredLocalGitIgnoreLines) {
+        Add-GitIgnoreLine $gitIgnorePath $line
+    }
 
     if (-not (Test-WikiRuntimeGitIgnorePolicy $gitIgnorePath)) {
         $content = Get-Content -LiteralPath $gitIgnorePath -Raw
@@ -315,13 +330,13 @@ Ensure-RuntimeStructure $VaultPath
 
 Push-Location $VaultPath
 try {
-    uv sync
+    uv sync --locked --default-index https://pypi.org/simple
 }
 finally {
     Pop-Location
 }
 
 Write-Host "Initialized package files, uv environment, and wiki structure at: $VaultPath"
-Write-Host "Default .gitignore keeps wiki runtime directories local and private. Existing .gitignore files are preserved; missing default runtime ignore rules are appended unless a wiki runtime policy is already present. To version durable wiki content, refer to docs/gitignore-templates.md or docs/gitignore-templates.zh-CN.md."
+Write-Host "Default .gitignore keeps wiki runtime directories local and private. Existing files are preserved; missing local baseline rules are appended, and the default runtime block is appended only when no wiki runtime policy is present. To version durable wiki content, refer to docs/gitignore-templates.md or docs/gitignore-templates.zh-CN.md."
 Write-Host "Next project-context confirmation should ask open-ended questions for theme, goal, audience, structure, classification, naming, and project-specific rules."
 Write-Host "Use short choices only for bounded operational preferences such as MinerU, OCR, transcription, or frame OCR. Store only non-secret choices in PROJECT.md; fill only variables required by the selected profile in .env."

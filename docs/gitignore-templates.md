@@ -8,8 +8,9 @@ In both templates, keep `.env`, `.venv/`, caches, and local tool state such as
 `.claude/`, `.claudian/`, and `.codex/` ignored. Only replace the
 `# Local wiki runtime content.` block in `.gitignore`.
 Init and upgrade scripts seed the default `.gitignore` when it is missing. When
-an existing `.gitignore` has no wiki runtime policy, they append the default
-private runtime block without overwriting the rest of the file.
+an existing `.gitignore` is present, they append any missing baseline lines
+below without overwriting existing rules. They append the default private
+runtime block only when no recognized wiki runtime policy exists.
 
 ## Private Local Runtime
 
@@ -17,6 +18,20 @@ This is the package default. It keeps source files, extracted material, wiki
 pages, questions, logs, reviews, and artifacts local.
 
 ```gitignore
+# Required local baseline.
+.env
+**/.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+tmp/
+.claude/
+.claudian/
+.codex/
+
 # Local wiki runtime content.
 /inbox/*
 !/inbox/.gitkeep
@@ -36,6 +51,20 @@ wiki content should be tracked. This template still keeps the transient inbox,
 preserved original files, and temporary extraction output local by default.
 
 ```gitignore
+# Required local baseline.
+.env
+**/.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+tmp/
+.claude/
+.claudian/
+.codex/
+
 # Local source intake and temporary extraction state.
 /inbox/*
 !/inbox/.gitkeep

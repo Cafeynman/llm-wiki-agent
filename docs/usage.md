@@ -32,7 +32,7 @@ It is **not** meant for one-off chatting. Its true value lies in durable accumul
 ## ⚙️ 2. Requirements
 
 Before you start, ensure you have:
-- [uv](https://docs.astral.sh/uv/) for Python environment management (the init scripts run `uv sync`).
+- [uv](https://docs.astral.sh/uv/) for Python environment management (the init scripts run `uv sync --locked` against the lockfile's official PyPI index).
 - PowerShell (Windows) or Bash (macOS/Linux) for initialization scripts.
 - Node.js/npm or an installed Defuddle CLI when you want the default webpage extraction provider.
 - Obsidian, or any standard Markdown editor.
@@ -68,7 +68,7 @@ After external-vault initialization, open or run the agent from the initialized 
 2. Creates `PROJECT.md` when it is missing and leaves source extraction preferences there for the agent to confirm when they matter, including whether to configure MinerU, which MinerU profile to use for API mode, and whether to prefer MinerU when it is available.
 3. Creates missing workflow directories and default wiki files (`inbox/`, `raw/`, `intake/`, `reviews/`, `logs/`, `wiki/`, etc.) without overwriting existing runtime content.
 4. Seeds `.gitignore` when it is missing, or appends the default private runtime block when no wiki runtime policy is present.
-5. Runs `uv sync` in the initialized root to create or update the `.venv/` runtime state.
+5. Runs `uv sync --locked --default-index https://pypi.org/simple` in the initialized root to create or update the `.venv/` runtime state from the committed lockfile.
 
 ### Optional Scenario Packages
 
@@ -94,7 +94,7 @@ Use the upgrade scripts when applying a newer package release to an existing wor
 ./scripts/upgrade.sh -TargetRoot "/path/to/your/workspace"
 ```
 
-The upgrade covers entries listed in `scripts/upgrade-manifest.txt`, creates `PROJECT.md` when it is missing, reconciles missing runtime directories and default wiki files, and runs `uv sync` in the target root. Listed files are overwritten. Listed directories, including `scenarios/`, are merged by overwriting package-managed files while leaving additional target entries in place. Existing `.gitignore` files are preserved; when no wiki runtime policy is present, upgrade appends the default private runtime block. Keep workspace-specific configuration in `PROJECT.md`.
+The upgrade covers entries listed in `scripts/upgrade-manifest.txt`, creates `PROJECT.md` when it is missing, reconciles missing runtime directories and default wiki files, and runs `uv sync --locked --default-index https://pypi.org/simple` in the target root. Listed files are overwritten. Listed directories, including `scenarios/`, are merged by overwriting package-managed files while leaving additional target entries in place. Existing `.gitignore` files are preserved; missing local baseline rules are appended, and the default private runtime block is appended only when no wiki runtime policy is present. Keep workspace-specific configuration in `PROJECT.md`.
 
 ### Local Service Secrets
 
