@@ -106,6 +106,19 @@ class TestLintWiki(unittest.TestCase):
         output = "\n".join(call[0][0] for call in mock_print.call_args_list if call[0])
         self.assertNotIn("Orphan: wiki/root.md", output)
 
+    def test_protocol_relative_md_link_is_external(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text("[External](//wiki/target.md)", encoding="utf-8")
+        (self.vault / "wiki" / "target.md").write_text("Target.", encoding="utf-8")
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0)
+        output = "\n".join(call[0][0] for call in mock_print.call_args_list if call[0])
+        self.assertNotIn("Broken:", output)
+        self.assertIn("Orphan: wiki/target.md", output)
+
     def test_md_link_cannot_resolve_outside_vault(self):
         outside = self.vault.parent / f"{self.vault.name}-outside.md"
         outside.write_text("Outside.", encoding="utf-8")

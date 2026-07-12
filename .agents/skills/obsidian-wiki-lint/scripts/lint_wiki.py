@@ -487,8 +487,10 @@ def resolve_markdown_target(
     if not target:
         return None
 
+    if target.startswith("//"):
+        return None
     if target.startswith("/"):
-        candidate = target.lstrip("/")
+        candidate = target[1:]
     else:
         source_parent = Path(source_rel).parent.as_posix()
         candidate = posixpath.normpath(posixpath.join(source_parent, target))
