@@ -35,7 +35,7 @@ Use `--json` when another script needs structured output. The JSON output uses t
 
 Each error or warning has `code`, `path`, and `message`. Exit code `0` means no hard errors were found, even if warnings exist. Exit code `1` means hard errors were found. Exit code `2` means the input path could not be read.
 
-Hard errors are limited to deterministic structure problems: missing `chunks/` or `chunks/index.md`, index entries that point outside `chunks/` or to missing files, leaf chunks not listed by their nearest `index.md`, nested chunk directories without local `index.md`, inconsistent direct-child chunk naming, oversized leaf chunks without a recorded reason, or final `summary.md`/`manifest.md` existing while hard chunk errors remain.
+Hard errors are limited to deterministic structure problems: missing `chunks/` or `chunks/index.md`, index entries that point outside `chunks/` or to missing files, leaf chunks not listed by their nearest `index.md`, nested chunk directories without local `index.md`, invalid or non-sequential numeric chunk paths, oversized leaf chunks without a recorded reason, or final `summary.md`/`manifest.md` existing while hard chunk errors remain.
 
 Warnings are review cues, not automatic blockers. They include unresolved local image references, possible table-of-contents-like repeated headings, and possible missing numbered parents such as a `4.1` heading without an observed `4` parent. Source Review Gate still decides whether warnings make the source `digested` or `needs-review`.
 
@@ -50,33 +50,32 @@ intake/processed/source-relative-parent/original-source-base-filename/
 ├── manifest.md
 └── chunks/
     ├── index.md
-    ├── 1-actual-top-level-heading/
+    ├── 01/
     │   ├── index.md
-    │   ├── 1.1-actual-child-heading/
+    │   ├── 01/
     │   │   ├── index.md
-    │   │   ├── 1.1.1-actual-leaf-heading.md
-    │   │   └── 1.1.2-actual-leaf-heading.md
-    │   └── 1.2-actual-child-heading.md
-    └── 2-actual-top-level-heading/
+    │   │   ├── 01.md
+    │   │   └── 02.md
+    │   └── 02.md
+    └── 02/
         └── index.md
 ```
 
-Use one naming strategy for each directory's direct child chunks. If every direct child title starts with a source-provided order token, keep the source title without adding an agent-generated prefix. If no direct child title starts with a source-provided order token, use generated numeric prefixes such as `01-` for every direct child in that directory. A sibling group that mixes source-ordered names and plain names is inconsistent; fix the split boundaries or names instead of adding generated prefixes in front of source-provided order tokens. Do not mix prefixed and unprefixed names in the same directory.
+Use one numeric sequence for the direct chunk files and chunk directories at each level. Use `01.md` for a leaf file and `01/` for a nested directory. Start at `01`, continue without gaps, and use the same sequence whether a child is a leaf file or a nested directory. Use at least two digits; after `99`, continue with `100`. A source-provided order token never replaces the numeric path component.
 
-When direct child titles do not provide their own order, use this generated-prefix shape:
+The paths and their display labels are separate:
 
 ```text
 chunks/
 ├── index.md
-├── 01-actual-top-level-heading-without-source-order/
+├── 01/
 │   ├── index.md
-│   ├── 01-actual-child-heading-without-source-order.md
-│   └── 02-another-child-heading-without-source-order.md
-└── 02-another-top-level-heading-without-source-order/
-    └── index.md
+│   ├── 01.md
+│   └── 02.md
+└── 02.md
 ```
 
-The generated prefix is only an order key. Preserve source-derived titles in headings and index entries; use filenames that are readable and stable without translating, romanizing, converting to pinyin, slugifying, forcing lowercase, case-normalizing, or simplifying the source title. Source-provided order tokens are detected from generic leading ordinal or list markers, not from words such as chapter, section, part, module, clause, or their translations.
+Numeric components are filesystem keys only. Preserve each exact source-language title and any source-provided order token in the chunk's first heading and in the nearest `index.md` entry. Do not translate, romanize, convert to pinyin, slugify, case-normalize, simplify, or remove characters from those display values. Characters that are invalid in filenames, such as `:`, `/`, `?`, or `*` on Windows, remain unchanged in headings and index labels because they are not part of the path.
 
 When a chunk generation or restructuring script moves Markdown into the final `chunks/` tree, keep existing Markdown image references resolvable from the moved chunk. The chunk audit can warn about unresolved local image references, but the generator owns path preservation or path rewriting.
 

@@ -15,18 +15,7 @@ MARKDOWN_IMAGE_RE = re.compile(r"!\[[^\]]*\]\(([^)]+)\)")
 NUMBERED_CHILD_RE = re.compile(r"(?<!\d)(\d+)\.(\d+(?:\.\d+)*)")
 NUMBERED_PARENT_RE = re.compile(r"(?<!\d)(\d+)(?![\d.])")
 EXTERNAL_TARGET_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*:")
-AGENT_ORDER_PREFIX_RE = re.compile(r"^\d{2,}-")
-CHINESE_NUMERAL_CHARS = "零〇一二三四五六七八九十百千万两"
-CHINESE_ORDINAL_UNITS = "章节篇卷编部课讲条款项目回则段"
-INTRINSIC_ORDER_PATTERNS = [
-    re.compile(r"^\(\d+(?:\.\d+)*\)"),
-    re.compile(r"^\d+(?:\.\d+)+(?:$|[.)、_\-\s])"),
-    re.compile(r"^\d+[.)、_\-\s]"),
-    re.compile(rf"^第[0-9{CHINESE_NUMERAL_CHARS}]+(?:部分|[{CHINESE_ORDINAL_UNITS}])(?:$|[.)、_\-\s]|[\u4e00-\u9fff])"),
-    re.compile(rf"^[{CHINESE_NUMERAL_CHARS}]+[.)、_\-\s]"),
-    re.compile(r"^(?i:[ivxlcdm]+)[.)、_\-]"),
-    re.compile(r"^[A-Za-z][.)、_\-]"),
-]
+CHUNK_PATH_COMPONENT_RE = re.compile(r"^\d{2,}$")
 
 
 def content_path(path: Path, root: Path) -> str:
@@ -105,7 +94,7 @@ def local_heading_text(path: Path) -> str:
         headings = extract_headings(path.read_text(encoding="utf-8"))
     except UnicodeDecodeError:
         return ""
-    return " ".join(headings + [path.stem])
+    return " ".join(headings)
 
 
 def numbered_parent_tokens(markdown_files: list[Path]) -> set[str]:
@@ -135,7 +124,7 @@ def numbered_child_warnings(markdown_files: list[Path], root: Path) -> list[dict
                     "possible_missing_numbered_parent",
                     path,
                     root,
-                    f"numbered child heading or filename '{child}' has no matching parent '{parent}' in chunk headings",
+                    f"numbered child heading '{child}' has no matching parent '{parent}' in chunk headings",
                 )
             )
     return warnings
@@ -154,94 +143,61 @@ def content_children(directory: Path) -> list[Path]:
             continue
         if child.is_file() and child.suffix.lower() == ".md":
             children.append(child)
-        elif child.is_dir() and (child / "index.md").is_file():
-            children.append(child)
+        elif child.is_dir():
+            has_chunk_content = (child / "index.md").is_file() or any(
+                grandchild.is_dir()
+                or (grandchild.is_file() and grandchild.suffix.lower() == ".md")
+                for grandchild in child.iterdir()
+            )
+            if has_chunk_content:
+                children.append(child)
     return sorted(children, key=lambda path: path.name.lower())
 
 
-def strip_agent_order_prefix(name: str) -> str:
-    return AGENT_ORDER_PREFIX_RE.sub("", name, count=1)
-
-
-def has_intrinsic_order_token(name: str) -> bool:
-    return any(pattern.match(name) for pattern in INTRINSIC_ORDER_PATTERNS)
-
-
-def naming_group_errors(directory: Path, root: Path) -> list[dict]:
+def chunk_path_group_errors(directory: Path, root: Path) -> list[dict]:
     children = content_children(directory)
-    if len(children) < 2:
+    if not children:
         return []
 
-    records = []
-    for child in children:
-        name = chunk_child_name(child)
-        has_prefix = AGENT_ORDER_PREFIX_RE.match(name) is not None
-        title_name = strip_agent_order_prefix(name) if has_prefix else name
-        records.append(
-            {
-                "name": name,
-                "has_prefix": has_prefix,
-                "has_intrinsic": has_intrinsic_order_token(title_name),
-            }
-        )
-
-    prefixed = [record for record in records if record["has_prefix"]]
-    unprefixed = [record for record in records if not record["has_prefix"]]
-    intrinsic = [record for record in records if record["has_intrinsic"]]
-    redundant_prefixed_intrinsic = [
-        record for record in records if record["has_prefix"] and record["has_intrinsic"]
+    names = [chunk_child_name(child) for child in children]
+    invalid_names = [
+        name
+        for name in names
+        if CHUNK_PATH_COMPONENT_RE.fullmatch(name) is None
+        or int(name) < 1
+        or name != f"{int(name):02d}"
     ]
-
-    names = ", ".join(record["name"] for record in records[:5])
-    if redundant_prefixed_intrinsic:
+    if invalid_names:
         return [
             issue(
-                "redundant_generated_prefix_for_intrinsic_siblings",
+                "invalid_chunk_path_component",
                 directory,
                 root,
-                f"direct chunk children include generated prefixes before intrinsic order tokens: {names}",
+                "direct chunk files and directories must use canonical numeric path components: "
+                + ", ".join(invalid_names[:5]),
             )
         ]
 
-    if prefixed and unprefixed:
+    ordinals = sorted(int(name) for name in names)
+    expected = list(range(1, len(names) + 1))
+    if ordinals != expected:
         return [
             issue(
-                "mixed_generated_prefix_in_sibling_group",
+                "non_sequential_chunk_path_components",
                 directory,
                 root,
-                f"direct chunk children mix generated order prefixes and unprefixed names: {names}",
+                "direct chunk files and directories must form one sequence starting at 01; found: "
+                + ", ".join(names[:5]),
             )
         ]
 
-    if len(prefixed) == len(records):
-        return []
-
-    if len(intrinsic) == len(records):
-        return []
-    if intrinsic:
-        return [
-            issue(
-                "mixed_intrinsic_and_plain_sibling_names",
-                directory,
-                root,
-                f"direct chunk children mix intrinsic order tokens and plain names without generated prefixes: {names}",
-            )
-        ]
-
-    return [
-        issue(
-            "missing_generated_prefix_for_plain_siblings",
-            directory,
-            root,
-            f"direct chunk children without intrinsic order tokens need generated order prefixes: {names}",
-        )
-    ]
+    return []
 
 
-def chunk_naming_errors(chunks_dir: Path, root: Path) -> list[dict]:
+def chunk_path_errors(chunks_dir: Path, root: Path) -> list[dict]:
     errors: list[dict] = []
     for directory in [chunks_dir, *[path for path in chunks_dir.rglob("*") if path.is_dir()]]:
-        errors.extend(naming_group_errors(directory, root))
+        errors.extend(chunk_path_group_errors(directory, root))
     return errors
 
 
@@ -310,7 +266,7 @@ def inspect_chunks(root: Path, threshold: int) -> dict:
                     )
                 )
 
-        errors.extend(chunk_naming_errors(chunks_dir, root))
+        errors.extend(chunk_path_errors(chunks_dir, root))
 
         leaf_files = [path for path in chunks_dir.rglob("*.md") if path.name != "index.md"]
         for leaf in leaf_files:

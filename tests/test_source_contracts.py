@@ -88,6 +88,48 @@ class SourceContractTest(unittest.TestCase):
             self.assertIn("delete", content.lower())
         self.assertIn("does not authorize OCR", wiki)
 
+    def test_archive_has_one_lifecycle_outcome(self) -> None:
+        wiki = self.read("WIKI.md")
+        source_kinds = self.read(
+            ".agents/skills/source-extraction/references/source-kinds.md"
+        )
+
+        self.assertIn("one Source Review Gate outcome", wiki)
+        self.assertIn("one raw-state destination", wiki)
+        self.assertIn("every inspected member and its disposition", wiki)
+        self.assertIn("one lifecycle source", source_kinds)
+        self.assertNotIn("classify each useful member separately", source_kinds)
+
+    def test_chunk_paths_are_numeric_and_titles_remain_content(self) -> None:
+        wiki = self.read("WIKI.md")
+        chunking = self.read(
+            ".agents/skills/source-extraction/references/large-source-chunking.md"
+        )
+        audit = self.read(
+            ".agents/skills/source-extraction/scripts/audit_chunks.py"
+        )
+
+        for content in (wiki, chunking):
+            self.assertIn("`01.md`", content)
+            self.assertIn("`01/`", content)
+            self.assertIn("exact source", content.lower())
+        self.assertIn("invalid_chunk_path_component", audit)
+        self.assertIn("non_sequential_chunk_path_components", audit)
+        for stale_text in (
+            "source-provided order token, keep the source title",
+            "generated numeric prefixes",
+            "mixed_generated_prefix_in_sibling_group",
+            "intrinsic order tokens",
+        ):
+            self.assertNotIn(stale_text, wiki + chunking + audit)
+
+    def test_page_type_values_are_scoped(self) -> None:
+        wiki = self.read("WIKI.md")
+
+        self.assertIn("For canonical knowledge pages under `wiki/`", wiki)
+        self.assertIn("`source`, `entity`, `concept`, `claim`, or `synthesis`", wiki)
+        self.assertIn("`type: artifact` and `type: question`", wiki)
+
 
 if __name__ == "__main__":
     unittest.main()

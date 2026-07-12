@@ -9,7 +9,7 @@ Classify source material before selecting a provider. Source kinds describe the 
 | `image` | Standalone image files or sources whose useful content is locked in images. | Ask before OCR; if approved, OCR output enters intake as reviewable Markdown. Otherwise mark `needs-review` or `unsupported`, depending on `PROJECT.md`. |
 | `audio` | Audio files or source material whose content requires transcription. | Ask before transcription or mark unsupported, depending on `PROJECT.md`. |
 | `video` | Video files or sources whose content requires audio transcription or frame analysis. | Ask before transcription/frame OCR or mark unsupported, depending on `PROJECT.md`. |
-| `archive` | ZIP or other archive containing mixed members. | List members first, then classify each useful member separately. |
+| `archive` | ZIP or other archive containing mixed members. | Treat the submitted archive as one lifecycle source. List members first, use members as extraction units, and assign one Source Review Gate outcome to the archive. |
 
 ## Temporary Extraction Handling
 
@@ -28,7 +28,7 @@ Use this table after classifying the source kind and checking `PROJECT.md` provi
 | Image | Ask before OCR when `PROJECT.md` says `ask-before-ocr`; if the user approves, extract OCR text to `intake/tmp/source-relative-parent/original-source-base-filename/source.md` and continue to Source Review Gate. If approval or a usable provider is missing, move to `raw/needs-review/` or `raw/unsupported/` according to the blocker. |
 | Audio | Transcribe only when `PROJECT.md` allows `ask-before-transcription` and the user approves; otherwise move to `raw/needs-review/` or `raw/unsupported/` according to the configured policy. |
 | Video | Extract audio transcript or frame text only when `PROJECT.md` allows it and the user approves; otherwise move to `raw/needs-review/` or `raw/unsupported/` according to the configured policy. |
-| ZIP or other archive | List members first, record member paths and file types, then selectively convert useful files. |
+| ZIP or other archive | List members first, record every inspected member and its disposition, then selectively convert useful members under the archive's intake folder. Keep one raw-state outcome for the submitted archive; do not promote members as separate raw sources. |
 | Unsupported or damaged file | Move to `raw/unsupported/` and record the reason. |
 
 ## Policy Values

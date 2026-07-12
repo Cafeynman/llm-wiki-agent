@@ -50,8 +50,8 @@ Intake first stages Markdown files or extracts non-Markdown originals into tempo
         |   |-- digest.md
         |   `-- chunks/
         |       |-- index.md
-        |       |-- 01-source-heading-or-range.md
-        |       `-- 02-source-heading-or-range.md
+        |       |-- 01.md
+        |       `-- 02.md
         |-- notes/
         |   `-- source.md
         |-- bundle/
@@ -64,7 +64,7 @@ Intake first stages Markdown files or extracts non-Markdown originals into tempo
             `-- source.md
 ```
 
-After each `source.md` is created, run the source-extraction intake file audit on that file. Normal files produce no output. If the audit reports `large_source`, create semantic `chunks/` before Source Review Gate when reliable source boundaries exist. When chunks are created, run the chunk audit on the temporary intake folder; resolve hard errors before promotion and carry warnings into review notes.
+After each `source.md` is created, run the source-extraction intake file audit on that file. Normal files produce no output. If the audit reports `large_source`, create semantic `chunks/` before Source Review Gate when reliable source boundaries exist. Chunk paths use numeric components such as `01.md`; exact source titles and order tokens remain in headings and local indexes. When chunks are created, run the chunk audit on the temporary intake folder; resolve hard errors before promotion and carry warnings into review notes.
 
 If `corrupted.pdf` cannot be extracted, stop handling that file immediately:
 
@@ -126,8 +126,8 @@ After accepted files are ingested:
 |   |   |   |-- digest.md
 |   |   |   `-- chunks/
 |   |   |       |-- index.md
-|   |   |       |-- 01-source-heading-or-range.md
-|   |   |       `-- 02-source-heading-or-range.md
+|   |   |       |-- 01.md
+|   |   |       `-- 02.md
 |   |   |-- notes/
 |   |   |   |-- source.md
 |   |   |   |-- summary.md
