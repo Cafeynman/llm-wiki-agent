@@ -12,7 +12,7 @@ npm install -g defuddle
 
 ```bash
 defuddle --version
-defuddle parse https://example.com --md
+defuddle parse https://example.com --json --md
 ```
 
 Defuddle does not require project API keys by default.

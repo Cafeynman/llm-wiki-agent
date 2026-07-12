@@ -60,10 +60,16 @@ class SourceContractTest(unittest.TestCase):
         defuddle_usage = self.read(
             ".agents/skills/source-extraction/references/providers/defuddle/usage.md"
         )
+        defuddle_setup = self.read(
+            ".agents/skills/source-extraction/references/providers/defuddle/setup.md"
+        )
         wiki = self.read("WIKI.md")
         agents = self.read("AGENTS.md")
 
         self.assertIn("defuddle parse <url> --json --md", defuddle_skill)
+        self.assertIn(
+            "defuddle parse https://example.com --json --md", defuddle_setup
+        )
         self.assertIn("inbox/web/", defuddle_usage)
         self.assertNotIn("-o intake/tmp", defuddle_skill + defuddle_usage)
         self.assertIn("sole exception", wiki)
