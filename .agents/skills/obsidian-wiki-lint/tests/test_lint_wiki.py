@@ -106,6 +106,21 @@ class TestLintWiki(unittest.TestCase):
         output = "\n".join(call[0][0] for call in mock_print.call_args_list if call[0])
         self.assertNotIn("Orphan: wiki/root.md", output)
 
+    def test_vault_root_md_link_normalizes_path_segments(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            "[Target](/wiki/section/../target.md)",
+            encoding="utf-8",
+        )
+        (self.vault / "wiki" / "target.md").write_text("Target.", encoding="utf-8")
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0)
+        output = "\n".join(call[0][0] for call in mock_print.call_args_list if call[0])
+        self.assertNotIn("Orphan: wiki/target.md", output)
+
     def test_protocol_relative_md_link_is_external(self):
         note_path = self.vault / "wiki" / "note.md"
         note_path.write_text("[External](//wiki/target.md)", encoding="utf-8")
