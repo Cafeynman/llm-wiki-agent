@@ -27,8 +27,8 @@ class TestLintWiki(unittest.TestCase):
         
         # Create the attachments
         (self.vault / "attachment.pdf").touch()
-        (self.vault / "folder").mkdir()
-        (self.vault / "folder" / "img.png").touch()
+        (self.vault / "wiki" / "folder").mkdir()
+        (self.vault / "wiki" / "folder" / "img.png").touch()
         
         # Run lint, capture stdout if needed, but we can just check the return value
         # lint() returns 1 if broken, 0 if clean
@@ -72,6 +72,74 @@ class TestLintWiki(unittest.TestCase):
         for call in mock_print.call_args_list:
             self.assertNotIn("Orphan: wiki/other.md", call[0][0] if call[0] else "")
 
+    def test_nested_md_links_resolve_from_source_directory(self):
+        section = self.vault / "wiki" / "section"
+        section.mkdir()
+        (section / "entry.md").write_text(
+            "[Sibling](sibling.md) [Parent](../parent.md)",
+            encoding="utf-8",
+        )
+        (section / "sibling.md").write_text("Sibling.", encoding="utf-8")
+        (self.vault / "wiki" / "parent.md").write_text("Parent.", encoding="utf-8")
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0)
+        output = "\n".join(call[0][0] for call in mock_print.call_args_list if call[0])
+        self.assertNotIn("Orphan: wiki/section/sibling.md", output)
+        self.assertNotIn("Orphan: wiki/parent.md", output)
+
+    def test_vault_root_md_link_resolves_from_leading_slash(self):
+        section = self.vault / "wiki" / "section"
+        section.mkdir()
+        (section / "entry.md").write_text(
+            "[Root](/wiki/root.md)",
+            encoding="utf-8",
+        )
+        (self.vault / "wiki" / "root.md").write_text("Root.", encoding="utf-8")
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0)
+        output = "\n".join(call[0][0] for call in mock_print.call_args_list if call[0])
+        self.assertNotIn("Orphan: wiki/root.md", output)
+
+    def test_links_inside_code_are_ignored(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """Inline `[[wiki/missing-inline.md]]` and `[missing](missing-inline.md)`.
+
+~~~markdown
+[[wiki/missing-fence.md]]
+[missing](missing-fence.md)
+~~~
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0)
+        output = "\n".join(call[0][0] for call in mock_print.call_args_list if call[0])
+        self.assertNotIn("Broken:", output)
+
+    def test_active_link_outside_code_remains_checked(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            "`[[wiki/example.md]]` but [[wiki/missing.md]].",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 1)
+        output = "\n".join(call[0][0] for call in mock_print.call_args_list if call[0])
+        self.assertIn("Broken: wiki/missing.md", output)
+
     def test_folder_without_trailing_slash_flagged_broken(self):
         note_path = self.vault / "wiki" / "note.md"
         note_path.write_text("See [[folder]]", encoding="utf-8")
@@ -110,7 +178,7 @@ class TestLintWiki(unittest.TestCase):
 
     def test_markdown_directory_link_with_trailing_slash_not_flagged_broken(self):
         note_path = self.vault / "wiki" / "note.md"
-        note_path.write_text("See [folder](wiki/folder/)", encoding="utf-8")
+        note_path.write_text("See [folder](folder/)", encoding="utf-8")
 
         (self.vault / "wiki" / "folder").mkdir()
 
@@ -153,7 +221,7 @@ class TestLintWiki(unittest.TestCase):
     def test_encoded_space_directory_links_not_flagged_broken(self):
         note_path = self.vault / "wiki" / "note.md"
         note_path.write_text(
-            "See [[wiki/My%20Folder/]] and [folder](wiki/My%20Folder/).",
+            "See [[wiki/My%20Folder/]] and [folder](/wiki/My%20Folder/).",
             encoding="utf-8",
         )
 
@@ -645,7 +713,7 @@ Body.
         note_path.write_text(
             """Inline example: `raw/digested/source.pdf`.
 Wikilink: [[raw/digested/source.pdf]].
-Markdown link: [source](raw/digested/source.pdf).
+Markdown link: [source](/raw/digested/source.pdf).
 """,
             encoding="utf-8",
         )

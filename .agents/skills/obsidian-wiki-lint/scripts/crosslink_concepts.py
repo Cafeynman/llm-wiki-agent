@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -42,24 +43,40 @@ def load_aliases(alias_file: Path | None) -> dict[str, str]:
 
 def build_concepts(vault: Path, concepts_dir: Path, aliases: dict[str, str]) -> list[Concept]:
     concepts_abs = (vault / concepts_dir).resolve()
-    by_title: dict[str, str] = {}
+    by_title: dict[str, set[str]] = defaultdict(set)
     by_target: set[str] = set()
+    candidates: dict[str, set[str]] = defaultdict(set)
 
-    for file_path in sorted(concepts_abs.glob("*.md")):
-        rel_no_suffix = to_posix((concepts_dir / file_path.stem))
+    for file_path in sorted(concepts_abs.rglob("*.md")):
+        rel_no_suffix = to_posix(file_path.relative_to(vault).with_suffix(""))
         title = read_title(file_path.read_text(encoding="utf-8"), file_path.stem)
-        by_title[title] = rel_no_suffix
+        by_title[title].add(rel_no_suffix)
         by_target.add(rel_no_suffix)
+        candidates[title].add(rel_no_suffix)
 
-    concepts = [Concept(name=title, target=target) for title, target in by_title.items()]
     for alias, destination in aliases.items():
-        target = by_title.get(destination, destination)
-        if target in by_target:
-            concepts.append(Concept(name=alias, target=target))
+        title_targets = by_title.get(destination, set())
+        if destination in by_target:
+            candidates[alias].add(destination)
+        elif len(title_targets) == 1:
+            candidates[alias].update(title_targets)
+        elif len(title_targets) > 1:
+            print(
+                f"Alias skipped; target title is ambiguous: {alias} -> {destination}"
+            )
         else:
             print(f"Alias skipped; target not found: {alias} -> {destination}")
 
-    return sorted(concepts, key=lambda item: len(item.name), reverse=True)
+    concepts: list[Concept] = []
+    for name, targets in sorted(candidates.items()):
+        if len(targets) > 1:
+            print(
+                f"Ambiguous concept term skipped: {name} -> {', '.join(sorted(targets))}"
+            )
+            continue
+        concepts.append(Concept(name=name, target=next(iter(targets))))
+
+    return sorted(concepts, key=lambda item: (-len(item.name), item.name, item.target))
 
 
 def protected_spans(line: str) -> list[tuple[int, int]]:
@@ -98,7 +115,12 @@ def link_line(line: str, concept: Concept, max_count: int) -> tuple[str, int]:
     return "".join(pieces), count
 
 
-def crosslink_file(file_path: Path, concepts: list[Concept], max_per_concept: int) -> tuple[str, int]:
+def crosslink_file(
+    file_path: Path,
+    concepts: list[Concept],
+    max_per_concept: int,
+    current_target: str | None = None,
+) -> tuple[str, int]:
     content = file_path.read_text(encoding="utf-8")
     match = FRONTMATTER_RE.match(content)
     if match:
@@ -108,12 +130,11 @@ def crosslink_file(file_path: Path, concepts: list[Concept], max_per_concept: in
         frontmatter, body = "", content
         current_title = file_path.stem
 
-    current_target_name = file_path.stem
     total = 0
     lines = body.splitlines(keepends=True)
 
     for concept in concepts:
-        if concept.name in {current_title, current_target_name} or Path(concept.target).name == current_target_name:
+        if concept.name == current_title or concept.target == current_target:
             continue
         remaining = max_per_concept
         in_code_block = False
@@ -141,8 +162,14 @@ def crosslink(vault: Path, concepts_dir: Path, alias_file: Path | None, max_per_
     total = 0
     changed_files = 0
 
-    for file_path in sorted(concepts_abs.glob("*.md")):
-        updated, count = crosslink_file(file_path, concepts, max_per_concept)
+    for file_path in sorted(concepts_abs.rglob("*.md")):
+        current_target = to_posix(file_path.relative_to(vault).with_suffix(""))
+        updated, count = crosslink_file(
+            file_path,
+            concepts,
+            max_per_concept,
+            current_target=current_target,
+        )
         if not count:
             continue
         changed_files += 1

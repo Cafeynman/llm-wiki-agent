@@ -5,10 +5,13 @@ from __future__ import annotations
 
 import argparse
 import os
+import posixpath
 import re
 from collections import defaultdict
 from pathlib import Path
 from urllib.parse import unquote
+
+from markdown_code import mask_inline_code, mask_markdown_code
 
 WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
 MD_LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
@@ -105,31 +108,12 @@ def strip_yaml_comment(value: str) -> str:
 def iter_markdown_body_lines(content: str) -> list[tuple[int, str]]:
     frontmatter_match = FRONTMATTER_RE.match(content)
     frontmatter_lines = len(frontmatter_match.group(0).splitlines()) if frontmatter_match else 0
-    lines: list[tuple[int, str]] = []
-    in_fence = False
-    fence_marker: str | None = None
-
-    for line_no, line in enumerate(content.splitlines(), start=1):
-        if line_no <= frontmatter_lines:
-            continue
-
-        stripped = line.strip()
-        if stripped.startswith(("```", "~~~")):
-            marker = stripped[:3]
-            if not in_fence:
-                in_fence = True
-                fence_marker = marker
-            elif marker == fence_marker:
-                in_fence = False
-                fence_marker = None
-            continue
-
-        if in_fence:
-            continue
-
-        lines.append((line_no, line))
-
-    return lines
+    masked = mask_markdown_code(content)
+    return [
+        (line_no, line)
+        for line_no, line in enumerate(masked.splitlines(), start=1)
+        if line_no > frontmatter_lines
+    ]
 
 
 def is_external_source(value: str) -> bool:
@@ -189,30 +173,6 @@ def has_unescaped_pipe(value: str) -> bool:
             return True
         escaped = False
     return False
-
-
-def mask_inline_code(line: str) -> str:
-    chars = list(line)
-    index = 0
-
-    while index < len(chars):
-        if chars[index] != "`":
-            index += 1
-            continue
-
-        run_start = index
-        while index < len(chars) and chars[index] == "`":
-            index += 1
-        marker = "`" * (index - run_start)
-        closing = line.find(marker, index)
-        if closing == -1:
-            continue
-
-        for mask_index in range(run_start, closing + len(marker)):
-            chars[mask_index] = " "
-        index = closing + len(marker)
-
-    return "".join(chars)
 
 
 def is_table_separator_line(line: str) -> bool:
@@ -506,6 +466,41 @@ def resolve_target(vault: Path, target: str, all_files: set[str], by_stem: dict[
     return normalized, False
 
 
+def resolve_markdown_target(
+    vault: Path,
+    source_rel: str,
+    target: str,
+    all_files: set[str],
+) -> tuple[str, bool] | None:
+    explicit_directory = is_explicit_directory_target(target)
+    target = unquote(target.strip()).replace("\\", "/")
+    if not target:
+        return None
+
+    if target.startswith("/"):
+        candidate = target.lstrip("/")
+    else:
+        source_parent = Path(source_rel).parent.as_posix()
+        candidate = posixpath.normpath(posixpath.join(source_parent, target))
+
+    if candidate in {"", "."}:
+        return None
+    if candidate == ".." or candidate.startswith("../"):
+        return candidate, explicit_directory
+
+    if explicit_directory:
+        candidate = candidate.rstrip("/") + "/"
+        return candidate, True
+
+    if (vault / candidate).exists() and not (vault / candidate).is_dir():
+        return candidate, False
+
+    normalized = normalize_target(candidate)
+    if not normalized:
+        return None
+    return normalized, False
+
+
 def lint(vault: Path, scope: str) -> int:
     markdown_files = iter_markdown_files(vault)
     all_files, by_stem = build_lookup(markdown_files, vault)
@@ -525,12 +520,13 @@ def lint(vault: Path, scope: str) -> int:
 
     for rel in scoped_files:
         content = (vault / rel).read_text(encoding="utf-8")
+        link_content = mask_markdown_code(content)
         ignored_frontmatter_intake_links = frontmatter_intake_source_link_spans(content)
         frontmatter_source_errors.extend(lint_frontmatter_sources(content, rel))
         frontmatter_tag_errors.extend(lint_frontmatter_tags(content, rel))
         table_wikilink_errors.extend(lint_table_wikilink_aliases(content, rel))
         traceability_path_errors.extend(lint_bare_traceability_paths(content, rel))
-        for match in WIKILINK_RE.finditer(content):
+        for match in WIKILINK_RE.finditer(link_content):
             if match.span() in ignored_frontmatter_intake_links:
                 continue
             raw_target = split_wikilink(match.group(1))
@@ -548,11 +544,11 @@ def lint(vault: Path, scope: str) -> int:
             if resolved not in all_files and not (vault / resolved).exists():
                 broken[resolved].append(rel)
 
-        for match in MD_LINK_RE.finditer(content):
+        for match in MD_LINK_RE.finditer(link_content):
             raw_target = match.group(1).split("#", 1)[0].strip()
             if not raw_target or raw_target.startswith(("http://", "https://", "mailto:")):
                 continue
-            resolution = resolve_target(vault, raw_target, all_files, by_stem)
+            resolution = resolve_markdown_target(vault, rel, raw_target, all_files)
             if not resolution:
                 continue
             resolved, is_directory = resolution

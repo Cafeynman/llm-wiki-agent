@@ -8,6 +8,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from markdown_code import mask_markdown_code
+
 WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
 
 
@@ -72,7 +74,15 @@ def fix_links(vault: Path, source_file: Path, target_dir: Path, write: bool) -> 
         changes.append(Change(match.group(0), new_link))
         return new_link
 
-    updated = WIKILINK_RE.sub(replace, content)
+    masked = mask_markdown_code(content)
+    pieces: list[str] = []
+    last = 0
+    for match in WIKILINK_RE.finditer(masked):
+        pieces.append(content[last : match.start()])
+        pieces.append(replace(match))
+        last = match.end()
+    pieces.append(content[last:])
+    updated = "".join(pieces)
 
     if not changes:
         print("No changes.")
