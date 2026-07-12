@@ -552,6 +552,9 @@ def lint(vault: Path, scope: str) -> int:
             if not resolution:
                 continue
             resolved, is_directory = resolution
+            if resolved == ".." or resolved.startswith("../"):
+                broken[resolved].append(rel)
+                continue
             if is_directory:
                 if not (vault / resolved.rstrip("/")).is_dir():
                     broken[resolved].append(rel)

@@ -133,5 +133,32 @@ class TestCrosslinkConcepts(unittest.TestCase):
             )
             self.assertIn("Ambiguous concept term skipped: Shared Term", output)
 
+    def test_nested_concept_does_not_link_to_its_own_alias(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            vault = Path(tmp)
+            concepts_dir = Path("wiki/concepts")
+            nested = vault / concepts_dir / "subject"
+            nested.mkdir(parents=True)
+            source = nested / "self.md"
+            original = "---\ntitle: Self Concept\n---\n\nSelf Alias."
+            source.write_text(original, encoding="utf-8")
+            alias_file = vault / "aliases.json"
+            alias_file.write_text(
+                '{"Self Alias": "wiki/concepts/subject/self"}',
+                encoding="utf-8",
+            )
+
+            with patch("builtins.print"):
+                result = crosslink_concepts.crosslink(
+                    vault,
+                    concepts_dir,
+                    alias_file=alias_file,
+                    max_per_concept=2,
+                    write=True,
+                )
+
+            self.assertEqual(result, 0)
+            self.assertEqual(source.read_text(encoding="utf-8"), original)
+
 if __name__ == "__main__":
     unittest.main()
