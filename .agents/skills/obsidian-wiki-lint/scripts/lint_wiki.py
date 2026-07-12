@@ -86,6 +86,10 @@ def normalize_target(target: str) -> str:
     return target
 
 
+def is_outside_vault(vault: Path, target: str) -> bool:
+    return not (vault / target).resolve().is_relative_to(vault.resolve())
+
+
 def strip_yaml_quotes(value: str) -> str:
     value = value.strip()
     if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
@@ -441,9 +445,12 @@ def build_lookup(markdown_files: list[Path], vault: Path) -> tuple[set[str], dic
 
 def resolve_target(vault: Path, target: str, all_files: set[str], by_stem: dict[str, list[str]]) -> tuple[str, bool] | None:
     explicit_directory = is_explicit_directory_target(target)
-    target = normalize_link_path(target)
-    if not target:
+    target = posixpath.normpath(normalize_link_path(target))
+    if target in {"", "."}:
         return None
+
+    if is_outside_vault(vault, target):
+        return target, explicit_directory
 
     if explicit_directory:
         if not target.endswith("/"):
@@ -485,7 +492,7 @@ def resolve_markdown_target(
 
     if candidate in {"", "."}:
         return None
-    if candidate == ".." or candidate.startswith("../"):
+    if is_outside_vault(vault, candidate):
         return candidate, explicit_directory
 
     if explicit_directory:
@@ -536,6 +543,9 @@ def lint(vault: Path, scope: str) -> int:
             if not resolution:
                 continue
             resolved, is_directory = resolution
+            if is_outside_vault(vault, resolved):
+                broken[resolved].append(rel)
+                continue
             if is_directory:
                 if not (vault / resolved.rstrip("/")).is_dir():
                     broken[resolved].append(rel)
@@ -552,7 +562,7 @@ def lint(vault: Path, scope: str) -> int:
             if not resolution:
                 continue
             resolved, is_directory = resolution
-            if resolved == ".." or resolved.startswith("../"):
+            if is_outside_vault(vault, resolved):
                 broken[resolved].append(rel)
                 continue
             if is_directory:

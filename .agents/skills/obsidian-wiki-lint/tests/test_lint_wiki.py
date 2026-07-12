@@ -127,6 +127,27 @@ class TestLintWiki(unittest.TestCase):
         finally:
             outside.unlink(missing_ok=True)
 
+    def test_wikilink_cannot_resolve_outside_vault(self):
+        outside = self.vault.parent / f"{self.vault.name}-outside.md"
+        outside.write_text("Outside.", encoding="utf-8")
+        try:
+            note_path = self.vault / "wiki" / "note.md"
+            note_path.write_text(
+                f"[[../{outside.name}]] [[wiki/../../{outside.name}]]",
+                encoding="utf-8",
+            )
+
+            with patch("builtins.print") as mock_print:
+                result = lint_wiki.lint(self.vault, self.scope)
+
+            self.assertEqual(result, 1)
+            output = "\n".join(
+                call[0][0] for call in mock_print.call_args_list if call[0]
+            )
+            self.assertIn(f"Broken: ../{outside.name}", output)
+        finally:
+            outside.unlink(missing_ok=True)
+
     def test_links_inside_code_are_ignored(self):
         note_path = self.vault / "wiki" / "note.md"
         note_path.write_text(
