@@ -87,6 +87,9 @@ def normalize_target(target: str) -> str:
 
 
 def is_outside_vault(vault: Path, target: str) -> bool:
+    normalized = posixpath.normpath(target.replace("\\", "/"))
+    if normalized == ".." or normalized.startswith("../"):
+        return True
     return not (vault / target).resolve().is_relative_to(vault.resolve())
 
 

@@ -148,6 +148,38 @@ class TestLintWiki(unittest.TestCase):
         finally:
             outside.unlink(missing_ok=True)
 
+    def test_wikilink_cannot_escape_and_reenter_vault(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            f"[[../{self.vault.name}/wiki/target.md]]",
+            encoding="utf-8",
+        )
+        (self.vault / "wiki" / "target.md").write_text("Target.", encoding="utf-8")
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 1)
+        output = "\n".join(call[0][0] for call in mock_print.call_args_list if call[0])
+        self.assertIn(f"Broken: ../{self.vault.name}/wiki/target.md", output)
+        self.assertIn("Orphan: wiki/target.md", output)
+
+    def test_markdown_link_cannot_escape_and_reenter_vault(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            f"[Target](../../{self.vault.name}/wiki/target.md)",
+            encoding="utf-8",
+        )
+        (self.vault / "wiki" / "target.md").write_text("Target.", encoding="utf-8")
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 1)
+        output = "\n".join(call[0][0] for call in mock_print.call_args_list if call[0])
+        self.assertIn(f"Broken: ../{self.vault.name}/wiki/target.md", output)
+        self.assertIn("Orphan: wiki/target.md", output)
+
     def test_links_inside_code_are_ignored(self):
         note_path = self.vault / "wiki" / "note.md"
         note_path.write_text(
