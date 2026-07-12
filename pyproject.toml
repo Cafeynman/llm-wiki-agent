@@ -5,7 +5,7 @@ description = "Agent package for maintaining an Obsidian LLM Wiki with raw-file 
 readme = "README.md"
 requires-python = "==3.12.*"
 dependencies = [
-  "markitdown[all]>=0.1.5",
+  "markitdown[audio-transcription,az-doc-intel,docx,outlook,pdf,pptx,xls,xlsx,youtube-transcription]>=0.1.6",
   "numpy>=1.26.0",
   "openpyxl>=3.1.0",
   "pandas>=2.2.0",

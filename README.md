@@ -49,22 +49,22 @@ The default `.gitignore` keeps local wiki runtime content private; refer to [Git
 Optional scenario packages under `scenarios/` can adapt an initialized workspace for specialized uses such as exam study; see [Optional Scenario Packages](docs/usage.md#optional-scenario-packages).
 
 **Your Minimal First Run:**
-1. Drop one or more source files into `inbox/`.
-2. Ask your agent: *"Process the files in inbox/ according to AGENTS.md, PROJECT.md, and WIKI.md."*
-3. Watch the agent process your file into the `wiki/` directory!
+1. Drop source files into `inbox/`, or give the agent a live URL as source material.
+2. Ask your agent: *"Process these sources according to AGENTS.md, PROJECT.md, and WIKI.md."*
+3. The agent materializes any URL through Defuddle, reviews the sources, and updates the wiki only after acceptance.
 
 ---
 
 ## 🤔 What Is This?
 
-**You drop the files. The agent organizes the knowledge. You get a traceable wiki.**
+**You provide files or links. The agent organizes the knowledge. You get a traceable wiki.**
 
 This repository is **not** a full application server or a replacement for Obsidian. It is a **portable workflow package** for agents that can read repository instructions (like Codex, Claude Code, Gemini CLI, OpenCode, etc.). 
 
 The package gives your agent a strict, clear operating contract: 
 <table>
-<tr><td>📥</td><td><code>inbox/</code></td><td>Where source files enter</td></tr>
-<tr><td>🗄️</td><td><code>raw/</code></td><td>Where original files are preserved</td></tr>
+<tr><td>📥</td><td><code>inbox/</code></td><td>Where submitted files and generated URL source captures enter</td></tr>
+<tr><td>🗄️</td><td><code>raw/</code></td><td>Where lifecycle source artifacts are preserved</td></tr>
 <tr><td>⚙️</td><td><code>intake/</code></td><td>Where reviewable Markdown is produced</td></tr>
 <tr><td>📝</td><td><code>reviews/</code></td><td>Where review decisions and reflections are recorded</td></tr>
 <tr><td>⏱️</td><td><code>logs/</code></td><td>Where wiki operation history is tracked</td></tr>
@@ -81,7 +81,7 @@ The package keeps the agent strictly on three major workflows. The agent will al
 
 | Workflow | When to Use | What it Does |
 |-----------|-------------|--------------|
-| **➕ Add Knowledge** | Add files, review sources, convert material. | Promotes files from `inbox/` ➡️ `intake/` ➡️ `wiki/`, and reflects on confirmed discussion insights. |
+| **➕ Add Knowledge** | Add files or URLs, review sources, convert material. | Promotes source artifacts from `inbox/` ➡️ `intake/` ➡️ `wiki/`, and reflects on confirmed discussion insights. |
 | **💡 Use Knowledge** | Answer questions, synthesize pages, create deliverables. | Searches the wiki to create reports, briefs, drafts, or comparison tables under `artifacts/`. |
 | **🧹 Maintain Wiki** | Check health, broken links, stale claims. | Finds contradictions, detects duplicates, logs gaps, and ensures traceability. |
 
@@ -91,10 +91,10 @@ The package keeps the agent strictly on three major workflows. The agent will al
 
 | Feature | Description |
 |---------|------------|
-| **📜 Text-First Workflow** | Extraction results in Markdown. Attachments/images stay in `raw/` as preserved sources. |
+| **📜 Text-First Workflow** | Extraction results in Markdown. Provider-returned attachments may be preserved beside `source.md`, but are not interpreted automatically. |
 | **🔍 Source Review Gate** | A successful extraction isn't enough. The agent reviews sources before accepting them into the wiki. |
 | **🔗 Explicit Traceability** | The package favors explicit links over hidden memory. Claims cite source cards, raw files, or discussion records. |
-| **📂 Original Preservation** | Original files are preserved. Generated Markdown lands in `intake/`, never mixing with `raw/`. |
+| **📂 Source Preservation** | Submitted files are preserved. A Defuddle capture is the lifecycle original for a live URL; other generated Markdown remains in `intake/`. |
 | **⚙️ Replaceable Context** | `PROJECT.md` holds your specific preferences. `WIKI.md` and `AGENTS.md` remain stable workflow rules. |
 | **🛡️ Safe Artifacts** | User-facing reports, briefs, outlines, and drafts go to `artifacts/`, keeping the `wiki/` clean. |
 
@@ -156,8 +156,8 @@ and are ignored by Git by default. To track durable wiki content in Git, refer t
 
 ```text
 .
-├── inbox/             Source file entry point
-├── raw/               Preserved original files by review state
+├── inbox/             Submitted-file and live-URL capture entry point
+├── raw/               Preserved lifecycle source artifacts by review state
 ├── intake/            Temporary and accepted Markdown extraction output
 ├── reviews/           Source review and reflection records
 ├── logs/              Wiki operation history

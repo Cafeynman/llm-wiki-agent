@@ -5,7 +5,7 @@ Classify source material before selecting a provider. Source kinds describe the 
 | Source kind | Description | Default policy meaning |
 | --- | --- | --- |
 | `document` | PDF, Word, PowerPoint, Excel, HTML files, and similar files submitted as documents. | Use the configured document provider. |
-| `webpage` | A live URL or saved web page intended to be extracted as readable page content. | Use the configured webpage provider. |
+| `webpage` | A live URL or saved web page intended to be extracted as readable page content. | For a live URL, use the configured provider to create the `WIKI.md` source capture under `inbox/web/`, then stage that capture for review. |
 | `image` | Standalone image files or sources whose useful content is locked in images. | Ask before OCR; if approved, OCR output enters intake as reviewable Markdown. Otherwise mark `needs-review` or `unsupported`, depending on `PROJECT.md`. |
 | `audio` | Audio files or source material whose content requires transcription. | Ask before transcription or mark unsupported, depending on `PROJECT.md`. |
 | `video` | Video files or sources whose content requires audio transcription or frame analysis. | Ask before transcription/frame OCR or mark unsupported, depending on `PROJECT.md`. |
@@ -23,6 +23,7 @@ Use this table after classifying the source kind and checking `PROJECT.md` provi
 | PowerPoint | Convert to Markdown and preserve slide structure. |
 | Excel | Convert tables to Markdown and summarize table meaning when needed. |
 | HTML | Extract readable Markdown while preserving extracted title, headings, and body text. |
+| Live URL | Use Defuddle once to create the deterministic Markdown source capture under `inbox/web/`; stage that capture unchanged under `intake/tmp/`. |
 | CSV / JSON / XML | Convert to Markdown table, structured summary, or both. |
 | Image | Ask before OCR when `PROJECT.md` says `ask-before-ocr`; if the user approves, extract OCR text to `intake/tmp/source-relative-parent/original-source-base-filename/source.md` and continue to Source Review Gate. If approval or a usable provider is missing, move to `raw/needs-review/` or `raw/unsupported/` according to the blocker. |
 | Audio | Transcribe only when `PROJECT.md` allows `ask-before-transcription` and the user approves; otherwise move to `raw/needs-review/` or `raw/unsupported/` according to the configured policy. |

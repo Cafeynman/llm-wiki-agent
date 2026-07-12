@@ -12,13 +12,13 @@ Source extraction providers produce reviewable Markdown from original source mat
 
 A provider receives:
 
-- Original source path or source URL.
+- Original source path, or the submitted source URL when creating the first live-URL capture.
 - Source kind.
-- Temporary output directory under `intake/tmp/source-relative-parent/original-source-base-filename/`, omitting `source-relative-parent` when the source is directly under the intake root.
+- Caller-selected output role: a deterministic Markdown source capture under `inbox/web/` for an initial live URL, or a temporary output directory under `intake/tmp/source-relative-parent/original-source-base-filename/` for ordinary extraction.
 - Project preferences from `PROJECT.md`.
 - Provider-specific options approved for the current task.
 
-The `original-source-base-filename` segment is the original source file's base filename after removing only the extension. Preserve language, case, whitespace, punctuation, and special characters; do not translate, romanize, convert to pinyin, URL encode, slugify, force lowercase, case-normalize, or simplify it.
+The `original-source-base-filename` segment is the original source file's base filename after removing only the extension. Preserve language, case, whitespace, punctuation, and special characters; do not translate, romanize, convert to pinyin, URL encode, slugify, force lowercase, case-normalize, or simplify it. Generated live-URL captures use the one deterministic title-and-hash filename defined in `WIKI.md`; do not apply that naming rule to submitted files.
 
 ## Provider Output
 
@@ -33,6 +33,10 @@ A successful provider run must produce:
   - warnings
   - missing content
   - links to generated side outputs when they are necessary for traceability
+
+For the initial live-URL flow, Defuddle instead returns structured Markdown and page metadata to the caller, which serializes the lifecycle source capture under `inbox/web/`. Intake then stages that capture unchanged as `source.md`; it does not run Defuddle a second time.
+
+Provider-returned images and attachments may be stored under the same intake folder as `source.md`, normally under `images/`. They are passive source side outputs, not first-class wiki knowledge. Promote them with an accepted intake folder or delete them with temporary output for every other outcome. Record accepted paths in `manifest.md`; record relevant disposition in source review or intake logs before deleting non-accepted output.
 
 Providers must preserve source-derived text and labels as content. Do not remove or normalize punctuation, YAML indicator characters, Markdown control characters, or filename characters from extracted titles, headings, paths, or body text. When provider metadata or source-derived strings are later written into YAML frontmatter, Markdown tables, wikilinks, or command examples, the writer must quote, escape, or encode them for that target syntax without changing the underlying value.
 
@@ -50,7 +54,7 @@ Agents may verify that a required variable is present, but must report only pres
 
 A provider must not:
 
-- Modify original files under `inbox/` or `raw/`.
+- Modify lifecycle source artifacts after they have entered `inbox/` or `raw/`. Creating the initial Defuddle URL capture is the scoped non-file-source exception.
 - Write directly to `wiki/`.
 - Promote files to `intake/processed/`.
 - Decide Source Review Gate outcomes.
@@ -60,4 +64,4 @@ A provider must not:
 
 ## Reprocessing
 
-When switching providers, restart from the original source file or URL. The previous provider output may be cited as comparison material, but it is not source truth and must not become the new provider input.
+When switching providers, restart from the lifecycle source artifact. For a submitted file, that is the preserved original file. For a live URL that has entered the lifecycle, that is the stored Defuddle source capture; fetching the current live page again is a new capture action, not ordinary reprocessing. Other provider output may be cited as comparison material, but it is not source truth and must not become the new provider input.

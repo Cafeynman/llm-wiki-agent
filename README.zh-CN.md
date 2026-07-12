@@ -49,22 +49,22 @@ cd llm-wiki-agent
 `scenarios/` 下的可选场景包可将初始化后的工作区适配为考试备考等专门用途；见 [可选场景包](docs/usage.zh-CN.md#可选场景包)。
 
 **你的最小化首次运行：**
-1. 将一个或多个源文件放入 `inbox/` 目录。
-2. 对智能体说：*"请根据 AGENTS.md, PROJECT.md 和 WIKI.md 处理 inbox/ 中的文件。"*
-3. 观察智能体将你的文件处理到 `wiki/` 目录！
+1. 将源文件放入 `inbox/`，或者把一个实时 URL 作为来源交给智能体。
+2. 对智能体说：*"请根据 AGENTS.md、PROJECT.md 和 WIKI.md 处理这些来源。"*
+3. 智能体会先通过 Defuddle 固化 URL，审查来源，并只在接受后更新 wiki。
 
 ---
 
 ## 🤔 这是什么？
 
-**你投放文件，智能体整理知识，你获得一个可溯源的 Wiki。**
+**你提供文件或链接，智能体整理知识，你获得一个可溯源的 Wiki。**
 
 本仓库**不是**一个完整的应用服务器，也**不是** Obsidian 的替代品。它是一个**便携的工作流包**，专为能够读取仓库指令的智能体（如 Codex, Claude Code, Gemini CLI, OpenCode 等）设计。
 
 该项目为你的智能体提供了一份严格而清晰的操作契约：
 <table>
-<tr><td>📥</td><td><code>inbox/</code></td><td>源文件的唯一入口</td></tr>
-<tr><td>🗄️</td><td><code>raw/</code></td><td>原始文件的持久化保存地</td></tr>
+<tr><td>📥</td><td><code>inbox/</code></td><td>提交文件和 URL 来源捕获文件的入口</td></tr>
+<tr><td>🗄️</td><td><code>raw/</code></td><td>生命周期来源工件的持久化保存地</td></tr>
 <tr><td>⚙️</td><td><code>intake/</code></td><td>生成可审查 Markdown 的处理区</td></tr>
 <tr><td>📝</td><td><code>reviews/</code></td><td>记录来源审查决定与讨论反射</td></tr>
 <tr><td>⏱️</td><td><code>logs/</code></td><td>记录 wiki 操作历史</td></tr>
@@ -81,7 +81,7 @@ cd llm-wiki-agent
 
 | 工作流 | 何时使用 | 它的作用 |
 |-----------|-------------|--------------|
-| **➕ 添加知识 (Add Knowledge)** | 添加文件、审查来源、提取材料。 | 将文件从 `inbox/` 推进至 `intake/` 再到 `wiki/`，并反射确认的讨论见解。 |
+| **➕ 添加知识 (Add Knowledge)** | 添加文件或 URL、审查来源、提取材料。 | 将来源工件从 `inbox/` 推进至 `intake/` 再到 `wiki/`，并反射确认的讨论见解。 |
 | **💡 使用知识 (Use Knowledge)** | 回答问题、综合页面、生成交付物。 | 检索 wiki，并在 `artifacts/` 目录下生成报告、简报、草案或对照表。 |
 | **🧹 维护 Wiki (Maintain Wiki)** | 健康检查、清理死链、查找过期声明。 | 查找矛盾、检测重复、记录日志空白，确保溯源完整。 |
 
@@ -91,10 +91,10 @@ cd llm-wiki-agent
 
 | 特性 | 描述 |
 |---------|------------|
-| **📜 文本优先 (Text-First)** | 提取结果必须是 Markdown。附件和图片作为原始来源保留在 `raw/` 中。 |
+| **📜 文本优先 (Text-First)** | 提取结果必须是 Markdown。提供方返回的附件可以保存在 `source.md` 旁，但不会被自动解释。 |
 | **🔍 来源审查门 (Source Review)** | 成功提取是不够的。智能体在将来源接受进 wiki 之前必须进行审查。 |
 | **🔗 显式溯源 (Explicit Traceability)** | 提倡显式链接而非依赖隐藏记忆。所有声明必须引用来源卡片、原始文件或讨论记录。 |
-| **📂 原始文件留存 (Original Preservation)** | 妥善保管原始文件。生成的 Markdown 保存在 `intake/`，绝不混入 `raw/`。 |
+| **📂 来源留存 (Source Preservation)** | 提交文件会被保留；Defuddle 捕获文件是实时 URL 的生命周期原件，其他生成 Markdown 仍保存在 `intake/`。 |
 | **⚙️ 可替换上下文 (Replaceable Context)** | `PROJECT.md` 包含你的特定偏好。`WIKI.md` 和 `AGENTS.md` 则是稳定的工作流规则。 |
 | **🛡️ 安全的交付物 (Safe Artifacts)** | 面向用户的报告、简报、大纲和草案进入 `artifacts/`，保持 `wiki/` 的纯净。 |
 
@@ -155,8 +155,8 @@ Git，请参考 [Git Ignore 模板](docs/gitignore-templates.zh-CN.md)。
 
 ```text
 .
-├── inbox/             源文件入口
-├── raw/               按审查状态保存的原始文件
+├── inbox/             提交文件和实时 URL 捕获文件的入口
+├── raw/               按审查状态保存的生命周期来源工件
 ├── intake/            临时和已接受的 Markdown 提取输出
 ├── reviews/           来源审查与讨论反射记录
 ├── logs/              Wiki 操作历史

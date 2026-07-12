@@ -54,3 +54,5 @@ State missing context, weak extraction, image-only material, uncertain claims, a
 - Source review: [[reviews/source-review/YYYY-MM-DD]]
 - Manifest: [[intake/processed/source-relative-parent/original-source-base-filename/manifest]]
 ```
+
+For a Defuddle live-URL capture, keep the raw capture wikilink as the first source and also add the exact submitted URL as a quoted plain string under `sources:`. Add `Submitted URL: <url>` under Traceability. Do not replace the raw capture link with the external URL.

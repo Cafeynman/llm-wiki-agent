@@ -82,9 +82,9 @@ Keep `WIKI.md`, `AGENTS.md`, and other agent entrypoint files stable and replace
 7. Use `logs/wiki.md` as the operation history.
 8. Put user-facing deliverables in `artifacts/`.
 9. Track open investigation questions in `questions/`.
-10. Use `inbox/` as the entry point for user-submitted original files.
-11. Preserve raw source traceability and do not edit original files under `raw/` unless the user explicitly asks.
-12. Treat the package as text-first: source material must become reviewable Markdown before it enters `intake/processed/` or `wiki/`. Attachments and images may remain part of the preserved original source, but they are not first-class wiki content unless the user explicitly asks for image handling.
+10. Use `inbox/` as the entry point for user-submitted original files and generated live-URL source captures.
+11. Preserve raw source traceability and do not edit lifecycle source artifacts under `raw/` unless the user explicitly asks.
+12. Treat the package as text-first: source material must become reviewable Markdown before it enters `intake/processed/` or `wiki/`. Providers may automatically preserve returned attachments and images under the same intake folder as `source.md`; promote or delete them with that folder. Passive preservation does not make them first-class wiki content or authorize OCR, visual interpretation, or image-derived knowledge.
 
 ## Obsidian Markdown and Frontmatter
 
@@ -102,11 +102,13 @@ Also preserve the source-relative parent path defined in `WIKI.md` when writing 
 
 Use the same source-relative parent and the `WIKI.md` source-language naming rule for `wiki/sources/` source cards. Do not translate, romanize, convert to pinyin, or slugify a source title unless the user explicitly asks for that naming scheme.
 
+For a submitted live URL, follow the deterministic Defuddle source-capture naming rule in `WIKI.md`. The generated URL capture is the lifecycle source artifact for that non-file source and is the sole exception to original-file naming and to the rule that generated Markdown does not enter `raw/`. Do not apply that exception to summaries, normalized provider output, chunks, or user-submitted files.
+
 ## Source Extraction Providers
 
 Before source extraction, use the local `.agents/skills/source-extraction/` skill. Document, webpage, image, audio, and video extraction choices belong in `PROJECT.md`, not in `AGENTS.md` or `CLAUDE.md`.
 
-OCR, image extraction, audio transcription, and video frame/audio extraction must follow `PROJECT.md`; do not enable them automatically. Real API keys, tokens, and private service URLs belong only in the local project-root `.env` file and must not be written into project instructions, manifests, logs, wiki pages, source cards, or skill files. Provider setup documents may name required environment variables, but local values must stay in `.env`.
+OCR, active image extraction or interpretation, audio transcription, and video frame/audio extraction must follow `PROJECT.md`; do not enable them automatically. Copying images already returned by the selected provider into the same intake folder is passive source preservation and does not require separate approval. Real API keys, tokens, and private service URLs belong only in the local project-root `.env` file and must not be written into project instructions, manifests, logs, wiki pages, source cards, or skill files. Provider setup documents may name required environment variables, but local values must stay in `.env`.
 
 ## Workflow Router
 

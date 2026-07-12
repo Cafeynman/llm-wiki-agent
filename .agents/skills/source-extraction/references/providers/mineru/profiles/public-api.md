@@ -176,7 +176,7 @@ Batch run:
 - each subdirectory is named with the original file base filename
 - each subdirectory contains `source.md`, `full.md`, optional `images/`, and `result.json`
 
-`source.md` is the normalized Markdown surface for later intake handling. `full.md` and `images/` are kept as the default traceable MinerU side outputs. The script removes the downloaded ZIP and unrequested files such as returned originals, layout JSON, model JSON, and content-list exports by default. Use `--keep-result-zip` only when the user asks to preserve the downloaded ZIP, and use `--keep-all-extracted` only when the user asks to inspect every returned artifact.
+`source.md` is the normalized Markdown surface for later intake handling. `full.md` and returned `images/` are kept automatically as traceable MinerU side outputs. Intake promotes or deletes them with the source folder and records their paths or disposition. The script removes the downloaded ZIP and unrequested files such as returned originals, layout JSON, model JSON, and content-list exports by default. Use `--keep-result-zip` only when the user asks to preserve the downloaded ZIP, and use `--keep-all-extracted` only when the user asks to inspect every returned artifact.
 
 If `full.md` contains watermark-like text such as `watermark` or `水印`, `result.json` and `batch.json` set `needs_review: true` with a review reason. The provider still writes `source.md`; Source Review Gate decides whether the source can proceed.
 

@@ -2,6 +2,19 @@
 
 This example shows the intended lifecycle for a batch of files in `inbox/`. The normative rules remain in `WIKI.md`; this file is only an example.
 
+## Live URL Entry
+
+A submitted live URL is materialized before ordinary intake:
+
+```text
+submitted URL
+`-- Defuddle structured Markdown
+    `-- inbox/web/<page-title>--<url-hash>.md
+        `-- intake/tmp/web/<page-title>--<url-hash>/source.md
+```
+
+The capture under `inbox/web/` is the lifecycle source artifact. It leaves `inbox/` in the same pass and moves to one `raw/<state>/web/` destination. Defuddle is not run against the capture a second time.
+
 ## Initial State
 
 ```text
@@ -18,7 +31,7 @@ This example shows the intended lifecycle for a batch of files in `inbox/`. The 
 
 ## Temporary Extraction
 
-Intake first stages Markdown files or extracts non-Markdown originals into temporary Markdown:
+Intake first stages Markdown files or extracts non-Markdown originals into temporary Markdown. Provider-returned attachments stay under the same temporary source folder and are promoted or deleted with it:
 
 ```text
 .

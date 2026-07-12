@@ -77,7 +77,7 @@ Output controls:
 | `--return-original-file` / `--no-return-original-file` | `return_original_file` |
 | `--client-side-output-generation` / `--no-client-side-output-generation` | `client_side_output_generation` |
 
-Treat `--image-analysis`, `--return-images`, and OCR-oriented parse options as approval-only. Do not add them to a wiki intake command unless `PROJECT.md` allows the relevant OCR/image extraction policy and the user has approved the current task.
+Treat `--image-analysis`, `--return-images`, and OCR-oriented parse options as approval-only because they actively request image processing or return. When the selected request already returns images, the script may preserve them automatically as source attachments without an additional copying approval.
 
 Page range controls:
 
@@ -120,7 +120,7 @@ The script accepts ZIP or JSON responses:
 - Multi-file runs require unique original base filenames and write one output directory per original base filename.
 - Watermark-like text in `full.md` marks `needs_review: true`; Source Review Gate decides whether the source can proceed.
 
-For ZIP output with images, the expected service layout contains Markdown and an `images/` directory under the same result folder. The script copies only images referenced from that result folder into the normalized `images/` directory.
+For ZIP output with images, the expected service layout contains Markdown and an `images/` directory under the same result folder. The script copies the returned image files into the normalized `images/` directory. Intake promotes or deletes that directory with the source folder and records its disposition.
 
 ## Error Handling
 
@@ -133,7 +133,7 @@ Common deployment-specific failures:
 - `413 Request Entity Too Large`: use async mode or adjust the gateway upload limit.
 - `403` or HTML response: gateway/WAF filtering may be involved; retry later, set `MINERU_FASTAPI_USER_AGENT`, or ask the service owner to adjust filtering.
 - Timeout in sync mode: retry with `--mode async`.
-- Missing images in Markdown output: if image extraction is approved, rerun with `--return-images --response-format-zip`; otherwise record the missing images for Source Review Gate.
+- Missing images in Markdown output: if actively requesting image return is approved, rerun with `--return-images --response-format-zip`; otherwise record the missing images for Source Review Gate. Images already returned are preserved automatically.
 
 ## Sources
 

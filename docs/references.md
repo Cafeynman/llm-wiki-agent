@@ -53,12 +53,12 @@ The references above shaped these key design choices:
 
 This package turns the theoretical pattern into a stricter, production-ready operating contract:
 
-- `inbox/` is the **only entry point** for user-submitted original files.
-- `raw/` is a strict state area with `digested`, `needs-review`, `ignored`, and `unsupported` outcomes.
+- `inbox/` is the entry point for submitted original files and deterministic Defuddle captures of submitted live URLs.
+- `raw/` is a strict state area for lifecycle source artifacts with `digested`, `needs-review`, `ignored`, and `unsupported` outcomes.
 - Source review happens **after** extraction and **before** wiki updates.
 - Accepted sources get content-rich source cards under `wiki/sources/`.
 - Discussion-derived knowledge is recorded separately from source-derived knowledge.
-- The workflow is **text-first**, meaning images, scans, screenshots, and audio remain preserved source material unless image or audio handling is explicitly added.
+- The workflow is **text-first**. Provider-returned attachments may be preserved beside `source.md`, but OCR, interpretation, and image- or audio-derived knowledge require explicit policy and approval.
 - Agent behavior is narrowed to three core workflows: **Add Knowledge**, **Use Knowledge**, and **Maintain Wiki**.
 
 These choices make the package easier to run, easier to audit, and safer to share as a public starter repository.

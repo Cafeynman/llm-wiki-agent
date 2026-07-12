@@ -1,43 +1,26 @@
 ---
 name: defuddle
-description: Run the Defuddle CLI as the webpage extraction provider after source-extraction selects `defuddle`, or for non-wiki webpage cleanup when no intake lifecycle applies. For wiki source material, use source-extraction first so PROJECT.md provider policy, Source Review Gate, and the WIKI.md output contract remain in control.
+description: Run the Defuddle CLI as the webpage source-capture provider after source-extraction selects `defuddle`, or for non-wiki webpage cleanup when no intake lifecycle applies. For wiki source material, use source-extraction first so PROJECT.md provider policy, Source Review Gate, and the WIKI.md output contract remain in control.
 ---
 
 # Defuddle
 
-Use Defuddle CLI to extract clean readable Markdown from web pages. In this package, Defuddle is a provider tool; it does not decide whether a source enters `intake/tmp/`, `intake/processed/`, or `wiki/`.
+Use Defuddle to extract clean Markdown and metadata from a webpage. For wiki intake, Defuddle materializes a submitted live URL as a lifecycle source capture; it does not write final wiki content or decide review outcomes.
 
-For wiki intake, start with `source-extraction`. Use this skill only after that workflow selects `defuddle` for a webpage source.
+If the CLI is missing, follow `.agents/skills/source-extraction/references/providers/defuddle/setup.md`.
 
-If not installed: `npm install -g defuddle`
+## Wiki URL Capture
 
-## Usage
-
-Always use `--md` for markdown output:
+Run once against the submitted URL:
 
 ```bash
-defuddle parse <url> --md
+defuddle parse <url> --json --md
 ```
 
-For wiki intake, write to the output path chosen by `source-extraction`:
+Parse the JSON structurally. Use the returned Markdown and metadata to serialize the deterministic source capture under `inbox/web/` according to `WIKI.md`. Stage that capture unchanged under `intake/tmp/`; do not run Defuddle against the capture again.
+
+For quick non-wiki cleanup, Markdown may be written directly to a caller-selected output:
 
 ```bash
-defuddle parse <url> --md -o intake/tmp/source-relative-parent/original-source-base-filename/source.md
+defuddle parse <url> --md -o <output.md>
 ```
-
-Extract specific metadata:
-
-```bash
-defuddle parse <url> -p title
-defuddle parse <url> -p description
-defuddle parse <url> -p domain
-```
-
-## Output formats
-
-| Flag        | Format                           |
-| ----------- | -------------------------------- |
-| `--md`      | Markdown (default choice)        |
-| `--json`    | JSON with both HTML and markdown |
-| (none)      | HTML                             |
-| `-p <name>` | Specific metadata property       |

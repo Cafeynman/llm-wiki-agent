@@ -114,8 +114,8 @@ Initialization and upgrade scripts install the non-secret `.env.example` templat
 
 | Directory | Responsibility |
 | --- | --- |
-| `inbox/` | 📥 Only entrypoint for user-submitted original files. |
-| `raw/` | 🗄️ Final state area for original files, preserving their source-relative paths. (Does not store agent-generated Markdown). |
+| `inbox/` | 📥 Entry point for submitted original files and generated live-URL source captures. |
+| `raw/` | 🗄️ Final state area for lifecycle source artifacts, preserving their source-relative paths. Defuddle URL captures are the only generated source artifacts allowed here. |
 | `intake/tmp/` | ⚙️ Temporary Markdown after extraction and before source review. |
 | `intake/processed/` | ✅ Accepted Markdown ready for wiki ingestion. |
 | `reviews/` | 📝 Source review and discussion reflection records. |
@@ -126,16 +126,17 @@ Initialization and upgrade scripts install the non-secret `.env.example` templat
 
 ---
 
-## 📥 5. First File Intake Workflow
+## 📥 5. First Source Intake Workflow
 
 For exact lifecycle rules, follow [WIKI.md](../WIKI.md). A first small intake normally looks like this:
 
-1. **Drop File:** Put one or more original source files into `inbox/`.
-2. **Prompt Agent:** Ask the agent: *"Process the files in inbox/ according to AGENTS.md, PROJECT.md, and WIKI.md."*
+1. **Submit Source:** Put original files into `inbox/`, or give the agent a live URL.
+2. **Prompt Agent:** Ask the agent: *"Process these sources according to AGENTS.md, PROJECT.md, and WIKI.md."*
 3. **Expected Result:**
+    - A live URL is converted once by Defuddle into `inbox/web/<page-title>--<url-hash>.md`; that capture then follows the same lifecycle as a submitted Markdown file.
     - Temporary Markdown appears at `intake/tmp/<source-relative-parent>/<source-base-filename>/source.md`. Nested input paths preserve their source-relative parents.
     - The **Source Review Gate** determines the final source state.
-    - The original file moves to a `raw/` state subfolder while preserving its path below `inbox/`.
+    - The lifecycle source artifact moves to a `raw/` state subfolder while preserving its path below `inbox/`.
     - Only `digested` content moves to `intake/processed/` and updates `wiki/`.
 
 For a batch walkthrough with intermediate and final directory states, see [Source Lifecycle Example](source-lifecycle.md).
@@ -145,6 +146,7 @@ Plain English requests are valid. You can ask for tasks such as:
 - *"Process raw files"*
 - *"Review sources"*
 - *"Ingest this source"*
+- *"Capture and ingest this URL"*
 - *"What does the wiki say about this topic?"*
 - *"Create an artifact"*
 - *"Health-check the wiki"*
@@ -172,7 +174,8 @@ This is a quick reference. The authoritative Source Review Gate rules live in [W
 LLM Wiki Agent is designed around a text-first intake path:
 - All readable documents (HTML, PDF, Word, PPT, Excel, etc.) become Markdown before ingestion.
 - Scans, images, audio, and video stay as original sources in `raw/` but are **not** first-class wiki content unless extraction is explicitly configured and approved.
-- Keep images out of wiki pages unless image handling is explicitly configured.
+- Images already returned by a selected provider may be preserved automatically under the same intake folder as `source.md`; they are promoted or deleted with that folder.
+- Keep images out of wiki pages, and do not OCR or interpret them, unless image handling is explicitly configured and approved.
 
 ---
 
@@ -222,12 +225,12 @@ Run the initialization script first. If it fails, install <code>uv</code> manual
 
 <details>
 <summary><b>What if Defuddle is missing?</b></summary>
-The default webpage provider is Defuddle. Install it with npm or ask the agent to follow <code>.agents/skills/source-extraction/references/providers/defuddle/setup.md</code>.
+The default live-URL capture provider is Defuddle. Install it with npm or ask the agent to follow <code>.agents/skills/source-extraction/references/providers/defuddle/setup.md</code>. A live URL is not sent directly to <code>intake/tmp/</code>; Defuddle first creates its source capture under <code>inbox/web/</code>.
 </details>
 
 <details>
 <summary><b>What if a file is already in <code>raw/</code>?</b></summary>
-New user-submitted originals must enter through <code>inbox/</code>. Files already in <code>raw/&lt;state&gt;/</code> may be reprocessed from their current state directory because they have already entered the lifecycle. Reprocessing must preserve the path after <code>raw/&lt;state&gt;/</code>, and when a source moves to a new state, the old state entry must be removed.
+New source artifacts must enter through <code>inbox/</code>. Submitted files enter unchanged; a live URL enters as its deterministic Defuddle source capture. Artifacts already in <code>raw/&lt;state&gt;/</code> may be reprocessed from their current state directory because they have entered the lifecycle. Reprocessing must preserve the path after <code>raw/&lt;state&gt;/</code>, and when a source moves to a new state, the old state entry must be removed.
 </details>
 
 <details>

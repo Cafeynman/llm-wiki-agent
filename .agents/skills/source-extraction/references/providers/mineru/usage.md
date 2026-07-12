@@ -36,14 +36,14 @@ Follow the selected profile's credential requirements. Secret values and private
 
 - Save the returned Markdown as `<intake-tmp-dir>/source.md`, even when the provider first returns ZIP-based side outputs.
 - Record the MinerU profile, batch id or task id, model version, credential status as present or not required, warnings, missing content, and result URLs in the intake manifest or review notes.
-- If MinerU returns extra outputs, preserve only what is needed for `source.md` unless the user explicitly asks to keep additional artifacts.
+- Preserve returned source images under the same intake folder as `source.md`. Promote or delete them with that folder and record their paths or disposition. Keep other provider artifacts only when they are required for traceability or the user explicitly asks.
 - Follow the selected profile's error handling for file-size, page-count, format, queue, timeout, rate-limit, and parsing failures.
 - Do not split PDFs automatically. If the selected mode cannot accept the whole file, ask the user to approve a page-range or section split strategy first.
 - If an approved split produces multiple Markdown files, merge them into the original source's `<intake-tmp-dir>/source.md` in page order. Keep per-part Markdown only as traceability side outputs, and record page ranges and part paths in the intake manifest or review notes.
 
 ## OCR and Images
 
-Do not enable MinerU OCR or image extraction automatically. If `PROJECT.md` says `ask-before-ocr`, ask the user before setting OCR options such as the active profile's OCR flag.
+Do not enable MinerU OCR, image analysis, or an option that actively requests image extraction automatically. If `PROJECT.md` says `ask-before-ocr`, ask the user before setting those options. Images already present in the selected provider's returned package may be copied automatically as passive source attachments; copying does not authorize OCR or interpretation.
 
 ## Source
 

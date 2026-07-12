@@ -30,7 +30,7 @@ def convert_file(md_converter, input_path, output_dir=None, verbose=False):
             print(f"Converting: {input_path}")
         
         result = md_converter.convert(str(input_path))
-        output_path.write_text(result.text_content)
+        output_path.write_text(result.text_content, encoding="utf-8")
         
         if verbose:
             print(f"Saved to: {output_path}")
@@ -65,34 +65,12 @@ def main():
         action="store_true",
         help="Verbose output"
     )
-    parser.add_argument(
-        "--llm-model",
-        help="LLM model for image descriptions (e.g., gpt-4o)"
-    )
-    parser.add_argument(
-        "--docintel-endpoint",
-        help="Azure Document Intelligence endpoint"
-    )
-    
+
     args = parser.parse_args()
-    
+
     # Initialize MarkItDown
     md_kwargs = {"enable_plugins": args.plugins}
-    
-    if args.llm_model:
-        try:
-            from openai import OpenAI
-            client = OpenAI()
-            md_kwargs["llm_client"] = client
-            md_kwargs["llm_model"] = args.llm_model
-        except ImportError:
-            print("Error: openai package required for LLM features", file=sys.stderr)
-            print("Refresh the project environment with: uv sync", file=sys.stderr)
-            sys.exit(1)
-    
-    if args.docintel_endpoint:
-        md_kwargs["docintel_endpoint"] = args.docintel_endpoint
-    
+
     md = MarkItDown(**md_kwargs)
     
     # Process files

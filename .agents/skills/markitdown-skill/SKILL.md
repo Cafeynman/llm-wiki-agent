@@ -1,70 +1,42 @@
 ---
 name: markitdown-skill
-description: Run Microsoft's MarkItDown as the local document extraction provider after source-extraction selects `markitdown`, or for non-wiki document-to-Markdown conversion when no intake lifecycle applies. For wiki source material, use source-extraction first so PROJECT.md provider policy, OCR/transcription approval, Source Review Gate, and the WIKI.md output contract remain in control.
+description: Run Microsoft's MarkItDown as the local document extraction provider after source-extraction selects `markitdown`, or for non-wiki document-to-Markdown conversion when no intake lifecycle applies. For wiki source material, use source-extraction first so PROJECT.md provider policy, transcription approval, Source Review Gate, and the WIKI.md output contract remain in control.
 ---
 
-# MarkItDown Skill
+# MarkItDown
 
-Documentation and utilities for converting documents to Markdown using Microsoft's [MarkItDown](https://github.com/microsoft/markitdown) library.
+Use Microsoft MarkItDown for local document-to-Markdown conversion. The package installs the verified MarkItDown dependency through `pyproject.toml` and `uv.lock`.
 
-> **Note:** In this package, MarkItDown is installed through `pyproject.toml` and `uv sync`. Run it with `uv run markitdown ...` from the package root.
+For wiki intake, start with `source-extraction`. This skill runs the selected provider; it does not decide Source Review Gate outcomes or write directly to `wiki/`.
 
-## When to Use
+## Local Conversion
 
-In wiki intake, start with `source-extraction`. Use this skill only after that workflow selects `markitdown` for a document source.
-
-Use MarkItDown for local document conversion, including PDFs, Word files, PowerPoint files, Excel workbooks, and HTML files submitted as document files. OCR, image extraction, audio transcription, and video transcription remain controlled by `PROJECT.md` and require explicit approval before use.
-
-## Quick Start
+Run from the package root:
 
 ```bash
-# Wiki intake output selected by source-extraction
-uv run markitdown document.pdf -o intake/tmp/source-relative-parent/original-source-base-filename/source.md
-
-# Non-wiki one-off conversion
-uv run markitdown document.pdf -o output.md
+uv run markitdown <input-file> -o <output.md>
 ```
 
-## Supported Formats
+MarkItDown handles text-bearing PDF, DOCX, PPTX, XLS/XLSX, HTML, Outlook, and related document formats through the installed extras. Audio and YouTube transcription remain approval-controlled source kinds. Azure Document Intelligence is an optional service-backed mode and must follow the provider setup document.
 
-| Format | Features |
-|--------|----------|
-| PDF | Text extraction, structure |
-| Word (.docx) | Headings, lists, tables |
-| PowerPoint | Slides, text |
-| Excel | Tables, sheets |
-| HTML | Structure preservation |
+MarkItDown is not the package's general OCR provider. If important source content requires OCR or visual interpretation, return to `source-extraction` and use an explicitly approved provider.
 
-## Installation
+## Verified CLI Options
 
-The project dependency set includes Microsoft's `markitdown` CLI. Initialize or refresh the environment from the package root:
+Use `--use-plugins` to enable installed third-party plugins and `--list-plugins` to inspect them. Use `--keep-data-uris` only when complete embedded data URIs are required for source review; the default CLI truncates them.
 
 ```bash
-uv sync
+uv run markitdown --list-plugins
+uv run markitdown --use-plugins <input-file> -o <output.md>
+uv run markitdown --keep-data-uris <input-file> -o <output.md>
 ```
 
-Verify the CLI through the project environment:
+## Batch Conversion
+
+The bundled helper performs verified local conversion and optional plugin loading:
 
 ```bash
-uv run markitdown --help
-```
-
-## Common Patterns
-
-### Convert PDF
-```bash
-uv run markitdown document.pdf -o document.md
-```
-
-### Batch Convert
-```bash
-# Using included script
-uv run .agents/skills/markitdown-skill/scripts/batch_convert.py docs/*.pdf -o markdown/ -v
-
-# Or shell loop
-for file in docs/*.pdf; do
-  uv run markitdown "$file" -o "${file%.pdf}.md"
-done
+uv run .agents/skills/markitdown-skill/scripts/batch_convert.py <files...> -o <output-directory>
 ```
 
 ## Python API
@@ -72,33 +44,8 @@ done
 ```python
 from markitdown import MarkItDown
 
-md = MarkItDown()
-result = md.convert("document.pdf")
+result = MarkItDown().convert("document.pdf")
 print(result.text_content)
 ```
 
-## Troubleshooting
-
-### "markitdown not found"
-```bash
-uv sync
-```
-
-### OCR or Transcription Needed
-
-Do not enable OCR or transcription from this skill alone. Follow `source-extraction` and `PROJECT.md`; if approval and setup are missing, stop before extraction and ask the user to configure the required provider.
-
-## What This Skill Provides
-
-| Component | Source |
-|-----------|--------|
-| `markitdown` CLI | Project dependency in `pyproject.toml` |
-| `markitdown` Python API | Project dependency in `pyproject.toml` |
-| `scripts/batch_convert.py` | This skill (utility) |
-| Documentation | This skill |
-
-## See Also
-
-- [USAGE-GUIDE.md](USAGE-GUIDE.md) - Detailed examples
-- [reference.md](reference.md) - Full API reference
-- [Microsoft MarkItDown](https://github.com/microsoft/markitdown) - Upstream library
+For wiki output paths, provider metadata, side-output handling, credentials, and review rules, follow `.agents/skills/source-extraction/references/providers/markitdown/`.

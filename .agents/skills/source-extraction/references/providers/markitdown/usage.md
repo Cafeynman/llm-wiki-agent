@@ -6,6 +6,7 @@ Use MarkItDown as the default local document provider unless `PROJECT.md` select
 
 - `document`
 - HTML files submitted as document files
+- approval-controlled audio or YouTube transcription when explicitly configured
 
 ## Command Pattern
 
@@ -15,23 +16,18 @@ Run from the project root:
 uv run markitdown <input-file> -o <intake-tmp-dir>/source.md
 ```
 
-When OCR has been explicitly approved and configured:
-
-```bash
-uv run --env-file .env markitdown <input-file> --use-plugins --llm-client openai --llm-model <MARKITDOWN_OCR_MODEL> -o <intake-tmp-dir>/source.md
-```
-
-For the documented OpenAI-compatible OCR command, `OPENAI_API_KEY` and `MARKITDOWN_OCR_MODEL` are required. If `.env` or either variable is missing, stop before extraction and ask the user to configure it. Do not paste API keys into command examples, prompts, manifests, logs, review notes, wiki pages, or source cards.
+Use `--use-plugins` only for installed, selected plugins. Use `--keep-data-uris` only when source review requires complete embedded data URIs; MarkItDown truncates them by default.
 
 ## Output Handling
 
-- Preserve provider output that comes from the source body, including inline media references. Do not silently delete `data:image/...;base64,...` links from `source.md`; record them as unprocessed embedded media instead.
-- Record missing figures, scans, screenshots, embedded media, or audio in review notes or manifest metadata.
+- Keep provider-returned side outputs under the same intake folder as `source.md`.
+- Promote accepted side outputs with that intake folder or delete them with the temporary folder for non-accepted outcomes.
+- Record preserved side outputs in `manifest.md` for accepted sources or in review/log records before temporary cleanup for other outcomes.
+- Record missing figures, scans, screenshots, embedded media, or audio when they affect reviewability.
 - If important non-text content was not processed, route the source to `needs-review` through the normal WIKI process.
 
-## Do Not
+## Limits
 
-- Do not enable OCR automatically.
-- Do not transcribe audio automatically.
-- Do not copy attachments into wiki pages by default.
+- MarkItDown is not the package's general local OCR provider.
+- Do not enable transcription without the configured policy and user approval.
 - Do not treat a successful MarkItDown exit as Source Review Gate acceptance.

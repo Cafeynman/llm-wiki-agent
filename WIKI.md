@@ -14,14 +14,14 @@ Use this structure unless the user explicitly asks for a different one:
 
 ```text
 .
-├── inbox/             Entry point for all user-submitted original files.
+├── inbox/             Entry point for user-submitted original files and generated live-URL source captures.
 ├── raw/
-│   ├── digested/       Original files accepted, digested, and linked to wiki updates.
-│   ├── needs-review/   Original files that need user judgment before final handling.
-│   ├── ignored/        Original files judged not worth organizing into the wiki.
-│   └── unsupported/    Original files that cannot currently be processed.
+│   ├── digested/       Source artifacts accepted, digested, and linked to wiki updates.
+│   ├── needs-review/   Source artifacts that need user judgment before final handling.
+│   ├── ignored/        Source artifacts judged not worth organizing into the wiki.
+│   └── unsupported/    Source artifacts that cannot currently be processed.
 ├── intake/
-│   ├── tmp/            Temporary Markdown extracted from raw files before review.
+│   ├── tmp/            Temporary Markdown extracted or staged from source artifacts before review.
 │   ├── processed/      Agent-generated Markdown outputs accepted for ingest.
 │   └── logs/           Daily intake logs.
 ├── reviews/
@@ -59,7 +59,9 @@ intake/processed/source-relative-parent/original-source-base-filename/
 
 If the source has no parent directory under the intake root, omit `source-relative-parent`. The `original-source-base-filename` directory must preserve the original source file's base filename and source language. Except for removing the extension, do not translate, romanize, convert to pinyin, slugify, force lowercase, case-normalize, URL encode, or simplify it. Use the same source-relative parent and source-language base filename for source cards under `wiki/sources/`.
 
-The source-relative path is the path below `inbox/` for first intake, or the path below the current `raw/<state>/` directory for reprocessing. Preserve this relative path when moving originals between raw state directories, when writing `intake/tmp/` or `intake/processed/` outputs, and when creating source cards under `wiki/sources/`. The relative path is traceability, not a wiki taxonomy.
+For a live URL, Defuddle first materializes the source as `inbox/web/<source-language-page-title>--<url-hash>.md`, where `<url-hash>` is the first eight lowercase hexadecimal characters of SHA-256 over the exact submitted URL encoded as UTF-8. Percent-encode Windows-invalid filename characters and control characters only in the title segment, and preserve the exact page title and submitted URL in frontmatter. If the page has no title, use Defuddle's domain value as the title segment. This deterministic generated-capture rule is the only exception to original-file naming; it does not authorize renaming user-submitted files.
+
+The source-relative path is the path below `inbox/` for first intake, or the path below the current `raw/<state>/` directory for reprocessing. Preserve this relative path when moving source artifacts between raw state directories, when writing `intake/tmp/` or `intake/processed/` outputs, and when creating source cards under `wiki/sources/`. The relative path is traceability, not a wiki taxonomy.
 
 Do not add a date directory under `intake/tmp/` or `intake/processed/`. Processing dates belong in `manifest.md`, `intake/logs/YYYY-MM-DD.md`, `reviews/source-review/YYYY-MM-DD.md`, and other dated logs or review records.
 
@@ -110,19 +112,19 @@ pages.
 
 ## Source and Traceability Rules
 
-1. Treat user-submitted files in `inbox/` and original files under `raw/` as source truth.
-2. Do not rewrite, normalize, rename, or edit original file contents unless the user explicitly asks.
-3. All new user-submitted original files must enter through `inbox/` before extraction, review, or classification. Once a file is handled by intake, move it out of `inbox/` in the same pass, regardless of outcome.
-4. Files already under `raw/digested/`, `raw/needs-review/`, `raw/ignored/`, or `raw/unsupported/` have already entered the lifecycle. They may be reprocessed from their current raw state directory without moving them back to `inbox/`.
-5. Preserve the source-relative path when moving originals into or between raw state directories. For first intake, this is the path below `inbox/`; for reprocessing, this is the path below the current `raw/<state>/` directory. The raw state directory records lifecycle status; the preserved relative path records source identity.
-6. Agent-generated Markdown never goes back into `raw/`; write temporary extraction output under `intake/tmp/` and accepted outputs under `intake/processed/`.
-7. `intake/tmp/` is not a holding area. Every temporary extraction must end by promoting accepted Markdown to `intake/processed/` or by deleting the temporary folder after the original moves to `raw/needs-review/`, `raw/ignored/`, or `raw/unsupported/`.
+1. Treat user-submitted files and generated live-URL source captures in `inbox/`, plus lifecycle source artifacts under `raw/`, as source truth.
+2. Do not rewrite, normalize, rename, or edit source artifact contents after they enter `inbox/` or `raw/` unless the user explicitly asks.
+3. Every new source artifact must enter through `inbox/` before review or classification. User-submitted files enter unchanged. A live URL enters only after Defuddle has materialized its clean Markdown source capture under `inbox/web/`. Once a source artifact is handled by intake, move it out of `inbox/` in the same pass, regardless of outcome.
+4. Source artifacts already under `raw/digested/`, `raw/needs-review/`, `raw/ignored/`, or `raw/unsupported/` have entered the lifecycle. They may be reprocessed from their current raw state directory without moving them back to `inbox/`.
+5. Preserve the source-relative path when moving source artifacts into or between raw state directories. For first intake, this is the path below `inbox/`; for reprocessing, this is the path below the current `raw/<state>/` directory. The raw state directory records lifecycle status; the preserved relative path records source identity.
+6. Agent-generated extraction, normalization, summary, and chunk Markdown never goes into `raw/`; write temporary extraction output under `intake/tmp/` and accepted outputs under `intake/processed/`. A Defuddle Markdown capture that materializes a submitted live URL is the sole exception because it is the lifecycle source artifact for that non-file source.
+7. `intake/tmp/` is not a holding area. Every temporary extraction and every provider side output must end by promotion to `intake/processed/` or deletion after the source artifact moves to `raw/needs-review/`, `raw/ignored/`, or `raw/unsupported/`.
 8. Every factual wiki claim must be grounded in an original source, an intake Markdown output, a cited wiki page, or a confirmed discussion-derived source record under `reviews/reflection/`.
 9. If a claim is useful but unsupported, put it in `questions/`, a needs-verification note on the relevant page, or a low-confidence page under `wiki/claims/`.
 10. Do not copy API keys, tokens, passwords, private keys, session cookies, or sensitive personal information into generated notes. Redact and cite the source path instead.
-11. Intake logs and review reports must record the complete original filename, file type, source path, final raw destination, and any generated Markdown path. Do not use ellipses or shortened paths for source traceability.
-12. Intake must preserve meaningful text and identify important non-text material. If useful content appears to depend on figures, screenshots, scans, audio, or other non-text material that was not processed, move the original to `raw/needs-review/` and record the missing processing step.
-13. This is a text-first workflow. Attachments, images, scans, screenshots, and audio may remain part of the preserved original source, but they are not first-class wiki content by default. Do not create attachment asset directories, copy images into wiki pages, or add image-reference schemes unless the user explicitly asks for image handling.
+11. Intake logs and review reports must record the complete source artifact filename, source kind or file type, source path or submitted URL, final raw destination, and any generated Markdown path. Do not use ellipses or shortened paths for source traceability.
+12. Intake must preserve meaningful text and identify important non-text material. If useful content appears to depend on figures, screenshots, scans, audio, or other non-text material that was not processed, move the source artifact to `raw/needs-review/` and record the missing processing step.
+13. This is a text-first workflow. A selected provider may automatically preserve returned images and other source attachments under the same intake folder as `source.md`, normally under `images/`. Promote or delete those side outputs with the intake folder and record them on the durable surface for the outcome. Passive preservation does not authorize OCR, visual interpretation, summaries, or wiki pages derived from the attachments; those actions still require the configured policy and explicit approval. Do not create attachment asset directories under `wiki/` or copy images into wiki pages unless the user explicitly asks.
 
 ## Page Conventions
 
@@ -150,7 +152,7 @@ Write deliverables to `artifacts/` when the user asks for a report, brief, outli
 
 Create one source card under `wiki/sources/<source-relative-parent>/original-source-base-filename.md` for every `digested` source. Do not create source cards for `ignored`, `unsupported`, or unresolved `needs-review` files.
 
-A source card is the wiki-facing summary of a source, not an intake receipt. It must contain substantive content: source summary, key points, supported claims, scope, limitations, and links to the raw file, processed Markdown, source review, and manifest. A page with only frontmatter, file size, line count, processing date, or paths is invalid.
+A source card is the wiki-facing summary of a source, not an intake receipt. It must contain substantive content: source summary, key points, supported claims, scope, limitations, and links to the raw source artifact, processed Markdown, source review, and manifest. For a live-URL capture, it must also cite the exact submitted external URL. A page with only frontmatter, file size, line count, processing date, or paths is invalid.
 
 Other wiki pages should normally cite the source card instead of citing raw files directly. The source card carries the full traceability chain back to `raw/digested/`, `intake/processed/`, and `reviews/source-review/`.
 
@@ -182,6 +184,7 @@ Classify the input before acting, then enter the matching path below. The "Start
 | -------------------------------------------------------------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------- |
 | A batch of candidate raw files, `inbox/`, or a triage request                                            | Intake                               | Extract each file to `intake/tmp/`, optionally write a digest, then run Source Review Gate     |
 | One specific raw file in `inbox/`                                                                        | Intake                               | Extract or stage Markdown to `intake/tmp/`, optionally write a digest, then run Source Review Gate |
+| A live URL submitted as source material                                                                  | Intake                               | Use Defuddle to create a Markdown source capture under `inbox/web/`, stage it to `intake/tmp/`, then run Source Review Gate |
 | A file already under `raw/digested/`, `raw/needs-review/`, `raw/ignored/`, or `raw/unsupported/` that needs reprocessing | Intake | Use the current raw state directory as the intake root, preserve the path below it, extract to `intake/tmp/`, then run Source Review Gate |
 | A new non-Markdown source that needs extraction                                                          | Intake                               | Ensure the original is in `inbox/`, extract to `intake/tmp/`, then run Source Review Gate  |
 | Large, archived, table-heavy, slide, scanned, multimodal, or noisy source                                | Large File and Context Budget Policy | Inspect metadata first; if it cannot be completed in the same pass, move the original to `raw/needs-review/` and record the next review question |
@@ -198,9 +201,9 @@ The following subsections define the path bodies referenced by the routing table
 
 ### 3. Intake
 
-Intake is the entry path for raw files. Its job is to produce reviewable Markdown first, then decide whether the material deserves permanent intake output and wiki ingestion.
+Intake is the entry path for source artifacts. Its job is to produce reviewable Markdown first, then decide whether the material deserves permanent intake output and wiki ingestion.
 
-For raw files, use the local `source-extraction` skill to classify the source kind, select the configured provider, and produce reviewable Markdown. Provider selection is project-specific and belongs in `PROJECT.md`; the stable provider contract belongs in `.agents/skills/source-extraction/references/contract.md`.
+Use the local `source-extraction` skill to classify the source kind, select the configured provider, and produce reviewable Markdown. A live URL is first materialized by Defuddle as the source capture defined above; the capture is then staged like other Markdown input. Provider selection is project-specific and belongs in `PROJECT.md`; the stable provider contract belongs in `.agents/skills/source-extraction/references/contract.md`.
 
 Before extraction, check whether a batch or file appears likely to benefit from OCR, such as scan-heavy PDFs or image-heavy Word, PowerPoint, and Excel files. If OCR appears available in the current environment, do not enable it automatically. First group the files into `recommend OCR`, `do not recommend OCR`, or `unclear`, then ask the user once whether to enable OCR for the recommended group and how to handle any unclear files.
 
@@ -210,21 +213,21 @@ The intake order is:
 
 `intake/tmp/` is the first Markdown landing area after extraction or Markdown staging. `intake/processed/` is not a scratch area; it is only for Markdown accepted by Source Review Gate and ready for ingest. Any extraction or Markdown staging path that produces accepted Markdown must follow the same lifecycle and output requirements.
 
-1. Choose the intake root. For first intake, take original files from `inbox/`. For reprocessing, take original files from their current `raw/<state>/` directory.
-2. Compute the source-relative path from the intake root, then inspect and record the complete raw file path, exact filename, file type, size, and basic readability.
+1. Choose the intake root. For a submitted live URL, first use Defuddle's structured Markdown result to create the deterministic source capture under `inbox/web/`; if capture creation fails, record the submitted URL and blocker in the source review or intake log and stop because no source artifact entered the lifecycle. For other first intake, take user-submitted files from `inbox/`. For reprocessing, take source artifacts from their current `raw/<state>/` directory.
+2. Compute the source-relative path from the intake root, then inspect and record the complete source path, exact filename, source kind or file type, size, and basic readability.
 3. For batch intake and other multi-file requests, perform OCR precheck before extraction when any file appears likely to benefit from OCR. Present the grouped recommendation once and wait for the user's decision before enabling OCR.
-4. Use the `source-extraction` skill to select the source kind and provider, then extract or stage the file as temporary Markdown under `intake/tmp/source-relative-parent/original-source-base-filename/`.
+4. Use the `source-extraction` skill to select the source kind and provider, then extract or stage the source artifact as temporary Markdown under `intake/tmp/source-relative-parent/original-source-base-filename/`. Stage a Defuddle URL capture unchanged; do not run Defuddle against its generated capture a second time.
 5. For archives, create a member listing first. Record each useful member's archive path, filename, detected type, and extraction result. Extract only members that are useful for review.
-6. If extraction fails, move the original file to `raw/unsupported/` while preserving its source-relative path, record the blocker in `intake/logs/YYYY-MM-DD.md`, delete the temporary folder, and stop.
-7. If extraction technically succeeds but the Markdown is garbled, empty, too thin to judge, obviously truncated, structurally broken, or missing important text, move the original to `raw/needs-review/` while preserving its source-relative path, record the extraction-quality question, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and stop.
+6. If extraction fails after a source artifact exists, move that artifact to `raw/unsupported/` while preserving its source-relative path, record the blocker in `intake/logs/YYYY-MM-DD.md`, delete the temporary folder and side outputs, and stop.
+7. If extraction technically succeeds but the Markdown is garbled, empty, too thin to judge, obviously truncated, structurally broken, or missing important text, move the source artifact to `raw/needs-review/` while preserving its source-relative path, record the extraction-quality question, move any useful review notes to `reviews/source-review/`, delete the temporary folder and side outputs, and stop.
 8. Run the source-extraction intake file audit on the temporary `source.md` just produced by the current intake step. Normal files need no audit record. If it reports `large_source`, create semantic chunks under the same temporary intake folder before Source Review Gate when reliable source boundaries exist. When `chunks/` is generated, run the chunk audit on the temporary intake folder; resolve hard chunk errors before promotion, and treat warnings as Source Review Gate caveats.
-9. If a large, ambiguous, encrypted, noisy, multimodal, or user-selection-dependent source cannot be made reviewable through semantic chunks in the same pass, or if hard chunk audit errors cannot be resolved in the same pass, move the original to `raw/needs-review/` while preserving its source-relative path, record the question, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and stop.
+9. If a large, ambiguous, encrypted, noisy, multimodal, or user-selection-dependent source cannot be made reviewable through semantic chunks in the same pass, or if hard chunk audit errors cannot be resolved in the same pass, move the source artifact to `raw/needs-review/` while preserving its source-relative path, record the question, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and stop.
 10. Optionally write `digest.md` in the temporary intake folder when a short digest would make review easier; do not make digest mandatory.
 11. Run Source Review Gate on the temporary Markdown, chunks, and optional digest, not on the raw filename alone.
-12. If the outcome is `digested`, promote the temporary Markdown to `intake/processed/source-relative-parent/original-source-base-filename/`, write `source.md`, `summary.md`, `manifest.md`, include `digest.md` only if it was useful, move the original to `raw/digested/` while preserving its source-relative path, delete the temporary folder, then ingest.
-13. If the outcome is `ignored`, move the original to `raw/ignored/` while preserving its source-relative path, log the reason, delete the temporary folder, and stop.
-14. If the outcome is `unsupported`, move the original to `raw/unsupported/` while preserving its source-relative path, log the blocker, delete the temporary folder, and stop.
-15. If the outcome is `needs-review`, move the original to `raw/needs-review/` while preserving its source-relative path, move any useful review notes to `reviews/source-review/`, delete the temporary folder, and record the question.
+12. If the outcome is `digested`, promote the temporary Markdown and provider side outputs to `intake/processed/source-relative-parent/original-source-base-filename/`, write `source.md`, `summary.md`, `manifest.md`, include `digest.md` only if it was useful, list preserved side outputs in the manifest, move the source artifact to `raw/digested/` while preserving its source-relative path, delete the temporary folder, then ingest.
+13. If the outcome is `ignored`, move the source artifact to `raw/ignored/` while preserving its source-relative path, log the reason and relevant side-output disposition, delete the temporary folder and side outputs, and stop.
+14. If the outcome is `unsupported`, move the source artifact to `raw/unsupported/` while preserving its source-relative path, log the blocker and relevant side-output disposition, delete the temporary folder and side outputs, and stop.
+15. If the outcome is `needs-review`, move the source artifact to `raw/needs-review/` while preserving its source-relative path, move useful review notes and relevant side-output disposition to `reviews/source-review/`, delete the temporary folder and side outputs, and record the question.
 
 After a final outcome is reached for a source, no temporary folder for that source may remain under `intake/tmp/`.
 
@@ -271,14 +274,14 @@ Do not update wiki knowledge pages during source review.
 Each accepted intake folder under `intake/processed/` must include:
 
 ```text
-source.md      Reviewable source Markdown from the original file.
+source.md      Reviewable source Markdown from the lifecycle source artifact.
 summary.md     Processing decision: outcome, extraction quality, source value, caveats, and recommended ingest scope.
-manifest.md    Traceability ledger: original file, generated intake outputs, source review, and wiki/question/artifact updates.
+manifest.md    Traceability ledger: source artifact, submitted URL when applicable, generated intake outputs and side outputs, source review, and wiki/question/artifact updates.
 ```
 
 These files are required for every accepted source, including later reprocessing, repaired document extraction, manual normalization, and any other approved text extraction path. A `source.md` without `summary.md` and `manifest.md` is incomplete and must not be treated as fully ingested.
 
-It may also include `digest.md` when a short digest was useful for review, and `chunks/` when the source required chunking.
+It may also include `digest.md` when a short digest was useful for review, `chunks/` when the source required chunking, and provider-returned source attachments such as `images/`.
 
 Keep accepted intake files distinct:
 
@@ -305,7 +308,7 @@ Each excerpt block must include:
 
 Missing heading context or required table context means the excerpt is incomplete and must not be ingested.
 
-After intake, move each original file from `inbox/` into exactly one state directory: `raw/digested/`, `raw/needs-review/`, `raw/ignored/`, or `raw/unsupported/`, preserving the path below `inbox/`. `inbox/` must not retain files that were already handled once. Record every move in `intake/logs/YYYY-MM-DD.md` with complete filenames, file types, source paths, and final destinations.
+After intake, move each source artifact from `inbox/` into exactly one state directory: `raw/digested/`, `raw/needs-review/`, `raw/ignored/`, or `raw/unsupported/`, preserving the path below `inbox/`. `inbox/` must not retain source artifacts that were already handled once. Record every move in `intake/logs/YYYY-MM-DD.md` with complete filenames, source kinds or file types, source paths or submitted URLs, and final destinations.
 
 Treat `raw/needs-review/` as a queue, not a final archive. Each file moved there must have a recorded review question in `reviews/source-review/YYYY-MM-DD.md` or `intake/logs/YYYY-MM-DD.md`. When the user or a later agent resolves the question, restart intake from that original file in its current raw state directory, preserve the path below `raw/needs-review/`, extract again to `intake/tmp/` if needed, then finish with `digested`, `ignored`, or `unsupported`. Do not leave a file in `raw/needs-review/` after a final decision exists.
 
@@ -331,8 +334,8 @@ Use this policy whenever a raw file, extracted `source.md`, or generated chunk i
 4. For large sources, create `chunks/` before ingest. Each chunk must be a coherent unit small enough to read and summarize independently. Prefer semantic boundaries such as headings, chapters, subchapters, slides, page ranges, sections, tables, or archive members. Follow `.agents/skills/source-extraction/references/large-source-chunking.md` for detailed chunk structure and chunk audit behavior.
 5. Write or update `summary.md` progressively from chunk summaries. The summary should capture the source topic, processing value, extraction caveats, low-value regions, noisy regions, and recommended ingest scope. Do not use `summary.md` as the detailed source synthesis; move durable claims and core viewpoints into `wiki/` during ingest.
 6. During ingest, read only the chunks needed for the current wiki update. Do not read all chunks unless the user explicitly asks for a full-source pass and the available context can support it.
-7. If a large source cannot be fully reviewed in the current pass, move the original out of `inbox/` to `raw/needs-review/`, record the review question, and clean `intake/tmp/`.
-8. If the source is mostly boilerplate, duplicate text, extraction errors, generated logs, raw data dumps, or other noise, do not expand it into the wiki. Record the issue in the review report and move the original to `raw/ignored/`, `raw/needs-review/`, or `raw/unsupported/` according to the blocker.
+7. If a large source cannot be fully reviewed in the current pass, move the source artifact out of `inbox/` to `raw/needs-review/`, record the review question, and clean `intake/tmp/`.
+8. If the source is mostly boilerplate, duplicate text, extraction errors, generated logs, raw data dumps, or other noise, do not expand it into the wiki. Record the issue in the review report and move the source artifact to `raw/ignored/`, `raw/needs-review/`, or `raw/unsupported/` according to the blocker.
 
 ### 6. Ingest
 

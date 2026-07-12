@@ -114,8 +114,8 @@ cd llm-wiki-agent
 
 | 目录 | 职责说明 |
 | --- | --- |
-| `inbox/` | 📥 用户提交原始文件的**唯一入口**。 |
-| `raw/` | 🗄️ 原始文件的状态存放地，并保留来源相对路径。(不存放智能体生成的 Markdown)。 |
+| `inbox/` | 📥 提交原始文件和实时 URL 来源捕获文件的入口。 |
+| `raw/` | 🗄️ 生命周期来源工件的状态存放地，并保留来源相对路径。Defuddle URL 捕获文件是唯一允许存放于此的生成来源工件。 |
 | `intake/tmp/` | ⚙️ 存放提取后且未进行来源审查前的临时 Markdown 文件。 |
 | `intake/processed/` | ✅ 存放已接受并准备写入 wiki 的 Markdown 文件。 |
 | `reviews/` | 📝 存放来源审查记录与讨论反射记录。 |
@@ -126,16 +126,17 @@ cd llm-wiki-agent
 
 ---
 
-## 📥 5. 首次摄入文件工作流
+## 📥 5. 首次摄入来源工作流
 
 精确生命周期规则以 [WIKI.md](../WIKI.md) 为准。第一次小规模摄入通常如下：
 
-1. **放入文件：** 将一个或多个原始源文件放入 `inbox/`。
-2. **提示智能体：** 询问智能体：*"请根据 AGENTS.md, PROJECT.md 和 WIKI.md 处理 inbox/ 中的文件。"*
+1. **提交来源：** 将原始文件放入 `inbox/`，或者把一个实时 URL 交给智能体。
+2. **提示智能体：** 询问智能体：*"请根据 AGENTS.md、PROJECT.md 和 WIKI.md 处理这些来源。"*
 3. **预期结果：**
+    - 实时 URL 会由 Defuddle 处理一次，生成 `inbox/web/<页面标题>--<URL 哈希>.md`；该捕获文件随后与提交的 Markdown 文件走同一生命周期。
     - 临时 Markdown 会出现在 `intake/tmp/<source-relative-parent>/<source-base-filename>/source.md`。如果输入文件位于嵌套目录，输出会保留其来源相对父路径。
     - **来源审查门 (Source Review Gate)** 会决定最终来源状态。
-    - 原始文件会被移入 `raw/` 下对应的状态子目录，并保留其在 `inbox/` 下的相对路径。
+    - 生命周期来源工件会被移入 `raw/` 下对应的状态子目录，并保留其在 `inbox/` 下的相对路径。
     - 只有被标记为 `digested` 的内容才会被移至 `intake/processed/` 并用于更新 `wiki/`。
 
 如需查看包含中间状态和最终目录状态的批量示例，请阅读 [来源生命周期示例](source-lifecycle.zh-CN.md)。
@@ -145,6 +146,7 @@ cd llm-wiki-agent
 - *"处理 raw 文件"*
 - *"审查来源"*
 - *"摄入这个来源"*
+- *"捕获并摄入这个 URL"*
 - *"wiki 里关于这个主题是怎么说的？"*
 - *"创建一个 artifact"*
 - *"对 wiki 做健康检查"*
@@ -172,7 +174,8 @@ cd llm-wiki-agent
 LLM Wiki Agent 采用文本优先的摄入路径：
 - 所有可读文档 (HTML, PDF, Word, PPT, Excel 等) 在摄入前都会转为 Markdown。
 - 扫描件、图片、音频和视频作为原始来源保留在 `raw/`，但除非已明确配置并批准提取，否则它们**不是**一等公民 (wiki 内容)。
-- 除非已明确配置图片处理机制，否则让图片留在原始来源中，不直接放入 wiki 页面。
+- 所选提供方已经返回的图片可以自动保存在 `source.md` 所在的 intake 目录中，并随该目录一起推进或删除。
+- 除非已明确配置并批准图片处理，否则不要把图片放入 wiki 页面，也不要执行 OCR 或视觉解释。
 
 ---
 
@@ -220,12 +223,12 @@ LLM Wiki Agent 采用文本优先的摄入路径：
 
 <details>
 <summary><b>如果找不到 Defuddle 怎么办？</b></summary>
-默认网页提取器是 Defuddle。请通过 npm 安装，或让智能体按照 <code>.agents/skills/source-extraction/references/providers/defuddle/setup.md</code> 执行。
+默认实时 URL 捕获提供方是 Defuddle。请通过 npm 安装，或让智能体按照 <code>.agents/skills/source-extraction/references/providers/defuddle/setup.md</code> 执行。实时 URL 不会直接进入 <code>intake/tmp/</code>；Defuddle 会先在 <code>inbox/web/</code> 下生成来源捕获文件。
 </details>
 
 <details>
 <summary><b>如果文件已经在 <code>raw/</code> 里面了呢？</b></summary>
-新提交的原始文件必须通过 <code>inbox/</code> 进入。已经位于 <code>raw/&lt;state&gt;/</code> 中的历史文件，可以从当前状态目录继续重新处理，因为它已经进入过生命周期。重新处理时必须保留 <code>raw/&lt;state&gt;/</code> 之后的相对路径；当来源移动到新状态时，旧状态目录中的那份必须移除。
+新的来源工件必须通过 <code>inbox/</code> 进入。提交文件保持不变；实时 URL 则以确定性的 Defuddle 来源捕获文件进入。已经位于 <code>raw/&lt;state&gt;/</code> 中的工件可以从当前状态目录继续重新处理，因为它已经进入过生命周期。重新处理时必须保留 <code>raw/&lt;state&gt;/</code> 之后的相对路径；当来源移动到新状态时，旧状态目录中的那份必须移除。
 </details>
 
 <details>

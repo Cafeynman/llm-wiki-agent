@@ -2,6 +2,19 @@
 
 这个示例说明 `inbox/` 中一批文件的预期生命周期。规范性规则仍以 `WIKI.md` 为准；本文件只是示例。
 
+## 实时 URL 入口
+
+提交的实时 URL 会在普通 intake 之前被固化：
+
+```text
+submitted URL
+`-- Defuddle structured Markdown
+    `-- inbox/web/<页面标题>--<URL 哈希>.md
+        `-- intake/tmp/web/<页面标题>--<URL 哈希>/source.md
+```
+
+`inbox/web/` 下的捕获文件是生命周期来源工件。它会在同一轮处理内离开 `inbox/`，并移动到唯一的 `raw/<state>/web/` 目标。Defuddle 不会再次处理这个捕获文件。
+
 ## 初始状态
 
 ```text
@@ -18,7 +31,7 @@
 
 ## 临时提取
 
-Intake 先暂存 Markdown 文件，或将非 Markdown 原始文件提取为临时 Markdown：
+Intake 先暂存 Markdown 文件，或将非 Markdown 原始文件提取为临时 Markdown。提供方返回的附件保存在同一临时来源目录中，并随该目录一起推进或删除：
 
 ```text
 .
