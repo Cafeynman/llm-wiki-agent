@@ -1,7 +1,7 @@
 [project]
 name = "llm-wiki-agent"
 version = "0.2.0"
-description = "Agent package for maintaining an Obsidian LLM Wiki with raw-file intake."
+description = "Agent package for maintaining a Markdown LLM Wiki with raw-file intake."
 readme = "README.md"
 requires-python = "==3.12.*"
 dependencies = [
