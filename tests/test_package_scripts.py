@@ -9,6 +9,7 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
+USER_ADAPTER_CONTENT = "# User-owned adapter\n"
 BASELINE_LINES = (
     ".env",
     "**/.env",
@@ -40,6 +41,7 @@ class PackageScriptTest(unittest.TestCase):
         target = root / "target"
         target.mkdir()
         (target / ".gitignore").write_text(VERSIONED_POLICY, encoding="utf-8")
+        (target / "CLAUDE.md").write_text(USER_ADAPTER_CONTENT, encoding="utf-8")
         if with_sentinel:
             sentinel = target / ".agents/skills/self-improving-agent/user-owned.txt"
             sentinel.parent.mkdir(parents=True)
@@ -54,6 +56,10 @@ class PackageScriptTest(unittest.TestCase):
         for line in BASELINE_LINES:
             self.assertEqual(gitignore.splitlines().count(line), 1, line)
         self.assertTrue((target / "uv.lock").is_file())
+        self.assertEqual(
+            (target / "CLAUDE.md").read_text(encoding="utf-8"),
+            USER_ADAPTER_CONTENT,
+        )
         calls = call_log.read_text(encoding="utf-8").splitlines()
         self.assertTrue(calls)
         self.assertTrue(
@@ -159,6 +165,10 @@ class PackageScriptTest(unittest.TestCase):
 
     def test_upgrade_bash_preserves_target_only_skill(self) -> None:
         self.run_bash_script("upgrade.sh", "-TargetRoot", with_sentinel=True)
+
+    def test_manifest_leaves_runtime_adapters_user_owned(self) -> None:
+        manifest = (ROOT / "scripts/upgrade-manifest.txt").read_text(encoding="utf-8")
+        self.assertNotIn("file CLAUDE.md", manifest.splitlines())
 
 
 if __name__ == "__main__":

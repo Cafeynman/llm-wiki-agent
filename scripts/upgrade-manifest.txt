@@ -1,6 +1,5 @@
 # Stable package files and directories managed by the upgrade scripts.
 file AGENTS.md
-file CLAUDE.md
 file WIKI.md
 file README.md
 file README.zh-CN.md

@@ -37,7 +37,7 @@ The stable intake contract remains in `WIKI.md`. This skill decides how to choos
 
 ## Security Rules
 
-- Do not write API keys, tokens, session cookies, or private credentials into `PROJECT.md`, `WIKI.md`, `AGENTS.md`, `CLAUDE.md`, manifests, logs, wiki pages, source cards, or skill files.
+- Do not write API keys, tokens, session cookies, or private credentials into `PROJECT.md`, `WIKI.md`, agent entrypoint files, manifests, logs, wiki pages, source cards, or skill files.
 - Provider setup documents may name required environment variables.
 - Agents may check whether required environment variables are present, but must not print, log, or persist their values.
 - When a provider needs local secrets, use the project-root `.env` file and run commands from the project root with `uv run --env-file .env ...` when applicable.

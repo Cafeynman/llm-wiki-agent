@@ -101,7 +101,6 @@ description: Use for a representative packaging check.
             "run_eval",
             "run_loop",
             "eval-viewer",
-            "claude -p",
         ):
             self.assertNotIn(stale_reference, retained)
 

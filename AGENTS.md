@@ -45,7 +45,7 @@ Before the first wiki task in a workspace, check whether package-managed entrypo
 
 Use `.\scripts\init.ps1 -VaultRoot .` on Windows and `./scripts/init.sh -VaultRoot .` on macOS or Linux.
 
-When the user wants the wiki structure in a separate Obsidian vault, pass that vault path as `-VaultRoot`. After external-vault initialization, treat the initialized vault root as the working package root. Existing package-managed files are replaced by the package copy; workspace-specific preferences belong in `PROJECT.md`.
+When the user wants the wiki structure in a separate directory, including an existing Obsidian vault, pass that path as `-VaultRoot`. After external-root initialization, treat the initialized root as the working package root. Existing package-managed files are replaced by the package copy; workspace-specific preferences belong in `PROJECT.md`.
 
 ## Skill Source
 
@@ -53,7 +53,7 @@ When using skills for this project, read the skill files from this repository's 
 
 ## Delegation Context
 
-When delegating wiki or source-processing work to subagents, Claude Code, AGY, external reviewers, or another runtime, do not assume repository context is inherited. Include the workspace root, the target vault root when different, `AGENTS.md` as the canonical entrypoint, relevant `WIKI.md` contract sections, `PROJECT.md` when naming or extraction preferences matter, relevant local `.agents/skills/` paths, and the source-language naming rule. Do not include secrets, private endpoints, tokens, or credentials in delegated prompts.
+When delegating wiki or source-processing work to subagents, AGY, external reviewers, or another runtime, do not assume repository context is inherited. Include the workspace root, the target vault root when different, `AGENTS.md` as the canonical entrypoint, relevant `WIKI.md` contract sections, `PROJECT.md` when naming or extraction preferences matter, relevant local `.agents/skills/` paths, and the source-language naming rule. Do not include secrets, private endpoints, tokens, or credentials in delegated prompts.
 
 ## Replacement and Target-State Writing
 
@@ -86,9 +86,9 @@ Keep `WIKI.md`, `AGENTS.md`, and other agent entrypoint files stable and replace
 11. Preserve raw source traceability and do not edit lifecycle source artifacts under `raw/` unless the user explicitly asks.
 12. Treat the package as text-first: source material must become reviewable Markdown before it enters `intake/processed/` or `wiki/`. Providers may automatically preserve returned attachments and images under the same intake folder as `source.md`; promote or delete them with that folder. Passive preservation does not make them first-class wiki content or authorize OCR, visual interpretation, or image-derived knowledge.
 
-## Obsidian Markdown and Frontmatter
+## Wiki Markdown and Frontmatter
 
-Use the local `.agents/skills/obsidian-markdown/` skill for Obsidian syntax, table-cell wikilinks, embeds, callouts, and properties. Traceability links to vault-internal files and notes must use Obsidian wikilinks.
+Use the local `.agents/skills/obsidian-markdown/` skill for the repository's Obsidian-compatible syntax, table-cell wikilinks, embeds, callouts, and properties. This is a file-format contract and does not require the Obsidian application. Traceability links to vault-internal files and notes must use wikilinks.
 
 Frontmatter `sources:` entries for vault-internal files must be quoted wikilink strings such as `"[[raw/digested/source-relative-parent/original-filename.ext]]"` or `"[[intake/processed/source-relative-parent/original-source-base-filename/source.md]]"`. Omit `source-relative-parent/` only when the source is directly under the intake root. Free-text values derived from users, sources, filenames, titles, paths, URLs, or descriptions must be quoted or emitted by a YAML serializer; see `.agents/skills/obsidian-markdown/references/PROPERTIES.md`.
 
@@ -106,7 +106,7 @@ For a submitted live URL, follow the deterministic Defuddle source-capture namin
 
 ## Source Extraction Providers
 
-Before source extraction, use the local `.agents/skills/source-extraction/` skill. Document, webpage, image, audio, and video extraction choices belong in `PROJECT.md`, not in `AGENTS.md` or `CLAUDE.md`.
+Before source extraction, use the local `.agents/skills/source-extraction/` skill. Document, webpage, image, audio, and video extraction choices belong in `PROJECT.md`, not in agent entrypoint files.
 
 OCR, active image extraction or interpretation, audio transcription, and video frame/audio extraction must follow `PROJECT.md`; do not enable them automatically. Copying images already returned by the selected provider into the same intake folder is passive source preservation and does not require separate approval. Real API keys, tokens, and private service URLs belong only in the local project-root `.env` file and must not be written into project instructions, manifests, logs, wiki pages, source cards, or skill files. Provider setup documents may name required environment variables, but local values must stay in `.env`.
 
@@ -124,7 +124,7 @@ When a request could fit multiple workflows, start with the smallest workflow th
 
 ## Wiki Agent Behavior
 
-Work like a careful Obsidian wiki maintainer: prefer small traceable updates, preserve useful existing structure, do not invent facts or citations, mark uncertainty clearly, keep raw originals unmodified, and use the shortest workflow that fully satisfies the user's request.
+Work like a careful Markdown wiki maintainer: prefer small traceable updates, preserve useful existing structure, do not invent facts or citations, mark uncertainty clearly, keep raw originals unmodified, and use the shortest workflow that fully satisfies the user's request.
 
 Update `wiki/index.md` and `logs/wiki.md` whenever wiki content changes. Update `wiki/home.md` only when the wiki purpose, main topics, current artifacts, or major open questions change. Create pages when they improve reuse, traceability, or synthesis, not for every named thing.
 

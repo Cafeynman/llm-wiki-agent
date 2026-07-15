@@ -29,7 +29,7 @@ Treat extra process as a risk until justified. Compatibility layers, fallback ro
 
 From the working root under review, read `AGENTS.md` and `WIKI.md` when they exist. Read the remaining files when they are relevant to the confirmed scope; for a full package contract review, read all applicable files in this list.
 
-1. `AGENTS.md` and adapter entrypoints such as `CLAUDE.md` for repository workflow, runtime, skill-source, precedence, and ownership rules.
+1. `AGENTS.md` and any optional adapter entrypoints for repository workflow, runtime, skill-source, precedence, and ownership rules.
 2. `WIKI.md` for the stable wiki directory contract and Add Knowledge, Use Knowledge, and Maintain Wiki workflows.
 3. `PROJECT.md` only for project-specific preferences; do not use it as a stable package contract.
 4. `scripts/upgrade-manifest.txt`, `scripts/init.ps1`, `scripts/init.sh`, `scripts/upgrade.ps1`, and `scripts/upgrade.sh` when reviewing migration, initialization, or upgrade behavior.
@@ -49,7 +49,7 @@ Start every review by stating the target root, whether it is a package root or i
 3. **Full local skill scan:** enumerate all `.agents/skills/*/SKILL.md` files, validate each skill, inspect auxiliary files, and compare trigger/ownership boundaries across skills.
 4. **Residue scan:** search for stale paths, conflicting wording, duplicated rules, obsolete workflow terms, local runtime artifacts, and generated files that should not be treated as package source.
 
-Do not stop after a single broad grep. Hidden directories are part of the review surface because `.agents/`, `.claude/`, `.obsidian/`, and tool workspaces can change how agents interpret the repository.
+Do not stop after a single broad grep. Hidden directories are part of the review surface because `.agents/`, editor configuration, and tool workspaces can change how agents interpret the repository.
 
 ### 1. Flow and Simplicity Fit
 
@@ -68,7 +68,7 @@ Check whether scripts and package-managed files match the current wiki structure
 
 1. Derive the expected runtime directories from `WIKI.md` and the initialization rules in `AGENTS.md`.
 2. Confirm `init` and `upgrade` scripts create the same required runtime directories and seed files.
-3. Confirm `upgrade-manifest.txt` includes stable package files and directories that must migrate, including `.agents/skills`, `docs`, `scripts`, `AGENTS.md`, `CLAUDE.md`, and `WIKI.md` when present.
+3. Confirm `upgrade-manifest.txt` includes stable package files and directories that must migrate, including `.agents/skills`, `docs`, `scripts`, `AGENTS.md`, and `WIKI.md` when present. Optional runtime adapters may remain user-owned instead of package-managed.
 4. Confirm package-managed files are copied from the package root and workspace-specific context stays in `PROJECT.md`.
 5. Compare `git ls-files`, `git status --ignored --short`, and the manifest so untracked archives, ignored vault folders, adapter directories, caches, and runtime folders are not mistaken for package source. Treat untracked files inside manifest-managed directories as pending local changes, not package source, until they are deliberately tracked.
 6. Search scripts and skills for stale path contracts such as dated intake directories, old skill paths, missing `.agents/skills` prefixes, unsupported runtime folders, or hardcoded scenario-specific paths.
@@ -92,7 +92,7 @@ For each skill:
    ```
 
 4. Check whether the trigger description overlaps another local skill or bypasses the owner of a workflow. Provider/helper skills must point back to their router; router skills must not hide provider-specific secrets or scenario-specific behavior.
-5. Check runtime portability. Flag active instructions that assume a non-current runtime, stale user-level paths, direct `python`/`pip` where this package requires `uv run`, `.claude` paths that conflict with `.agents/skills`, or hidden local service assumptions.
+5. Check runtime portability. Flag active instructions that assume a specific runtime, stale user-level paths, direct `python`/`pip` where this package requires `uv run`, runtime-specific skill paths that conflict with `.agents/skills`, or hidden local service assumptions.
 6. Check package suitability. Flag skill-specific README, `POST_INSTALL.md`, `_meta.json`, `package.json`, hooks, copied upstream docs, or examples when they are stale, redundant, or not needed for the package contract.
 7. Check source-control status. A skill inside a manifest-managed directory but untracked is pending local state, not confirmed package source, until the user decides to add it.
 
@@ -110,7 +110,7 @@ Get-ChildItem -LiteralPath .agents/skills -Directory | Sort-Object Name
 Get-ChildItem -LiteralPath .agents/skills -Recurse -Filter SKILL.md -File
 git ls-files .agents/skills
 git status --short -- .agents/skills
-rg -n --hidden "OpenClaw|Claude|Cowork|\.claude|skills/|python |pip |intake/tmp/[0-9]{4}|fallback|legacy|deprecated|TODO|TBD" .agents/skills
+rg -n --hidden "skills/|python |pip |intake/tmp/[0-9]{4}|fallback|legacy|deprecated|TODO|TBD" .agents/skills
 ```
 
 Treat broad-search output as a queue for inspection, not as findings by itself. Some terms are valid in examples, search commands, or compatibility notes; classify each match by active behavior and ownership.
@@ -124,7 +124,7 @@ rg --files --hidden -g "!**/.git/**" -g "!**/.venv/**" -g "!**/__pycache__/**" -
 rg --files --hidden --no-ignore -g "!**/.git/**" -g "!**/.venv/**" -g "!**/__pycache__/**" -g "!**/.pytest_cache/**" -g "!**/node_modules/**"
 git ls-files
 git status --ignored --short
-$reviewPaths = @("AGENTS.md","CLAUDE.md","WIKI.md","PROJECT.md","README.md","README.zh-CN.md","pyproject.toml",".env.example","docs","scripts",".agents/skills") | Where-Object { Test-Path $_ }
+$reviewPaths = @("AGENTS.md","WIKI.md","PROJECT.md","README.md","README.zh-CN.md","pyproject.toml",".env.example","docs","scripts",".agents/skills") | Where-Object { Test-Path $_ }
 rg -n --hidden "intake/tmp/[0-9]{4}|intake/processed/[0-9]{4}|skills/obsidian-wiki-lint|TODO|TBD|legacy|deprecated|fallback" $reviewPaths
 if (Test-Path wiki) { uv run --no-project .agents/skills/obsidian-wiki-lint/scripts/lint_wiki.py --vault . --scope wiki }
 ```
@@ -139,7 +139,7 @@ Classify every issue by ownership before proposing changes:
 | Surface | Owns |
 | --- | --- |
 | `WIKI.md` | Stable wiki operating contract, directory lifecycle, source traceability, workflow rules |
-| `AGENTS.md` / `CLAUDE.md` | Agent entrypoint behavior, runtime command rules, initialization rules, package workflow |
+| `AGENTS.md` / optional adapter entrypoints | Agent entrypoint behavior, runtime command rules, initialization rules, package workflow |
 | `PROJECT.md` | Vault-specific subject, structure preferences, provider choices, naming preferences, project-specific rules |
 | `.agents/skills/` | Reusable local procedures and deterministic tool guidance |
 | `scripts/` | Package installation, upgrade, and repeatable automation |

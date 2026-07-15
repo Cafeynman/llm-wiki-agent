@@ -34,7 +34,7 @@ Each profile owns:
 
 ## Security Rules
 
-Use `.env.example` as the non-secret template. Do not store tokens or private endpoint values in `PROJECT.md`, `WIKI.md`, `AGENTS.md`, `CLAUDE.md`, manifests, logs, wiki pages, source cards, or skill files. Agents may check whether required variables are present, but must not print or persist their values.
+Use `.env.example` as the non-secret template. Do not store tokens or private endpoint values in `PROJECT.md`, `WIKI.md`, agent entrypoint files, manifests, logs, wiki pages, source cards, or skill files. Agents may check whether required variables are present, but must not print or persist their values.
 
 ## Upstream Documentation
 

@@ -1,6 +1,6 @@
 # LLM Wiki Operating Guide
 
-This file defines the common operating rules for an agent-maintained Obsidian LLM Wiki.
+This file defines the common operating rules for an agent-maintained Markdown LLM Wiki.
 
 ## Core Goal
 
@@ -128,7 +128,7 @@ pages.
 
 ## Page Conventions
 
-Use Obsidian-compatible Markdown. Prefer `[[wikilinks]]` for internal wiki pages and normal Markdown links for external URLs. Keep filenames human-readable and stable.
+Use Obsidian-compatible Markdown as the repository's file format; the workflow does not require the Obsidian application. Prefer `[[wikilinks]]` for internal wiki pages and normal Markdown links for external URLs. Keep filenames human-readable and stable.
 
 Traceability links to vault-internal files and notes must use Obsidian wikilinks. In frontmatter `sources:`, write vault-internal paths as quoted wikilink strings, for example `"[[raw/digested/source-relative-parent/original-filename.ext]]"` or `"[[intake/processed/source-relative-parent/original-source-base-filename/source.md]]"`. Omit `source-relative-parent/` only when the source is directly under the intake root. External URLs remain quoted plain strings. See `.agents/skills/obsidian-markdown/references/PROPERTIES.md` for exact YAML quoting rules.
 
@@ -348,7 +348,7 @@ When a source is ready to become wiki knowledge:
 2. Read `summary.md`, `manifest.md`, and `chunks/index.md` first when available.
 3. Read the original source only when accuracy or extraction quality needs verification.
 4. Extract durable knowledge: main thesis, key claims, evidence, counterevidence, named entities, important concepts, decisions, recommendations, contradictions, and open questions.
-5. Verify Obsidian Markdown before writing wiki pages. Use the local `obsidian-markdown` skill as the syntax contract and run `obsidian-wiki-lint` as the deterministic lint gate.
+5. Verify wiki Markdown compatibility before writing wiki pages. Use the local `obsidian-markdown` skill as the syntax contract and run `obsidian-wiki-lint` as the deterministic lint gate.
 6. Create or update exactly one content-rich source card under `wiki/sources/<source-relative-parent>/original-source-base-filename.md`.
 7. For long books, manuals, standards, reports, or other sources that need a structured reading surface, create or update a source-specific wiki entry only when useful. Put full-source detailed summaries, core viewpoints, knowledge flow, chapter navigation, and chapter-level digests there, for example under `wiki/books/source-relative-parent/original-source-base-filename/`.
 8. Create or update relevant pages in `wiki/entities/`, `wiki/concepts/`, `wiki/claims/`, or `wiki/syntheses/` only when useful.
