@@ -1,6 +1,6 @@
 <h1 align="center"><b>LLM Wiki Agent</b></h1>
 
-<h2 align="center"><b>Build and maintain a persistent, traceable Obsidian-style Markdown knowledge base with an LLM agent.</b></h2>
+<h2 align="center"><b>Build and maintain a persistent, traceable Markdown knowledge base with an LLM agent.</b></h2>
 
 <p align="center">
   <b><i><font size="4">Just drop your files in the inbox, and let your agent build the wiki.</font></i></b>
@@ -10,7 +10,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
   <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12"></a>
   <a href="https://docs.astral.sh/uv/"><img src="https://img.shields.io/badge/Package_Manager-uv-blue?logo=python&logoColor=white" alt="uv Package Manager"></a>
-  <a href="https://obsidian.md/"><img src="https://img.shields.io/badge/Optimized_for-Obsidian-483699?logo=obsidian&logoColor=white" alt="Optimized for Obsidian"></a>
+  <a href="https://obsidian.md/"><img src="https://img.shields.io/badge/Obsidian-Compatible-483699?logo=obsidian&logoColor=white" alt="Obsidian Compatible"></a>
   <a href="#%EF%B8%8F-key-features--design-boundaries"><img src="https://img.shields.io/badge/⚠️_Rules-Text_First-orange" alt="Text-First Boundaries"></a>
 </p>
 
@@ -39,7 +39,7 @@ cd llm-wiki-agent
 ./scripts/init.sh -VaultRoot .
 ```
 
-*Note: For a separate Obsidian vault, pass the vault path like `.\scripts\init.ps1 -VaultRoot "C:\path\to\your\vault"`. The target vault becomes the working root and receives the package-managed agent files, local skills, scripts, docs, and runtime structure. Package-managed files are replaced by the package copy; vault-specific preferences belong in `PROJECT.md`.*
+*Note: For a separate working directory, including an existing Obsidian vault, pass that path like `.\scripts\init.ps1 -VaultRoot "C:\path\to\your\workspace"`. The target becomes the working root and receives the package-managed agent files, local skills, scripts, docs, and runtime structure. Package-managed files are replaced by the package copy; workspace-specific preferences belong in `PROJECT.md`.*
 
 Default source extraction preferences are recorded in `PROJECT.md`. During first project-context confirmation, the agent asks whether to configure MinerU, which MinerU profile should be used when API mode is selected, and whether to prefer MinerU when it is available; choosing that preference records MinerU as the document default.
 For service-backed providers and OCR backends, copy `.env.example` to `.env` in the initialized working root and fill only the variables required by the selected provider profile. The real `.env` file is ignored by Git; agents should load it with `uv run --env-file .env` when running provider commands.
@@ -59,7 +59,7 @@ Optional scenario packages under `scenarios/` can adapt an initialized workspace
 
 **You provide files or links. The agent organizes the knowledge. You get a traceable wiki.**
 
-This repository is **not** a full application server or a replacement for Obsidian. It is a **portable workflow package** for agents that can read repository instructions (like Codex, Claude Code, Gemini CLI, OpenCode, etc.). 
+This repository is **not** a full application server or tied to a specific agent platform. It is a **portable workflow package** for any agent that can read repository instructions, edit files, and run the required commands. Obsidian and Claudian are optional interfaces, not runtime requirements.
 
 The package gives your agent a strict, clear operating contract: 
 <table>
@@ -100,11 +100,12 @@ The package keeps the agent strictly on three major workflows. The agent will al
 
 ---
 
-## 🛠️ Recommended Setup
+## 🛠️ Optional Interfaces
 
-To get the most out of LLM Wiki Agent, we recommend pairing it with:
-- **[Claudian](https://github.com/YishenTu/claudian)**: Recommended if you want an Obsidian-oriented local agent environment.
-- **[Obsidian Web Clipper](https://github.com/obsidianmd/obsidian-clipper)**: Recommended for seamlessly collecting web pages into Markdown source material.
+LLM Wiki Agent works directly from the filesystem without Obsidian or Claudian. If you prefer an Obsidian interface:
+
+- **Claudian** embeds supported agent runtimes in an Obsidian vault. Follow the current installation guidance in the [YishenTu/claudian repository](https://github.com/YishenTu/claudian) or on the [Claudian website](https://claudian.xyz/zh/), then consult the [provider documentation](https://claudian.xyz/zh/docs/providers/). See the [Usage Guide](docs/usage.md#optional-obsidian-and-claudian-interface) for this package's setup recommendation.
+- **[Obsidian Web Clipper](https://github.com/obsidianmd/obsidian-clipper)** can collect web pages as Markdown source material.
 
 ---
 

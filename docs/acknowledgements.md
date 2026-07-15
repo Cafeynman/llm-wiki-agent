@@ -27,12 +27,6 @@ This project exists because of the public LLM Wiki idea space and the people who
 
 ---
 
-## 🛠️ Environment Setup Help
-
-Thanks to the **Bilibili UP creator** behind [BV1p4DeB8ECi](https://www.bilibili.com/video/BV1p4DeB8ECi/) for the Obsidian + Claudian environment setup guidance. That setup material helped make the workflow easier to run in a real local knowledge-base environment.
-
----
-
 ## 🌐 Tools and Ecosystem
 
 Thanks to the **Obsidian ecosystem** for making local Markdown knowledge bases practical, and to the maintainers of the local skills and extraction tools used by this package.

@@ -27,12 +27,6 @@
 
 ---
 
-## 🛠️ 环境配置协助
-
-感谢 [BV1p4DeB8ECi](https://www.bilibili.com/video/BV1p4DeB8ECi/) 背后的 **B站 UP 主**提供的 Obsidian + Claudian 环境配置指导。这些材料让工作流在真实的本地知识库环境中更容易跑通。
-
----
-
 ## 🌐 工具与生态系统
 
 感谢 **Obsidian 生态系统** 让本地 Markdown 知识库变得如此实用，也感谢本项目所使用的各种本地技能和来源提取工具的维护者们。

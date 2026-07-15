@@ -1,6 +1,6 @@
 <h1 align="center"><b>LLM Wiki Agent</b></h1>
 
-<h2 align="center"><b>通过 LLM 智能体构建并维护一个持久化、可溯源的 Obsidian 风格 Markdown 知识库。</b></h2>
+<h2 align="center"><b>通过 LLM 智能体构建并维护一个持久化、可溯源的 Markdown 知识库。</b></h2>
 
 <p align="center">
   <b><i><font size="4">只需将文件放入收件箱，让智能体为你构建 Wiki。</font></i></b>
@@ -10,7 +10,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
   <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12"></a>
   <a href="https://docs.astral.sh/uv/"><img src="https://img.shields.io/badge/Package_Manager-uv-blue?logo=python&logoColor=white" alt="uv Package Manager"></a>
-  <a href="https://obsidian.md/"><img src="https://img.shields.io/badge/Optimized_for-Obsidian-483699?logo=obsidian&logoColor=white" alt="Optimized for Obsidian"></a>
+  <a href="https://obsidian.md/"><img src="https://img.shields.io/badge/Obsidian-Compatible-483699?logo=obsidian&logoColor=white" alt="Obsidian Compatible"></a>
   <a href="#%EF%B8%8F-核心特性与设计边界"><img src="https://img.shields.io/badge/⚠️_Rules-Text_First-orange" alt="Text-First Boundaries"></a>
 </p>
 
@@ -39,7 +39,7 @@ cd llm-wiki-agent
 ./scripts/init.sh -VaultRoot .
 ```
 
-*提示：如果要使用单独的 Obsidian 库，请传递库路径，例如 `.\scripts\init.ps1 -VaultRoot "C:\path\to\your\vault"`。目标库会成为工作根目录，并获得包管理的智能体文件、本地技能、脚本、文档和运行结构。包管理文件会被包副本替换；库级个性化偏好应放在 `PROJECT.md`。*
+*提示：如果要使用单独的工作目录，包括现有 Obsidian 库，请传递该路径，例如 `.\scripts\init.ps1 -VaultRoot "C:\path\to\your\workspace"`。目标目录会成为工作根目录，并获得包管理的智能体文件、本地技能、脚本、文档和运行结构。包管理文件会被包副本替换；工作区个性化偏好应放在 `PROJECT.md`。*
 
 默认来源提取偏好记录在 `PROJECT.md`。首次确认项目上下文时，智能体会询问是否配置 MinerU、API 模式下使用哪个 MinerU profile，以及 MinerU 可用时是否优先使用 MinerU；选择该偏好时会把 MinerU 记录为文档默认 provider。
 如果使用需要本地服务配置的 provider 或 OCR 后端，请将 `.env.example` 复制为初始化后工作根目录中的 `.env`，并只填写所选 provider profile 真正需要的变量。真实 `.env` 已被 Git 忽略；智能体运行 provider 命令时应通过 `uv run --env-file .env` 加载它。
@@ -59,7 +59,7 @@ cd llm-wiki-agent
 
 **你提供文件或链接，智能体整理知识，你获得一个可溯源的 Wiki。**
 
-本仓库**不是**一个完整的应用服务器，也**不是** Obsidian 的替代品。它是一个**便携的工作流包**，专为能够读取仓库指令的智能体（如 Codex, Claude Code, Gemini CLI, OpenCode 等）设计。
+本仓库**不是**一个完整的应用服务器，也不绑定特定智能体平台。它是一个**便携的工作流包**，任何能够读取仓库指令、编辑文件并执行所需命令的智能体都可以使用。Obsidian 和 Claudian 都是可选界面，不是运行要求。
 
 该项目为你的智能体提供了一份严格而清晰的操作契约：
 <table>
@@ -100,11 +100,12 @@ cd llm-wiki-agent
 
 ---
 
-## 🛠️ 推荐配置
+## 🛠️ 可选界面
 
-为了最大化发挥 LLM Wiki Agent 的能力，建议搭配以下工具使用：
-- **[Claudian](https://github.com/YishenTu/claudian)**：如果你想要一个面向 Obsidian 的本地智能体环境，这是推荐选择。
-- **[Obsidian Web Clipper](https://github.com/obsidianmd/obsidian-clipper)**：推荐用于将网页无缝剪辑为 Markdown 源材料。
+LLM Wiki Agent 可以直接通过文件系统运行，不需要安装 Obsidian 或 Claudian。如果你希望使用 Obsidian 界面：
+
+- **Claudian** 可以把受支持的智能体运行时嵌入 Obsidian 库中。请按照 [YishenTu/claudian 仓库](https://github.com/YishenTu/claudian)或 [Claudian 官网](https://claudian.xyz/zh/)的最新安装说明操作，再查看 [provider 文档](https://claudian.xyz/zh/docs/providers/)。本仓库的配置建议见 [使用指南](docs/usage.zh-CN.md#可选的-obsidian-与-claudian-界面)。
+- **[Obsidian Web Clipper](https://github.com/obsidianmd/obsidian-clipper)** 可以把网页收集为 Markdown 来源材料。
 
 ---
 

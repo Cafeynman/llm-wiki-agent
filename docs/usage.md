@@ -35,8 +35,17 @@ Before you start, ensure you have:
 - [uv](https://docs.astral.sh/uv/) for Python environment management (the init scripts run `uv sync --locked` against the lockfile's official PyPI index).
 - PowerShell (Windows) or Bash (macOS/Linux) for initialization scripts.
 - Node.js/npm or an installed Defuddle CLI when you want the default webpage extraction provider.
-- Obsidian, or any standard Markdown editor.
-- An AI Agent that reads repository instructions (e.g., Codex, Claude Code, Gemini CLI, OpenCode).
+- Any standard Markdown editor. Obsidian is optional.
+- An agent runtime that can read repository instructions, edit files, and run the required commands.
+
+### Recommended Agent Runtime
+
+The package does not depend on a specific agent platform. For the default setup, this guide recommends [OpenCode](https://opencode.ai/docs/). Install and configure OpenCode using its current documentation, then run it from the initialized working root. Other compatible agent runtimes remain supported.
+
+```bash
+opencode auth login
+opencode
+```
 
 ---
 
@@ -52,7 +61,7 @@ cd llm-wiki-agent
 ./scripts/init.sh -VaultRoot .
 ```
 
-To create the structure inside an existing separate Obsidian vault:
+To create the structure inside a separate working directory, including an existing Obsidian vault:
 ```bash
 # Windows
 .\scripts\init.ps1 -VaultRoot "C:\path\to\your\vault"
@@ -61,7 +70,7 @@ To create the structure inside an existing separate Obsidian vault:
 ./scripts/init.sh -VaultRoot "/path/to/your/vault"
 ```
 
-After external-vault initialization, open or run the agent from the initialized vault root. The target vault receives the package-managed entrypoint files, local skills, scripts, docs, runtime directories, and project environment. Existing package-managed files in the target vault are replaced by the package copy; keep vault-specific preferences in `PROJECT.md`.
+After external-root initialization, open or run the agent from the initialized root. The target receives the package-managed entrypoint files, local skills, scripts, docs, runtime directories, and project environment. Existing package-managed files in the target are replaced by the package copy; keep workspace-specific preferences in `PROJECT.md`.
 
 **What this does:**
 1. Installs package-managed entrypoint files, local skills, scripts, and docs into the target root.
@@ -69,6 +78,12 @@ After external-vault initialization, open or run the agent from the initialized 
 3. Creates missing workflow directories and default wiki files (`inbox/`, `raw/`, `intake/`, `reviews/`, `logs/`, `wiki/`, etc.) without overwriting existing runtime content.
 4. Seeds `.gitignore` when it is missing, or appends the default private runtime block when no wiki runtime policy is present.
 5. Runs `uv sync --locked --default-index https://pypi.org/simple` in the initialized root to create or update the `.venv/` runtime state from the committed lockfile.
+
+### Optional Obsidian and Claudian Interface
+
+Obsidian and Claudian are not required. The package works through the filesystem with any compatible agent runtime. If you want an embedded agent interface inside Obsidian, follow the current installation instructions in the [YishenTu/claudian repository](https://github.com/YishenTu/claudian) or on the [Claudian website](https://claudian.xyz/zh/), then review the [provider documentation](https://claudian.xyz/zh/docs/providers/).
+
+For this optional Claudian path, this package recommends OpenCode as the default provider choice. This is a package-level recommendation, not a claim that OpenCode is Claudian's only provider. Other providers supported by Claudian remain valid.
 
 ### Optional Scenario Packages
 

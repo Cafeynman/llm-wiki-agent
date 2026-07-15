@@ -35,8 +35,17 @@
 - [uv](https://docs.astral.sh/uv/)，用于 Python 环境管理 (初始化脚本会依据锁文件并使用官方 PyPI 索引运行 `uv sync --locked`)。
 - PowerShell (Windows) 或 Bash (macOS/Linux) 用于执行初始化脚本。
 - 当你要使用默认网页提取器时，需要 Node.js/npm 或已安装的 Defuddle CLI。
-- Obsidian，或任何标准的 Markdown 编辑器。
-- 一个能够读取仓库级别指令的 AI 智能体 (例如 Codex, Claude Code, Gemini CLI, OpenCode)。
+- 任意标准 Markdown 编辑器；Obsidian 是可选项。
+- 一个能够读取仓库指令、编辑文件并执行所需命令的智能体运行时。
+
+### 推荐的智能体运行时
+
+本工作流包不依赖特定智能体平台。作为默认配置，本指南推荐使用 [OpenCode](https://opencode.ai/docs/)。请按照 OpenCode 的最新文档完成安装和配置，然后从初始化后的工作根目录启动。其他兼容的智能体运行时仍然受支持。
+
+```bash
+opencode auth login
+opencode
+```
 
 ---
 
@@ -52,7 +61,7 @@ cd llm-wiki-agent
 ./scripts/init.sh -VaultRoot .
 ```
 
-若要在单独的现有 Obsidian 库中创建结构：
+若要在单独的工作目录中创建结构，包括现有 Obsidian 库：
 ```bash
 # Windows
 .\scripts\init.ps1 -VaultRoot "C:\path\to\your\vault"
@@ -61,7 +70,7 @@ cd llm-wiki-agent
 ./scripts/init.sh -VaultRoot "/path/to/your/vault"
 ```
 
-外部库初始化完成后，请从初始化后的库根目录打开或运行智能体。目标库会得到包管理的入口文件、本地技能、脚本、文档、运行目录和项目环境。目标库中已有的包管理文件会被包副本替换；库级个性化偏好应放在 `PROJECT.md`。
+外部根目录初始化完成后，请从初始化后的根目录打开或运行智能体。目标目录会得到包管理的入口文件、本地技能、脚本、文档、运行目录和项目环境。目标目录中已有的包管理文件会被包副本替换；工作区个性化偏好应放在 `PROJECT.md`。
 
 **它的作用是：**
 1. 将包管理的入口文件、本地技能、脚本和文档安装到目标根目录。
@@ -69,6 +78,12 @@ cd llm-wiki-agent
 3. 补齐缺失的工作流目录和默认 wiki 文件 (`inbox/`, `raw/`, `intake/`, `reviews/`, `logs/`, `wiki/` 等)，不覆盖已有运行内容。
 4. 在 `.gitignore` 缺失时写入默认模板；如果已有 `.gitignore` 没有 wiki 运行目录策略，则追加默认私有运行目录段落。
 5. 在初始化后的根目录运行 `uv sync --locked --default-index https://pypi.org/simple`，根据已提交的锁文件创建或更新 `.venv` 本地运行环境。
+
+### 可选的 Obsidian 与 Claudian 界面
+
+Obsidian 和 Claudian 都不是必需项。本工作流包可以通过文件系统配合任意兼容智能体运行时工作。如果你希望在 Obsidian 中使用内嵌的智能体界面，请按照 [YishenTu/claudian 仓库](https://github.com/YishenTu/claudian)或 [Claudian 官网](https://claudian.xyz/zh/)的最新安装说明操作，然后查看 [provider 文档](https://claudian.xyz/zh/docs/providers/)。
+
+在这条可选的 Claudian 使用路径中，本工作流包默认推荐选择 OpenCode provider。这是本工作流包的配置建议，并不表示 OpenCode 是 Claudian 唯一支持的 provider；Claudian 支持的其他 provider 仍然可以使用。
 
 ### 可选场景包
 
