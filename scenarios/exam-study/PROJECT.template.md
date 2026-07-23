@@ -9,13 +9,15 @@ project-specific context.
 - Theme: Professional qualification exam preparation knowledge base
 - Goal:
 - Audience:
-- Scope: Foundational materials, syllabus, question banks, wrong-question records, practice generation, and review artifacts for one exam.
+- Scope: Foundational materials, syllabus, question banks, wrong-question topic pages, practice generation, and review artifacts for one exam.
 - Preferred terms:
   - Subject:
   - Chapter:
   - Knowledge point:
   - Question bank:
   - Wrong question:
+  - Wrong-question topic:
+  - Knowledge topic:
 - Wiki structure requirements:
   - One workspace targets one exam.
   - Confirmed subjects:
