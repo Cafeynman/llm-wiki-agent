@@ -132,6 +132,8 @@ Use Obsidian-compatible Markdown as the repository's file format; the workflow d
 
 Traceability links to vault-internal files and notes must use Obsidian wikilinks. In frontmatter `sources:`, write vault-internal paths as quoted wikilink strings, for example `"[[raw/digested/source-relative-parent/original-filename.ext]]"` or `"[[intake/processed/source-relative-parent/original-source-base-filename/source.md]]"`. Omit `source-relative-parent/` only when the source is directly under the intake root. External URLs remain quoted plain strings. See `.agents/skills/obsidian-markdown/references/PROPERTIES.md` for exact YAML quoting rules.
 
+The `sources:` property records page-level traceability; it does not replace claim-level citations. In cross-source research pages and research deliverables, place citations next to source-dependent facts, numbers, quotations, and contested judgments. General summaries on a single-source card may rely on the page's declared source, but numbers, quotations, and content that needs precise source location should still be cited in place. Use a direct wikilink when it keeps the source relationship clear; otherwise use a standard Markdown footnote. Reuse a footnote label only when each occurrence refers to the same evidence scope; when the evidence scope differs or separate citations make the support clearer, use separate labels even if they point to the same source. Every standard footnote reference `[^label]` must have a matching `[^label]:` definition in the same Markdown file.
+
 Preserve source-derived text exactly as content. Do not delete, replace, romanize, convert to pinyin, slugify, or otherwise normalize special characters just because a target syntax treats them specially. Encode or quote the value only at the output boundary that needs it, such as YAML frontmatter, Markdown table cells, wikilinks, or command examples.
 
 Preserve source-language names for source-specific artifacts: source cards, source-specific reading pages, source-derived page titles, headings, aliases, catalog labels, and index entries. Chunk content files and chunk directories are the sole path exception: use numeric components such as `01.md` and `01/`, while preserving the exact source title and source order token in the chunk heading and nearest `index.md` entry. Do not translate, romanize, convert to pinyin, slugify, force lowercase, case-normalize, or simplify source-derived names unless the user explicitly asks or `PROJECT.md` records a confirmed naming preference. For cross-source pages such as entities, concepts, claims, and syntheses, follow `PROJECT.md` naming preferences; if none are confirmed, use the dominant language of the relevant sources, or the user's request language when there is no dominant source language. Add alternative-language names as aliases when they help prevent duplicate pages. Fixed system-role filenames, including `source.md`, `summary.md`, `manifest.md`, `digest.md`, `index.md`, `home.md`, `overview.md`, and `logs/wiki.md`, keep their contract names.
@@ -387,10 +389,11 @@ Use this mode when the user asks a question, asks what the wiki says, asks for e
 3. Read the most relevant pages and their cited sources when accuracy matters.
 4. Answer from compiled wiki knowledge, not from raw search alone.
 5. For research questions, separate direct answer, supporting evidence, counterevidence, uncertainty, and open questions.
-6. Cite wiki pages, intake outputs, or raw source paths for non-obvious claims.
+6. Cite wiki pages, intake outputs, or raw source paths for non-obvious claims, following the claim-level placement rule in Page Conventions.
 7. If the answer produces durable synthesis, save it under `wiki/syntheses/` when the user asks or confirms.
 8. If the user asks for a deliverable, write it under `artifacts/`.
 9. If the answer exposes an unresolved investigation thread worth tracking, write or update it under `questions/` when the user asks or confirms.
+10. When this workflow writes Markdown, run `obsidian-wiki-lint` against each changed top-level scope before delivery.
 
 If the wiki has no relevant page, say so and offer the smallest useful next action: inspect raw material, review sources, process an intake item, or create a `questions/` investigation note.
 
@@ -403,7 +406,7 @@ Check for:
 1. Broken wikilinks.
 2. Orphan pages that should be connected.
 3. Duplicate pages for the same entity, concept, claim, or source.
-4. Claims without sources.
+4. Claims without nearby source support, or citations that do not support the claim they follow.
 5. Claims with support but no counterevidence check.
 6. Stale claims superseded by newer sources.
 7. Contradictions that are not represented clearly.

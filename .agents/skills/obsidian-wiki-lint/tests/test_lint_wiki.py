@@ -852,5 +852,53 @@ raw/digested/source.pdf
 
         self.assertEqual(result, 0, "Lint should ignore traceability path examples inside fenced code.")
 
+    def test_footnote_reference_requires_definition(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text("Claim with missing support[^missing].", encoding="utf-8")
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 1, "Lint should reject a footnote reference without a definition.")
+        output = "\n".join(call[0][0] for call in mock_print.call_args_list if call[0])
+        self.assertIn(
+            "wiki/note.md:1: footnote reference has no definition: missing",
+            output,
+        )
+
+    def test_repeated_footnote_reference_can_share_one_definition(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """First supported claim[^source].
+
+Second use of the same evidence[^source].
+
+[^source]: Shared source details.
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print"):
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0)
+
+    def test_footnote_references_inside_code_are_ignored(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text(
+            """Inline example: `Claim[^inline]`.
+
+```markdown
+Fenced example[^fenced].
+```
+""",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print"):
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        self.assertEqual(result, 0)
+
 if __name__ == "__main__":
     unittest.main()

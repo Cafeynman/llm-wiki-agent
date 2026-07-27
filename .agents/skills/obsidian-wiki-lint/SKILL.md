@@ -1,6 +1,6 @@
 ---
 name: obsidian-wiki-lint
-description: Foundational Obsidian wiki static linting tool. Use as the FIRST standard layer for checking broken wikilinks and orphan pages. For project-specific business logic validations (e.g. counting files, checking specific metadata), ALWAYS run this skill first to establish a baseline, then write custom scripts for the rest. Do not write custom scripts to replace this skill's basic link parsing.
+description: Foundational Obsidian wiki static linting tool. Use as the FIRST standard layer for checking broken wikilinks, missing standard footnote definitions, and orphan pages. For project-specific business logic validations (e.g. counting files, checking specific metadata), ALWAYS run this skill first to establish a baseline, then write custom scripts for the rest. Do not write custom scripts to replace this skill's basic Markdown parsing.
 ---
 
 # Obsidian Wiki Lint
@@ -31,7 +31,7 @@ Keep executable Obsidian Markdown checks owned here. `WIKI.md` may require this 
 4. Add `--write` only when the fix is mechanical and the target scope is correct.
 5. After writes, rerun `lint_wiki.py`.
 
-`lint_wiki.py` ignores link examples inside fenced or inline code. It resolves ordinary Markdown links relative to the containing note, while a leading `/` starts from the vault root and Obsidian wikilinks retain vault semantics. Links that resolve outside the vault are reported as broken. Links ending in `/` or `\` are explicit directory links. Existing directory links are checked for directory existence and do not count as page incoming links. Internal vault paths in frontmatter `sources:` must be complete quoted wikilinks. `intake/` wikilinks in frontmatter `sources:` are source traceability and are excluded from navigation broken-link reporting; body links to `intake/` remain checked.
+`lint_wiki.py` ignores link and footnote examples inside fenced or inline code. It resolves ordinary Markdown links relative to the containing note, while a leading `/` starts from the vault root and Obsidian wikilinks retain vault semantics. Links that resolve outside the vault are reported as broken. Links ending in `/` or `\` are explicit directory links. Existing directory links are checked for directory existence and do not count as page incoming links. Internal vault paths in frontmatter `sources:` must be complete quoted wikilinks. `intake/` wikilinks in frontmatter `sources:` are source traceability and are excluded from navigation broken-link reporting; body links to `intake/` remain checked. Every standard footnote reference must have a matching definition in the same note; repeated references may share one definition.
 
 If the requested `--scope` contains no Markdown pages, `lint_wiki.py` exits with code `2`. Treat that as a wrong vault root or scope, not a clean wiki.
 
@@ -39,7 +39,7 @@ If the requested `--scope` contains no Markdown pages, `lint_wiki.py` exits with
 
 | Script | Purpose | Writes by default |
 | --- | --- | --- |
-| `lint_wiki.py` | Reports broken wikilinks, orphan pages under a scope, frontmatter `sources:` entries that should be wikilinks, frontmatter `tags:` values that contain whitespace, unescaped wikilink alias separators in Markdown tables, bare internal traceability paths in body text, and page counts. | No |
+| `lint_wiki.py` | Reports broken wikilinks, standard footnote references without same-note definitions, orphan pages under a scope, frontmatter `sources:` entries that should be wikilinks, frontmatter `tags:` values that contain whitespace, unescaped wikilink alias separators in Markdown tables, bare internal traceability paths in body text, and page counts. | No |
 | `fix_truncated_links.py` | Expands wikilinks whose target filename is a unique prefix of an existing Markdown file. | No |
 | `crosslink_concepts.py` | Adds limited links from concept names or aliases to concept notes recursively under the configured concepts directory. | No |
 

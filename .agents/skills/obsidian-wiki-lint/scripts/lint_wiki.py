@@ -15,6 +15,8 @@ from markdown_code import mask_inline_code, mask_markdown_code
 
 WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
 MD_LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
+FOOTNOTE_REF_RE = re.compile(r"(?<!\\)\[\^([^\]\r\n]+)\]")
+FOOTNOTE_DEF_RE = re.compile(r"^[ \t]{0,3}\[\^([^\]\r\n]+)\]:")
 FRONTMATTER_RE = re.compile(r"\A---\r?\n(.*?)\r?\n---", re.DOTALL)
 TRACEABILITY_PATH_RE = re.compile(
     r"(?<![\w/.\-])"
@@ -436,6 +438,29 @@ def lint_bare_traceability_paths(content: str, rel: str) -> list[str]:
     return errors
 
 
+def lint_footnote_references(content: str, rel: str) -> list[str]:
+    body_lines = iter_markdown_body_lines(content)
+    definitions = {
+        match.group(1)
+        for _, line in body_lines
+        if (match := FOOTNOTE_DEF_RE.match(line))
+    }
+    errors: list[str] = []
+
+    for line_no, line in body_lines:
+        definition = FOOTNOTE_DEF_RE.match(line)
+        for match in FOOTNOTE_REF_RE.finditer(line):
+            if definition and match.start() == definition.start():
+                continue
+            label = match.group(1)
+            if label not in definitions:
+                errors.append(
+                    f"{rel}:{line_no}: footnote reference has no definition: {label}"
+                )
+
+    return errors
+
+
 def build_lookup(markdown_files: list[Path], vault: Path) -> tuple[set[str], dict[str, list[str]]]:
     all_files: set[str] = set()
     by_stem: dict[str, list[str]] = defaultdict(list)
@@ -529,6 +554,7 @@ def lint(vault: Path, scope: str) -> int:
     frontmatter_tag_errors: list[str] = []
     table_wikilink_errors: list[str] = []
     traceability_path_errors: list[str] = []
+    footnote_reference_errors: list[str] = []
 
     for rel in scoped_files:
         content = (vault / rel).read_text(encoding="utf-8")
@@ -538,6 +564,7 @@ def lint(vault: Path, scope: str) -> int:
         frontmatter_tag_errors.extend(lint_frontmatter_tags(content, rel))
         table_wikilink_errors.extend(lint_table_wikilink_aliases(content, rel))
         traceability_path_errors.extend(lint_bare_traceability_paths(content, rel))
+        footnote_reference_errors.extend(lint_footnote_references(content, rel))
         for match in WIKILINK_RE.finditer(link_content):
             if match.span() in ignored_frontmatter_intake_links:
                 continue
@@ -629,6 +656,14 @@ def lint(vault: Path, scope: str) -> int:
             print(f"Invalid: {error}")
 
     print()
+    print("=== Footnote references ===")
+    if not footnote_reference_errors:
+        print("None")
+    else:
+        for error in footnote_reference_errors:
+            print(f"Invalid: {error}")
+
+    print()
     print("=== Stats ===")
     print(f"Markdown pages: {len(all_files)}")
     print(f"Scoped pages: {len(scoped_files)}")
@@ -638,17 +673,19 @@ def lint(vault: Path, scope: str) -> int:
     print(f"Frontmatter tag errors: {len(frontmatter_tag_errors)}")
     print(f"Markdown table errors: {len(table_wikilink_errors)}")
     print(f"Traceability path errors: {len(traceability_path_errors)}")
+    print(f"Footnote reference errors: {len(footnote_reference_errors)}")
     return 1 if (
         broken
         or frontmatter_source_errors
         or frontmatter_tag_errors
         or table_wikilink_errors
         or traceability_path_errors
+        or footnote_reference_errors
     ) else 0
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Lint Obsidian wikilinks.")
+    parser = argparse.ArgumentParser(description="Lint Obsidian wiki Markdown.")
     parser.add_argument("--vault", default=".", help="Vault or package root.")
     parser.add_argument("--scope", default="wiki", help="Relative path scope to lint.")
     args = parser.parse_args()

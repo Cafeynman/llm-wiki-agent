@@ -56,3 +56,25 @@ State missing context, weak extraction, image-only material, uncertain claims, a
 ```
 
 For a Defuddle live-URL capture, keep the raw capture wikilink as the first source and also add the exact submitted URL as a quoted plain string under `sources:`. Add `Submitted URL: <url>` under Traceability. Do not replace the raw capture link with the external URL.
+
+## Citation Placement
+
+Use a direct wikilink when it keeps the supporting source clear, for example `This claim follows [[wiki/sources/Source A#Relevant section|Source A]]`.
+
+When multiple passages rely on the same evidence scope, they may reuse one footnote label:
+
+```markdown
+Source A supports the first claim[^source-a-evidence].
+A later passage relying on the same evidence may reuse that label[^source-a-evidence].
+
+[^source-a-evidence]: [[wiki/sources/Source A#Relevant section|Source A]], relevant section.
+```
+
+When one source supports different claims with different evidence scopes, use separate labels:
+
+```markdown
+Source A supports one claim[^source-a-first] and a separate claim[^source-a-second].
+
+[^source-a-first]: [[wiki/sources/Source A#First relevant section|Source A]], first relevant section.
+[^source-a-second]: [[wiki/sources/Source A#Second relevant section|Source A]], second relevant section.
+```
