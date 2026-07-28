@@ -11,7 +11,7 @@ Use Defuddle as the default webpage provider when `PROJECT.md` selects `defuddle
 Run Defuddle once against the exact submitted URL and request structured Markdown output:
 
 ```bash
-defuddle parse <url> --json --md
+defuddle parse <url> --json
 ```
 
 Parse the JSON structurally. Serialize a Markdown source capture at:
@@ -21,6 +21,8 @@ inbox/web/<source-language-page-title>--<url-hash>.md
 ```
 
 Follow the exact title encoding and SHA-256 hash rule in `WIKI.md`. Use a YAML serializer for available metadata such as the exact submitted URL, capture timestamp, provider, title, author, domain, and publication date. Write Defuddle's clean Markdown as the body. If the title is missing, use the returned domain as the filename title segment.
+
+With `--json`, require `contentMarkdown` to be a non-empty string and use that field as the Markdown body. The `content` field contains HTML. Do not add `--md` to this structured route because Defuddle `0.19.2` then omits `contentMarkdown`.
 
 The capture is the lifecycle source artifact for the live URL. Stage it unchanged at `intake/tmp/web/<capture-base-name>/source.md`, run Source Review Gate once, and move the capture to one `raw/<state>/web/` destination. A digested source card cites both the raw capture wikilink and the quoted external URL.
 

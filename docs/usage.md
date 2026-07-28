@@ -34,7 +34,7 @@ It is **not** meant for one-off chatting. Its true value lies in durable accumul
 Before you start, ensure you have:
 - [uv](https://docs.astral.sh/uv/) for Python environment management (the init scripts run `uv sync --locked` against the lockfile's official PyPI index).
 - PowerShell (Windows) or Bash (macOS/Linux) for initialization scripts.
-- Node.js/npm or an installed Defuddle CLI when you want the default webpage extraction provider.
+- Node.js/npm when you want the default webpage extraction provider. If Defuddle CLI is missing, the agent explains the pinned global npm installation, requests approval, then installs and verifies it automatically.
 - Any standard Markdown editor. Obsidian is optional.
 - An agent runtime that can read repository instructions, edit files, and run the required commands.
 
@@ -240,7 +240,7 @@ Run the initialization script first. If it fails, install <code>uv</code> manual
 
 <details>
 <summary><b>What if Defuddle is missing?</b></summary>
-The default live-URL capture provider is Defuddle. Install it with npm or ask the agent to follow <code>.agents/skills/source-extraction/references/providers/defuddle/setup.md</code>. A live URL is not sent directly to <code>intake/tmp/</code>; Defuddle first creates its source capture under <code>inbox/web/</code>.
+The default live-URL capture provider is Defuddle. The agent follows <code>.agents/skills/source-extraction/references/providers/defuddle/setup.md</code>, tells you the exact pinned global npm change, and requests approval. After approval, the agent installs and verifies the CLI automatically; you do not need to run the commands manually. A live URL is not sent directly to <code>intake/tmp/</code>; Defuddle first creates its source capture under <code>inbox/web/</code>.
 </details>
 
 <details>

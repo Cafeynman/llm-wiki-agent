@@ -34,7 +34,7 @@
 开始前，请确保你拥有：
 - [uv](https://docs.astral.sh/uv/)，用于 Python 环境管理 (初始化脚本会依据锁文件并使用官方 PyPI 索引运行 `uv sync --locked`)。
 - PowerShell (Windows) 或 Bash (macOS/Linux) 用于执行初始化脚本。
-- 当你要使用默认网页提取器时，需要 Node.js/npm 或已安装的 Defuddle CLI。
+- 当你要使用默认网页提取器时，需要 Node.js/npm。如果缺少 Defuddle CLI，智能体会说明固定版本的 npm 全局安装变更、请求授权，并在获准后自动安装和验证。
 - 任意标准 Markdown 编辑器；Obsidian 是可选项。
 - 一个能够读取仓库指令、编辑文件并执行所需命令的智能体运行时。
 
@@ -238,7 +238,7 @@ LLM Wiki Agent 采用文本优先的摄入路径：
 
 <details>
 <summary><b>如果找不到 Defuddle 怎么办？</b></summary>
-默认实时 URL 捕获提供方是 Defuddle。请通过 npm 安装，或让智能体按照 <code>.agents/skills/source-extraction/references/providers/defuddle/setup.md</code> 执行。实时 URL 不会直接进入 <code>intake/tmp/</code>；Defuddle 会先在 <code>inbox/web/</code> 下生成来源捕获文件。
+默认实时 URL 捕获提供方是 Defuddle。智能体会按照 <code>.agents/skills/source-extraction/references/providers/defuddle/setup.md</code> 说明固定版本的 npm 全局安装变更并请求授权；获准后由智能体自动完成安装和验证，用户不需要手动执行命令。实时 URL 不会直接进入 <code>intake/tmp/</code>；Defuddle 会先在 <code>inbox/web/</code> 下生成来源捕获文件。
 </details>
 
 <details>

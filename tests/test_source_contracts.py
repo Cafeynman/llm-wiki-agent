@@ -63,13 +63,20 @@ class SourceContractTest(unittest.TestCase):
         defuddle_setup = self.read(
             ".agents/skills/source-extraction/references/providers/defuddle/setup.md"
         )
+        usage_docs = self.read("docs/usage.md") + self.read("docs/usage.zh-CN.md")
         wiki = self.read("WIKI.md")
         agents = self.read("AGENTS.md")
 
-        self.assertIn("defuddle parse <url> --json --md", defuddle_skill)
-        self.assertIn(
-            "defuddle parse https://example.com --json --md", defuddle_setup
-        )
+        self.assertIn("defuddle parse <url> --json", defuddle_skill)
+        self.assertNotIn("defuddle parse <url> --json --md", defuddle_skill)
+        self.assertIn("contentMarkdown", defuddle_skill)
+        self.assertIn("contentMarkdown", defuddle_usage)
+        self.assertIn("npm install -g defuddle@0.19.2", defuddle_setup)
+        self.assertIn("request approval", defuddle_setup)
+        self.assertIn("defuddle parse <url> --md -o <output.md>", defuddle_skill)
+        self.assertIn("General Webpage Cleanup", defuddle_skill)
+        self.assertIn("automatically", usage_docs)
+        self.assertIn("自动安装", usage_docs)
         self.assertIn("inbox/web/", defuddle_usage)
         self.assertNotIn("-o intake/tmp", defuddle_skill + defuddle_usage)
         self.assertIn("sole exception", wiki)
