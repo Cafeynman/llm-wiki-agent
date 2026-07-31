@@ -120,6 +120,8 @@ Use `Use Knowledge` when the user asks what the wiki says, asks for evidence or 
 
 Use `Maintain Wiki` when the user asks for lint, cleanup, health check, broken link repair, duplicate detection, stale claim review, or consistency maintenance.
 
+For a review or audit of wiki content or overall knowledge quality, use the local `wiki-quality-review` skill within `Maintain Wiki`. A review-only request is read-only: report numbered findings and proposed changes, then edit only the findings the user explicitly approves. If the request also asks for fixes, follow the write boundary in `WIKI.md`. Source review remains part of `Add Knowledge`; package and workflow contract review remains owned by `wiki-contract-review`.
+
 When a request could fit multiple workflows, start with the smallest workflow that can produce the requested result, then continue only if the task requires it.
 
 ## Wiki Agent Behavior
