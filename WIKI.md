@@ -420,7 +420,7 @@ Check for:
 15. `questions/` items that have been resolved but not reflected into wiki pages or closed.
 16. `artifacts/` that cite missing wiki pages, intake outputs, or source paths.
 
-Fix mechanical issues directly when the correct fix is clear. For substantive contradictions, source interpretation, page merges, deletions, or changes of judgment, summarize the proposed resolution and ask the user first.
+A review, audit, or health-check request is read-only unless the user also asks for fixes. Report findings and proposed resolutions first. After the user requests fixes or explicitly approves findings, fix clear mechanical issues within that scope. For substantive contradictions, source interpretation, page merges, deletions, or changes of judgment, modify only the specific resolution the user approved.
 
 ## Confidence and Lifecycle
 

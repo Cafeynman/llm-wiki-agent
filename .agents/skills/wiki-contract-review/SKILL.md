@@ -1,15 +1,15 @@
 ---
 name: wiki-contract-review
-description: Use when reviewing this LLM Wiki development package or an initialized vault for wiki/package contract drift, process-flow closure and simplicity, init/upgrade path fit, local skill consistency, hidden or untracked residue, redundant wiki structure, conflicting agent instructions, stale workflow residue, multilingual doc drift, unnecessary branches or fallback paths, or knowledge-base cleanup risks.
+description: Use when reviewing this LLM Wiki package or an initialized vault for workflow, script, skill, runtime-structure, init/upgrade, or documentation contract drift. Use wiki-quality-review for page-level knowledge content quality.
 ---
 
 # Wiki Contract Review
 
-Use this skill for Maintain Wiki or package-maintenance reviews where the risk is contract drift across scripts, entrypoint docs, local skills, human docs, and runtime wiki folders.
+Use this skill for Maintain Wiki or package-maintenance reviews where the risk is contract drift across scripts, entrypoint docs, local skills, human docs, and runtime wiki folders. It checks whether required knowledge surfaces and lifecycle records satisfy the contract; it does not judge the factual, interpretive, or epistemic quality of page content.
 
 When the user requests a full package contract review of this development package root, do not sample local skills. Enumerate and inspect every local skill under `.agents/skills/`, including untracked local review skills, then classify whether each one belongs in the package, is local-only, or needs cleanup. For scoped reviews, inspect only the surfaces needed to answer the confirmed scope and state what was not reviewed.
 
-The goal is to find whether the current implementation matches the wiki contract, whether each process has a clear closed loop from input to recorded outcome, and whether the knowledge base contains redundant, obsolete, or conflicting structure. Do not treat one file as authoritative until you have identified the current source of truth.
+The goal is to find whether the current implementation matches the wiki contract, whether each process has a clear closed loop from input to recorded outcome, and whether runtime structure follows its declared ownership. Do not treat one file as authoritative until you have identified the current source of truth.
 
 ## Review Fit
 
@@ -162,11 +162,11 @@ Look for:
 - Intake, source-card, log, or question folders that duplicate each other instead of linking to one source of truth.
 - Accepted sources represented in multiple raw states.
 - Intake outputs without required `source.md`, `summary.md`, or `manifest.md`.
-- Source cards that are only receipts instead of content-rich wiki summaries.
+- Source cards that lack contract-required sections or traceability links.
 
-For review-only requests, report cleanup opportunities, deletion candidates, source-interpretation conflicts, category redesign needs, and substantive contradictions as findings only. Do not ask for editing confirmation, start edits, or convert the review into a fix task. If the user later asks for fixes, treat that as a new fix task.
+For review-only requests, report contract cleanup opportunities, package deletion candidates, workflow ownership conflicts, and directory or category redesign needs as findings only. Do not ask for editing confirmation, start edits, or convert the review into a fix task. If the user later asks for fixes, treat that as a new fix task.
 
-If the user explicitly requested fixes, mechanical cleanup can be done directly when the correct fix is uniquely determined. For page deletion, source interpretation, category redesign, or resolving substantive contradictions during a fix task, report the conflict and ask for confirmation before editing.
+If the user explicitly requested fixes, mechanical cleanup can be done directly when the correct fix is uniquely determined. For package-managed deletion, category or directory redesign, workflow ownership changes, or other contract decisions, report the conflict and ask for confirmation before editing.
 
 ## Output Format
 
@@ -209,6 +209,7 @@ Use exact file paths and line references when possible. Do not bury blockers in 
 - Do not call a branch, fallback, duplicate route, or extra review step "safer" unless a named contract, concrete risk, or user requirement justifies it.
 - Do not require full-audit ceremony, subagents, or external model review for a scoped review when the evidence can be checked directly.
 - Do not fix unrelated style, formatting, or prose while reviewing contract drift.
+- Do not use this skill to judge page-level factual accuracy, source interpretation, argument quality, counterevidence, or semantic completeness; use `wiki-quality-review` for those tasks.
 - Do not assume `PROJECT.md` template blanks authorize invented project preferences.
 - Do not move, rename, delete, or rewrite original source files under `raw/` unless the user explicitly asks.
 - Do not use custom parsing scripts to replace the basic Obsidian link checks provided by `obsidian-wiki-lint`; run that skill first for link and orphan baselines when reviewing wiki content.
