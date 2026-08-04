@@ -97,7 +97,7 @@ Skeleton:
 type: synthesis
 status: draft
 confidence: low
-question_acceptance: accepted
+question_acceptance: needs_answer
 sources: []
 ---
 
@@ -162,6 +162,11 @@ wiki/syntheses/<subject>/wrong-questions/<NNN>-<knowledge-topic>.md
 renumber it. The description names the central knowledge topic, not one source
 question.
 
+Use the basename exactly as `<NNN>-<knowledge-topic>.md`: one three-digit
+sequence, one ASCII hyphen, and the topic. The parent directory carries the
+subject identity. Use an alternative only when the root `PROJECT.md` records an
+explicitly confirmed naming preference.
+
 Localize the visible headings to the language and preferred terms confirmed in
 the root `PROJECT.md`.
 
@@ -212,11 +217,11 @@ explicitly reports a personal error reason or repeat-review result, put it in a
 dated optional `复习备注` entry instead of inferring it from the answer.
 
 Optional additions include `关联知识`, `复习备注`, source basis, boundary or
-comparison tables, reusable decision paths, memory summaries, and open
-questions. Add them only when they help. Related knowledge should explain its
-relationship rather than becoming a bare link list. A memory summary is an
-accurate compressed review note, not a rhyme, slogan, or mnemonic; omit it
-unless it preserves the conditions, exceptions, and accuracy that matter.
+comparison tables, reusable decision paths, and open questions. Add them only
+when they help. Related knowledge should explain its relationship rather than
+becoming a bare link list. Use direct concepts, causal reasoning, conditions,
+exceptions, and distinctions in the explanation style confirmed by
+`PROJECT.md`.
 
 For a choice question, keep an option-by-option table inside `答案 / 参考作答`
 only when it makes the distinctions clearer:

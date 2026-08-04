@@ -1,6 +1,6 @@
 # Large Source Chunking
 
-Use this reference when a source is too large to review, ingest, or retrieve as one Markdown file. The stable lifecycle remains in `WIKI.md`; this file gives the detailed chunking procedure.
+Use this reference when a source is too large to review, ingest, or retrieve as one Markdown file. `intake-lifecycle.md` owns the detailed source movement and outcome; this file owns chunking mechanics.
 
 ## Intake File Audit
 

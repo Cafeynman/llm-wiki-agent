@@ -1,6 +1,6 @@
 # Source Lifecycle Example
 
-This example shows the intended lifecycle for a batch of files in `inbox/`. The normative rules remain in `WIKI.md`; this file is only an example.
+This example shows the intended lifecycle for a batch of files in `inbox/`. The core contract remains in `WIKI.md`, detailed mechanics live in `.agents/skills/source-extraction/references/intake-lifecycle.md`, and this file is only an example.
 
 ## Live URL Entry
 

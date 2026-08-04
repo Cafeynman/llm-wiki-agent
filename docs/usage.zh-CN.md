@@ -15,7 +15,7 @@
 
 ---
 
-> **注意：** [AGENTS.md](../AGENTS.md) 是智能体入口。 [PROJECT.md](../PROJECT.md) 包含了当前工作区的配置项。 [WIKI.md](../WIKI.md) 是核心的操作指南。 请保持 `WIKI.md` 稳定，而日常的个性化设置请修改 `PROJECT.md`。
+> **注意：** [AGENTS.md](../AGENTS.md) 是智能体入口。[PROJECT.md](../PROJECT.md) 包含当前工作区的配置项，[WIKI.md](../WIKI.md) 是核心操作指南。所有对话一开始，智能体都先完整读取活动工作区的 `WIKI.md` 和 `PROJECT.md`，然后再规划、搜索、回答、委派或写入。编程和恢复已有对话使用同一启动门；对话历史和此前读取不能替代这一步。请保持 `WIKI.md` 稳定，而日常个性化设置应修改 `PROJECT.md`。
 
 ## 🎯 1. 适用场景
 
@@ -32,7 +32,7 @@
 ## ⚙️ 2. 环境要求
 
 开始前，请确保你拥有：
-- [uv](https://docs.astral.sh/uv/)，用于 Python 环境管理 (初始化脚本会依据锁文件并使用官方 PyPI 索引运行 `uv sync --locked`)。
+- [uv](https://docs.astral.sh/uv/)，用于 Python 环境管理。初始化前先完成安装；脚本会依据锁文件并使用官方 PyPI 索引运行 `uv sync --locked`，但不安装机器级工具。
 - PowerShell (Windows) 或 Bash (macOS/Linux) 用于执行初始化脚本。
 - 当你要使用默认网页提取器时，需要 Node.js/npm。如果缺少 Defuddle CLI，智能体会说明固定版本的 npm 全局安装变更、请求授权，并在获准后自动安装和验证。
 - 任意标准 Markdown 编辑器；Obsidian 是可选项。
@@ -70,13 +70,13 @@ cd llm-wiki-agent
 ./scripts/init.sh -VaultRoot "/path/to/your/vault"
 ```
 
-外部根目录初始化完成后，请从初始化后的根目录打开或运行智能体。目标目录会得到包管理的入口文件、本地技能、脚本、文档、运行目录和项目环境。目标目录中已有的包管理文件会被包副本替换；工作区个性化偏好应放在 `PROJECT.md`。
+外部根目录初始化完成后，请从初始化后的根目录打开或运行智能体。目标目录会得到包管理的入口文件、本地技能、脚本、文档、运行目录和项目环境。初始化与升级使用同一覆盖保护：相同文件跳过；已有同名文件内容不同且没有干净、已跟踪的 Git 基线时，会在写入目标前停止。工作区个性化偏好应放在 `PROJECT.md`。
 
 **它的作用是：**
 1. 将包管理的入口文件、本地技能、脚本和文档安装到目标根目录。
 2. 在缺失时创建 `PROJECT.md`，并将来源提取偏好放在那里，由智能体在需要时确认，包括是否配置 MinerU、API 模式下使用哪个 MinerU profile，以及 MinerU 可用时是否优先使用 MinerU。
 3. 补齐缺失的工作流目录和默认 wiki 文件 (`inbox/`, `raw/`, `intake/`, `reviews/`, `logs/`, `wiki/` 等)，不覆盖已有运行内容。
-4. 在 `.gitignore` 缺失时写入默认模板；如果已有 `.gitignore` 没有 wiki 运行目录策略，则追加默认私有运行目录段落。
+4. 只有在新目标既没有 `.gitignore`、也没有已跟踪的 wiki 运行目录文件时，才写入默认私有模板。若运行目录文件已被 Git 跟踪，则只创建密钥和技术缓存基线规则，不隐藏这些文件。已有 `.gitignore` 保留其目标自有的领域策略。
 5. 在初始化后的根目录运行 `uv sync --locked --default-index https://pypi.org/simple`，根据已提交的锁文件创建或更新 `.venv` 本地运行环境。
 
 ### 可选的 Obsidian 与 Claudian 界面
@@ -109,7 +109,9 @@ Obsidian 和 Claudian 都不是必需项。本工作流包可以通过文件系�
 ./scripts/upgrade.sh -TargetRoot "/path/to/your/workspace"
 ```
 
-升级会处理 `scripts/upgrade-manifest.txt` 中列出的条目，在缺失时创建 `PROJECT.md`，补齐缺失的运行目录和默认 wiki 文件，并在目标根目录运行 `uv sync --locked --default-index https://pypi.org/simple`。列出的文件会被覆盖；列出的目录，包括 `scenarios/`，会按包文件合并覆盖，并保留目标目录中额外存在的条目。已有 `.gitignore` 会被保留；缺失的本地基线规则会被补齐，只有在不存在 wiki 运行目录策略时才会追加默认私有运行目录段落。工作区个性化配置应放在 `PROJECT.md`。
+升级会先展开 `scripts/upgrade-manifest.txt`，把每个包管理文件判定为新建、相同、替换或冲突。缺失文件会创建，相同文件会跳过；内容不同的文件只有在目标仓库中已跟踪且相对 `HEAD` 干净时才会替换。已修改、已暂存、已删除或内容不同的同名未跟踪包管理文件都属于冲突；非 Git 目标中已有的不同文件也属于冲突。同一次预检还会拒绝目标根的既有祖先、目标根或待写路径中的符号链接、目录联接或 reparse point，以及 `PROJECT.md`、`.gitignore`、`.venv` 或固定运行路径的类型错误。脚本会一次列出全部冲突，并在写入目标前停止。包管理目录中的目标专有文件会保留，`PROJECT.md` 会保留，运行知识内容不进入包管理文件的内容冲突判断。
+
+可审查的升级从干净且已提交的目标状态开始。在相应 Git 操作得到明确授权后创建专用分支，只在该分支运行一次升级，检查差异并运行测试，再把已经验证的提交集成到记录的基准分支。升级脚本本身不创建分支、提交或合并。复制完成后，脚本会补齐缺失的运行结构，保留已有 `.gitignore` 的目标域规则并补齐密钥和缓存基线，最后运行 `uv sync --locked --default-index https://pypi.org/simple`。
 
 ### 本地服务密钥
 
@@ -143,7 +145,7 @@ Obsidian 和 Claudian 都不是必需项。本工作流包可以通过文件系�
 
 ## 📥 5. 首次摄入来源工作流
 
-精确生命周期规则以 [WIKI.md](../WIKI.md) 为准。第一次小规模摄入通常如下：
+核心生命周期以 [WIKI.md](../WIKI.md) 为准；详细摄入步骤由 `source-extraction/references/intake-lifecycle.md` 维护。第一次小规模摄入通常如下：
 
 1. **提交来源：** 将原始文件放入 `inbox/`，或者把一个实时 URL 交给智能体。
 2. **提示智能体：** 询问智能体：*"请根据 AGENTS.md、PROJECT.md 和 WIKI.md 处理这些来源。"*
@@ -170,7 +172,7 @@ Obsidian 和 Claudian 都不是必需项。本工作流包可以通过文件系�
 
 ## 🔍 6. 来源审查门 (Source Review Gate) 结果
 
-这里是快速参考。权威的来源审查门规则以 [WIKI.md](../WIKI.md) 为准。
+这里是快速参考。核心结果以 [WIKI.md](../WIKI.md) 为准，质量判断和处理细节由 `source-extraction/references/intake-lifecycle.md` 维护。
 
 | 审查结果 | 目标路径 | 下一步动作 |
 | --- | --- | --- |
@@ -204,7 +206,7 @@ LLM Wiki Agent 采用文本优先的摄入路径：
 2. `wiki/sources/`、`wiki/entities/`、`wiki/concepts/`、`wiki/claims/`、`wiki/syntheses/` 下的相关页面
 3. `questions/` 和 `artifacts/` 中的相关调查记录与交付物
 
-报告、模板、草案等生成交付物应放在 `artifacts/` 目录中。
+智能体会先检查这些本地范围；本地知识不足时，会先说明缺口，再扩大搜索。普通回答和纠错只在对话中返回，不改文件。只有你明确要求或确认后才会写入；报告、模板、草案等交付物应放在 `artifacts/` 目录中。
 
 ---
 
@@ -233,7 +235,7 @@ LLM Wiki Agent 采用文本优先的摄入路径：
 
 <details>
 <summary><b>如果找不到 <code>uv</code> 怎么办？</b></summary>
-先运行初始化脚本。如果自动安装失败，请手动安装 <code>uv</code> 然后再次运行初始化脚本。
+按官方文档安装 <code>uv</code>，再重新运行初始化脚本。脚本会先完成目标路径预检，然后报告缺少该命令。
 </details>
 
 <details>

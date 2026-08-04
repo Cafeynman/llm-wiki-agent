@@ -32,4 +32,4 @@ Run the smoke check defined by the active profile before the first API extractio
 
 ## Extraction Boundary
 
-When the user later asks for real API parsing, start from the original source path and follow `usage.md` plus the selected profile. Record provider profile, batch id or task id, model version, warnings, missing content, and result URLs in the intake manifest or review notes. The API result still must be normalized into the WIKI intake output contract before Source Review Gate.
+When the user later asks for real API parsing, start from the original source path and follow `usage.md` plus the selected profile. Record provider profile, batch id or task id, model version, warnings, missing content, and result URLs in the intake manifest or review notes. The API result still must satisfy the source-extraction intake lifecycle before Source Review Gate.

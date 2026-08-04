@@ -39,7 +39,9 @@ cd llm-wiki-agent
 ./scripts/init.sh -VaultRoot .
 ```
 
-*Note: For a separate working directory, including an existing Obsidian vault, pass that path like `.\scripts\init.ps1 -VaultRoot "C:\path\to\your\workspace"`. The target becomes the working root and receives the package-managed agent files, local skills, scripts, docs, and runtime structure. Package-managed files are replaced by the package copy; workspace-specific preferences belong in `PROJECT.md`.*
+*Note: For a separate working directory, including an existing Obsidian vault, pass that path like `.\scripts\init.ps1 -VaultRoot "C:\path\to\your\workspace"`. The target becomes the working root and receives the package-managed agent files, local skills, scripts, docs, and runtime structure. Initialization skips identical managed files and stops before writing when a differing existing file has no clean Git baseline. Workspace-specific preferences belong in `PROJECT.md`.*
+
+Every conversation in the initialized workspace begins with the agent reading that workspace's complete `WIKI.md` and `PROJECT.md`. Programming, debugging, questions, technical work, and file operations all use this same automatic start; resumed conversations read them again, and conversation history is not a substitute.
 
 Default source extraction preferences are recorded in `PROJECT.md`. During first project-context confirmation, the agent asks whether to configure MinerU, which MinerU profile should be used when API mode is selected, and whether to prefer MinerU when it is available; choosing that preference records MinerU as the document default.
 For service-backed providers and OCR backends, copy `.env.example` to `.env` in the initialized working root and fill only the variables required by the selected provider profile. The real `.env` file is ignored by Git; agents should load it with `uv run --env-file .env` when running provider commands.

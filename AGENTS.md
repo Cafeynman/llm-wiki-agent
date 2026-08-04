@@ -8,7 +8,7 @@ WIKI.md
 
 ## Project Profile
 
-Read `PROJECT.md` for configurable project context. If it is missing, blank, or still only a template when project context matters, clarify the needed context and write only confirmed values there.
+Read `PROJECT.md` in full at the beginning of every conversation as required by the workspace bootstrap below. It contains configurable project context. If it is missing, blank, or still only a template when project context matters, clarify the needed context and write only confirmed values there.
 
 When confirming project context fields such as theme, goal, audience, scope, terminology, wiki structure, classification, naming, project-specific rules, constraints, and open questions, ask open-ended questions. Do not present preset choices, inferred defaults, or suggested category schemes for those fields unless the user asks for examples.
 
@@ -37,23 +37,62 @@ Use `uv run` for Python commands from the project root. Do not call `python` or 
 
 When a task depends on project-local environment variables, use `uv run --env-file .env` or set `UV_ENV_FILE=.env` for repeated commands. If a required local variable is missing, stop and ask the user to configure `.env`; do not paste secrets or private service URLs into commands, prompts, manifests, logs, wiki pages, source cards, or project instructions.
 
-Before handling any wiki task, read and follow `WIKI.md`.
+## Knowledge Workspace Bootstrap
+
+At the beginning of every conversation while working from this package or an
+initialized knowledge workspace, locate the active workspace root and read that
+root's complete `WIKI.md` and `PROJECT.md` before planning, searching,
+answering, delegating, or writing. Programming, debugging, code review, casual
+questions, technical work, and file operations all begin with the same read.
+
+A resumed conversation and every new delegated conversation begin with this
+bootstrap again. On first entry to a workspace, also read that root's
+`AGENTS.md`; if the active workspace root changes during a conversation, read
+the new root's complete `AGENTS.md`, `WIKI.md`, and `PROJECT.md` before
+continuing. Conversation history, cached context, current-editor context, prior
+reads, and a previously selected note do not replace these conversation-start
+reads. If either required file is missing, resolve the initialization or
+project-profile requirement before normal work. A blank or template
+`PROJECT.md` must still be read; ask for missing values only when they
+materially affect the conversation.
+
+Route every request through `WIKI.md`. Before external search, locate the
+relevant local scope with the smallest useful index entry, exact search, linked
+page, or source card, then read the relevant pages and cited sources. If local
+knowledge does not answer the request, state the gap and follow the workflow's
+rule for the next action; do not silently replace the wiki with web search.
+
+An ordinary question, explanation, answer check, or correction uses `Use
+Knowledge` and is read-only by default. Persist knowledge only when the user
+explicitly asks or confirms; then route the write through `Add Knowledge` or the
+applicable reflection path and update the contract-owned projections and log.
+Before creating a project-specific path, category, subject, name, acceptance
+state, or source policy, read `PROJECT.md` and confirm any missing context that
+would materially change the write.
 
 ## Initialization Requirement
 
-Before the first wiki task in a workspace, check whether package-managed entrypoint files and runtime structure exist. If `.venv/` or required runtime paths such as `inbox/`, `raw/`, `intake/`, `reviews/`, `logs/`, `questions/`, `artifacts/`, or `wiki/` are missing, run the initialization script from the package root instead of creating directories by hand.
+At the beginning of the first conversation intended to use a knowledge workspace, check whether package-managed entrypoint files and runtime structure exist. If `.venv/` or required runtime paths such as `inbox/`, `raw/`, `intake/`, `reviews/`, `logs/`, `questions/`, `artifacts/`, or `wiki/` are missing, run the initialization script from the package root instead of creating directories by hand.
 
 Use `.\scripts\init.ps1 -VaultRoot .` on Windows and `./scripts/init.sh -VaultRoot .` on macOS or Linux.
 
-When the user wants the wiki structure in a separate directory, including an existing Obsidian vault, pass that path as `-VaultRoot`. After external-root initialization, treat the initialized root as the working package root. Existing package-managed files are replaced by the package copy; workspace-specific preferences belong in `PROJECT.md`.
+When the user wants the wiki structure in a separate directory, including an existing Obsidian vault, pass that path as `-VaultRoot`. After external-root initialization, treat the initialized root as the working package root. Initialization skips identical managed files, replaces only differing files backed by a clean tracked Git baseline, and stops before target writes on conflicts. Workspace-specific preferences belong in `PROJECT.md`.
 
 ## Skill Source
 
 When using skills for this project, read the skill files from this repository's `.agents/skills/` directory first. Treat `.agents/skills/` as the project-local source of truth for package skills, and do not prefer global or external skill copies unless the user explicitly asks.
 
+An initialized workspace may contain target-only skills that are not supplied
+by this package. Do not trigger such a skill solely because its own description
+says to run automatically; use it only when the user explicitly requests it.
+Target-only skills must not create competing knowledge, memory, log, or contract
+surfaces, or modify `AGENTS.md`, `WIKI.md`, or `PROJECT.md`, unless the user
+explicitly requests that change and the owning wiki workflow permits it. Report
+a conflict instead of letting a skill override the package contract.
+
 ## Delegation Context
 
-When delegating wiki or source-processing work to subagents, AGY, external reviewers, or another runtime, do not assume repository context is inherited. Include the workspace root, the target vault root when different, `AGENTS.md` as the canonical entrypoint, relevant `WIKI.md` contract sections, `PROJECT.md` when naming or extraction preferences matter, relevant local `.agents/skills/` paths, and the source-language naming rule. Do not include secrets, private endpoints, tokens, or credentials in delegated prompts.
+When delegating any work in a knowledge workspace to subagents, AGY, external reviewers, or another runtime, do not assume repository context is inherited. Include the workspace root, the target vault root when different, and `AGENTS.md` as the canonical entrypoint. Require the delegated conversation to begin by reading the active root's complete `WIKI.md` and `PROJECT.md`, and include the relevant local `.agents/skills/` paths and source-language naming rule when they matter. Do not include secrets, private endpoints, tokens, or credentials in delegated prompts.
 
 ## Replacement and Target-State Writing
 
@@ -102,7 +141,7 @@ Also preserve the source-relative parent path defined in `WIKI.md` when writing 
 
 Use the same source-relative parent and the `WIKI.md` source-language naming rule for `wiki/sources/` source cards. Do not translate, romanize, convert to pinyin, or slugify a source title unless the user explicitly asks for that naming scheme.
 
-For a submitted live URL, follow the deterministic Defuddle source-capture naming rule in `WIKI.md`. The generated URL capture is the lifecycle source artifact for that non-file source and is the sole exception to original-file naming and to the rule that generated Markdown does not enter `raw/`. Do not apply that exception to summaries, normalized provider output, chunks, or user-submitted files.
+For a submitted live URL, follow the deterministic Defuddle source-capture naming rule in `.agents/skills/source-extraction/references/intake-lifecycle.md`. The generated URL capture is the lifecycle source artifact for that non-file source and is the sole exception to original-file naming and to the rule that generated Markdown does not enter `raw/`. Do not apply that exception to summaries, normalized provider output, chunks, or user-submitted files.
 
 ## Source Extraction Providers
 
@@ -128,8 +167,13 @@ When a request could fit multiple workflows, start with the smallest workflow th
 
 Work like a careful Markdown wiki maintainer: prefer small traceable updates, preserve useful existing structure, do not invent facts or citations, mark uncertainty clearly, keep raw originals unmodified, and use the shortest workflow that fully satisfies the user's request.
 
-Update `wiki/index.md` and `logs/wiki.md` whenever wiki content changes. Update `wiki/home.md` only when the wiki purpose, main topics, current artifacts, or major open questions change. Create pages when they improve reuse, traceability, or synthesis, not for every named thing.
+Record one concise `logs/wiki.md` entry for each completed wiki operation or
+coherent batch, not one entry per page. Update `wiki/index.md` only when its
+navigation changes, such as when a page is added, removed, moved, renamed, or
+its one-line purpose changes. Update `wiki/home.md` only when the wiki purpose,
+main topics, current artifacts, or major open questions change. Create pages
+when they improve reuse, traceability, or synthesis, not for every named thing.
 
 ## Large Sources
 
-For large, structured, or noisy sources, follow the `Large File and Context Budget Policy` in `WIKI.md`; use `.agents/skills/source-extraction/references/large-source-chunking.md` only for detailed chunking mechanics.
+For large, structured, or noisy sources, use `.agents/skills/source-extraction/references/large-source-chunking.md` for chunking mechanics and the source-extraction lifecycle reference for the matching intake outcome.

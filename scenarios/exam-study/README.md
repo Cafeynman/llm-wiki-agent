@@ -70,6 +70,15 @@ Keep source handling aligned with the normal wiki lifecycle.
   item as evidence for a knowledge-point conclusion. Track a separately useful
   unresolved item in `questions/` and close that queue entry when it is resolved
   or rejected.
+- Before answering, classifying, explaining, generating, or recording a
+  question, search the relevant subject pages and reviewed foundational sources
+  already in the wiki. External search fills a stated local gap; it does not
+  replace available local evidence.
+- A question origin, wrong-question index, queue, dashboard, or catalog is not
+  evidence for the knowledge explanation. Keep the material's provenance clear
+  and cite the reviewed textbook, source card, intake output, or other evidence
+  that supports the explanation. Do not create a circular source chain between
+  a record and the index that lists it.
 
 ## Wrong-Question Topic Layout and Naming
 
@@ -85,12 +94,27 @@ Use the confirmed canonical subject directory name for `<subject>`. Subject
 aliases must point to that canonical subject instead of creating parallel
 directories.
 
+The literal canonical wrong-question topic basename is
+`<NNN>-<knowledge-topic>.md` in every subject directory. The basename consists
+of a three-digit subject-local sequence, one ASCII hyphen, and the topic. The
+subject directory carries subject identity. A project may use a different form
+only when the user explicitly confirms it in the root `PROJECT.md`.
+
+If the requested subject is not confirmed in the root `PROJECT.md`, do not
+invent a directory or reuse the nearest subject. Ask the user to confirm the
+project-specific subject name and whether it belongs to the current exam. After
+confirmation, update `PROJECT.md` first, then create only that subject's required
+starter pages and directories.
+
 Apply these naming and grouping rules:
 
 1. Treat one wrong-question topic page as one useful knowledge topic. It may
    contain one or more wrong questions.
 2. Use a stable three-digit subject-local sequence for `<NNN>`, starting at
-   `001`. Do not renumber existing pages.
+   `001`. Before allocating an identifier, scan both filenames and the canonical
+   subject index. Use the next unused identifier and stop for review if the
+   existing records already contain a collision. Do not renumber existing pages
+   merely to close a gap.
 3. Write `<knowledge-topic>` as a concise, human-readable description of the
    central knowledge theme. Follow the root `PROJECT.md` naming preferences and
    the cross-source naming rules in `WIKI.md`.
@@ -100,11 +124,45 @@ Apply these naming and grouping rules:
 5. Combine or split questions when doing so makes future review clearer. A
    shared subject or chapter alone does not require either choice, and different
    error reasons do not by themselves require separate topics.
+6. For an approved migration from a legacy filename, resolve duplicate
+   identifiers first, prepare an old-to-new path map, rename each canonical page
+   once, and update all inbound wikilinks and subject-index rows in the same
+   batch. Do not preserve the old name by copying the page or creating a second
+   maintained record.
 
 The topic page is the maintained record. The subject
 `wrong-question-index.md` and `study-dashboard.md` are thin current-state
 projections. Update the topic page first, then update those projections only
 when their displayed state changes.
+
+The subject `wrong-question-index.md` is the only detailed wrong-question
+inventory for that subject. Do not mirror its rows under `questions/`, the
+global `wiki/index.md`, a dashboard, or another catalog. Those surfaces may link
+to the canonical index and contain only the state they independently own.
+
+### Structural Audit
+
+For legacy imports, collision review, or a naming migration, run the structural
+audit before changing paths:
+
+```bash
+uv run --no-project python scenarios/exam-study/scripts/audit_wrong_questions.py --vault . --subject "<subject>" --output artifacts/wrong-question-audit.json
+```
+
+The report lists each current path, naming status, parsed sequence and topic,
+suggested target, index entries, and wrong-question-page inbound wikilinks. It separately reports
+duplicate sequences, target collisions, a missing index file, missing or
+duplicate index entries, and unresolved index links. Exit code `0` means the structure is clean, `1` means
+the report contains findings, and `2` means the input could not be audited. The
+command writes only the explicitly requested report file; it does not rename or
+edit source pages or indexes. A normal single-entry update
+still uses the local filename-and-index scan above; it does not require a batch
+audit when no legacy or collision risk is present.
+
+An existing confirmed subject with no wrong-question topic pages may omit the
+`wrong-questions/` directory; the audit treats that as an empty collection and
+does not create a placeholder. A missing subject directory remains an input
+error.
 
 Each topic page has two required headings: `错题材料` and `知识点`. The former
 preserves enough question context for review; the latter explains the knowledge
@@ -119,16 +177,17 @@ conditions, boundaries, and common traps. Do not create a default `我的作答`
 user explicitly provides their error reason or a later review result, record it
 only in a dated optional `复习备注` entry.
 
-Option analysis, source basis, boundary tables, decision paths, memory summaries,
-related pages, open questions, and review logs are optional. Use them only when
+Option analysis, source basis, boundary tables, decision paths, related pages,
+open questions, and review logs are optional. Use them only when
 they improve understanding or future review. An option-by-option table belongs
 inside `答案 / 参考作答` when it helps distinguish choices; it is not a required
 section. When a related link is important, briefly explain the relationship
 instead of leaving a bare link list.
 
-When used, a memory summary is a concise and accurate review note. Preserve the
-conditions and exceptions that matter. Do not turn it into a rhyme, slogan, or
-mnemonic unless the user explicitly asks for that form.
+Use direct concepts, causal reasoning, conditions, exceptions, and distinctions
+for explanations and review notes. Apply the confirmed explanation style from
+`PROJECT.md` consistently across wrong-question pages, indexes, concepts,
+syntheses, and artifacts.
 
 ## Formal Question Acceptance
 

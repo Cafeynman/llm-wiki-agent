@@ -7,10 +7,12 @@ user intends to commit wiki content.
 In both templates, keep `.env`, `.venv/`, caches, and local tool state such as
 `.claude/`, `.claudian/`, and `.codex/` ignored. Only replace the
 `# Local wiki runtime content.` block in `.gitignore`.
-Init and upgrade scripts seed the default `.gitignore` when it is missing. When
-an existing `.gitignore` is present, they append any missing baseline lines
-below without overwriting existing rules. They append the default private
-runtime block only when no recognized wiki runtime policy exists.
+Init and upgrade scripts preserve an existing `.gitignore` domain policy and
+append only missing secret and technical-cache baseline lines. They do not infer
+or append a wiki runtime policy to an existing file. When `.gitignore` is
+missing, they seed the default private template only if no durable wiki runtime
+files are already tracked; otherwise they create baseline-only rules so current
+and future wiki records remain visible to Git.
 
 ## Private Local Runtime
 
@@ -75,7 +77,7 @@ tmp/
 This version tracks `intake/processed/`, `intake/logs/`, `reviews/`, `logs/`,
 `questions/`, `artifacts/`, and `wiki/`. If original source files under `raw/`
 also need to be versioned, remove `/raw/` only after reviewing privacy, size,
-copyright, and licensing constraints. Init and upgrade scripts still recognize
-the versioned wiki policy when `/raw/` is intentionally removed. They also
-recognize `/intake/` in place of `/intake/tmp/` when all intake output should
-remain local.
+copyright, and licensing constraints. Use `/intake/` in place of `/intake/tmp/`
+when all intake output should remain local. Init and upgrade preserve either
+target-owned form and add only missing secret and technical-cache baseline
+rules.

@@ -39,7 +39,9 @@ cd llm-wiki-agent
 ./scripts/init.sh -VaultRoot .
 ```
 
-*提示：如果要使用单独的工作目录，包括现有 Obsidian 库，请传递该路径，例如 `.\scripts\init.ps1 -VaultRoot "C:\path\to\your\workspace"`。目标目录会成为工作根目录，并获得包管理的智能体文件、本地技能、脚本、文档和运行结构。包管理文件会被包副本替换；工作区个性化偏好应放在 `PROJECT.md`。*
+*提示：如果要使用单独的工作目录，包括现有 Obsidian 库，请传递该路径，例如 `.\scripts\init.ps1 -VaultRoot "C:\path\to\your\workspace"`。目标目录会成为工作根目录，并获得包管理的智能体文件、本地技能、脚本、文档和运行结构。初始化会跳过相同文件；已有同名文件内容不同且没有干净 Git 基线时，会在写入前停止。工作区个性化偏好应放在 `PROJECT.md`。*
+
+初始化后的工作区中，所有对话一开始，智能体都先完整读取该工作区的 `WIKI.md` 和 `PROJECT.md`。编程、调试、普通问答、技术工作和文件操作都使用同一启动门；恢复已有对话时也重新读取，对话历史不能替代这一步。
 
 默认来源提取偏好记录在 `PROJECT.md`。首次确认项目上下文时，智能体会询问是否配置 MinerU、API 模式下使用哪个 MinerU profile，以及 MinerU 可用时是否优先使用 MinerU；选择该偏好时会把 MinerU 记录为文档默认 provider。
 如果使用需要本地服务配置的 provider 或 OCR 后端，请将 `.env.example` 复制为初始化后工作根目录中的 `.env`，并只填写所选 provider profile 真正需要的变量。真实 `.env` 已被 Git 忽略；智能体运行 provider 命令时应通过 `uv run --env-file .env` 加载它。

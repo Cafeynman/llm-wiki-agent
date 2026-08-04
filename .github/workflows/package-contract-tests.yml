@@ -1,0 +1,36 @@
+name: Package contract tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  package-contract:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          python-version: "3.12"
+      - name: Check Bash syntax
+        if: runner.os == 'Linux'
+        run: bash -n scripts/init.sh scripts/upgrade.sh
+      - name: Run package contract tests
+        run: >-
+          uv run --no-project python -m unittest -v
+          tests.test_package_scripts
+          tests.test_exam_wrong_question_audit
+          tests.test_wiki_quality_review_contract
+          tests.test_source_contracts
+          tests.test_skill_creator

@@ -72,7 +72,7 @@ Write for the current repository's agent contract first. In this repository, loc
 
 When a step depends on a runtime capability, phrase it conditionally:
 
-- If subagents are available, use them for independent validation.
+- When independent validation is justified, use available subagents for a bounded review.
 - If only shell commands are available, use deterministic scripts and direct file inspection.
 - If a command is runtime-specific, name the runtime and keep the command out of the generic path.
 
@@ -147,7 +147,7 @@ git diff -- .agents/skills/<skill-name>
 
 Adjust the residue search terms to the actual old concept. A match is not automatically a bug; inspect context before changing it.
 
-For behavior-heavy skills, add realistic prompt checks. If the current runtime supports independent agents, run one or two independent validation prompts against the revised skill. If it does not, do a manual dry run against a small representative task and record what was checked.
+For behavior-heavy skills, add realistic prompt checks. Use one or two independent validation prompts when the user requests them or the change's ambiguity and blast radius justify them; otherwise do a manual dry run against a small representative task and record what was checked.
 
 ## Packaging
 

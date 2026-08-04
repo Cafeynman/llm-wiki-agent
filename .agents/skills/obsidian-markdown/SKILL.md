@@ -9,12 +9,11 @@ Create and edit valid Obsidian Flavored Markdown. Obsidian extends CommonMark an
 
 ## Workflow: Creating an Obsidian Note
 
-1. **Add frontmatter** with properties (title, tags, aliases) at the top of the file. See [PROPERTIES.md](references/PROPERTIES.md) for all property types.
-2. **Write content** using standard Markdown for structure, plus Obsidian-specific syntax below.
-3. **Link related notes** using wikilinks (`[[Note]]`) for internal vault connections, or standard Markdown links for external URLs.
-4. **Embed content** from other notes, images, or PDFs using the `![[embed]]` syntax. See [EMBEDS.md](references/EMBEDS.md) for all embed types.
-5. **Add callouts** for highlighted information using `> [!type]` syntax. See [CALLOUTS.md](references/CALLOUTS.md) for all callout types.
-6. **Verify** the note renders correctly in Obsidian's reading view.
+1. **Inspect the owner**: follow the active `WIKI.md`, page template, and nearby note conventions.
+2. **Add only required frontmatter**. See [PROPERTIES.md](references/PROPERTIES.md) when a property type or YAML boundary needs clarification.
+3. **Write content** with standard Markdown and use wikilinks for vault-internal notes.
+4. **Use embeds or callouts when the requested page needs them**. Load [EMBEDS.md](references/EMBEDS.md) or [CALLOUTS.md](references/CALLOUTS.md) only then.
+5. **Verify the output** by parsing or linting the changed Markdown. Check Obsidian's reading view when the application is available and visual rendering matters.
 
 Follow `WIKI.md` source-language naming when note filenames, frontmatter `title`, headings, aliases, links, or display labels come from source or user terms. Preserve the source/user language for those names, and use aliases for alternative-language terms on cross-source pages.
 

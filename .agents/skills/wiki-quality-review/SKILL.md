@@ -11,8 +11,9 @@ it does not create a fourth workflow or a second quality standard.
 
 ## Ownership and Boundaries
 
-1. Read the working root's `AGENTS.md` and `WIKI.md` before reviewing. The
-   `Maintain Wiki` checklist in `WIKI.md` is authoritative for what the wiki
+1. Begin after the conversation-start read of the working root's complete
+   `WIKI.md` and `PROJECT.md`; on first entry, `AGENTS.md` has also been read.
+   The `Maintain Wiki` contract in `WIKI.md` is authoritative for what the wiki
    must satisfy.
 2. Run the local `obsidian-wiki-lint` skill first for deterministic Markdown,
    link, footnote, and orphan diagnostics. Do not reimplement those checks here.
@@ -50,7 +51,7 @@ presence of a citation as proof that the citation supports the claim.
 2. **Establish the static baseline.** From the working root, run:
 
    ```powershell
-   uv run --no-project .agents/skills/obsidian-wiki-lint/scripts/lint_wiki.py --vault . --scope wiki
+   uv run --no-project python .agents/skills/obsidian-wiki-lint/scripts/lint_wiki.py --vault . --scope wiki
    ```
 
    Adapt the scope when the confirmed target is narrower. Record failures and
@@ -66,7 +67,11 @@ presence of a citation as proof that the citation supports the claim.
    counterevidence or limitations, contradictions, superseded or stale claims,
    duplicate knowledge, thin or inaccurate source summaries, repeated concepts
    without a useful home, and unresolved questions that should change current
-   knowledge.
+   knowledge. Also check for catalogs, indexes, queues, or dashboards used as
+   pseudo-sources; circular evidence chains; duplicate identifiers or detailed
+   inventories; index rows that do not match canonical records; and
+   project-defined acceptance states unsupported by the available question,
+   answer, classification, or evidence.
 5. **Check whole-wiki quality proportionately.** For a whole-wiki request,
    inventory first and prioritize central pages, `draft` or `low`-confidence
    pages, stale claims, disputed topics, weakly sourced syntheses, and isolated

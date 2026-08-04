@@ -43,6 +43,8 @@ project-specific context.
   - Weak-point priority basis:
   - Availability constraints:
   - Reminder or supervision preference:
+  - Explanation style:
+  - Comparison format:
 - Project-specific rules:
   - Add only rules that are specific to this exam, institution, syllabus, or personal study process.
 - Constraints:

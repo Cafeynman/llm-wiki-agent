@@ -1,6 +1,6 @@
 ---
 name: obsidian-wiki-lint
-description: Foundational Obsidian wiki static linting tool. Use as the FIRST standard layer for checking broken wikilinks, missing standard footnote definitions, and orphan pages. For project-specific business logic validations (e.g. counting files, checking specific metadata), ALWAYS run this skill first to establish a baseline, then write custom scripts for the rest. Do not write custom scripts to replace this skill's basic Markdown parsing.
+description: Foundational Obsidian wiki static linting tool for broken wikilinks, missing standard footnote definitions, orphan pages, and shared Markdown parsing. Run the full lint first for wiki health reviews and when the owning workflow requires a baseline. Focused project validators may reuse its parser without running an unrelated whole-wiki audit.
 ---
 
 # Obsidian Wiki Lint
@@ -17,9 +17,7 @@ uv run --no-project .agents/skills/obsidian-wiki-lint/scripts/lint_wiki.py --vau
 
 ## Verification Architecture
 
-When users request complex health checks or business logic validation, follow a two-layer approach:
-1. **Standard Layer (Foundation)**: Always run `lint_wiki.py` first to establish a reliable baseline of deterministic Obsidian Markdown health checks.
-2. **Project Layer (Custom)**: Write custom one-off scripts to verify project-specific states (e.g., source card counts, synthesis completion, metadata values). Do not mix foundational wiki link parsing with custom business logic.
+For wiki health reviews, run `lint_wiki.py` first and add a focused project layer only for business rules the standard lint does not own. For a narrow project validator, reuse the existing code masking and wikilink resolution functions when they are relevant; run the full lint when its diagnostics affect the requested result or the active `WIKI.md` requires it. Keep foundational Markdown parsing here rather than duplicating it in each validator.
 
 Keep executable Obsidian Markdown checks owned here. `WIKI.md` may require this lint layer as a gate, but should not duplicate the detailed list of individual checks. General syntax guidance belongs in `obsidian-markdown`; deterministic checks and their test coverage belong in this skill.
 

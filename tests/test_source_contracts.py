@@ -66,6 +66,9 @@ class SourceContractTest(unittest.TestCase):
         usage_docs = self.read("docs/usage.md") + self.read("docs/usage.zh-CN.md")
         wiki = self.read("WIKI.md")
         agents = self.read("AGENTS.md")
+        lifecycle = self.read(
+            ".agents/skills/source-extraction/references/intake-lifecycle.md"
+        )
 
         self.assertIn("defuddle parse <url> --json", defuddle_skill)
         self.assertNotIn("defuddle parse <url> --json --md", defuddle_skill)
@@ -79,31 +82,40 @@ class SourceContractTest(unittest.TestCase):
         self.assertIn("自动安装", usage_docs)
         self.assertIn("inbox/web/", defuddle_usage)
         self.assertNotIn("-o intake/tmp", defuddle_skill + defuddle_usage)
-        self.assertIn("sole exception", wiki)
+        self.assertIn("sole exception", lifecycle)
+        self.assertIn("source-extraction", wiki)
         self.assertIn("live-URL source captures", agents)
 
     def test_provider_attachments_share_intake_lifecycle(self) -> None:
         wiki = self.read("WIKI.md")
         contract = self.read(".agents/skills/source-extraction/references/contract.md")
+        lifecycle = self.read(
+            ".agents/skills/source-extraction/references/intake-lifecycle.md"
+        )
         mineru = self.read(
             ".agents/skills/source-extraction/references/providers/mineru/usage.md"
         )
 
-        for content in (wiki, contract, mineru):
+        for content in (lifecycle, contract, mineru):
             self.assertIn("same intake folder", content)
             self.assertIn("promote", content.lower())
             self.assertIn("delete", content.lower())
-        self.assertIn("does not authorize OCR", wiki)
+        self.assertIn("does not authorize OCR", lifecycle)
+        self.assertIn("text-first", wiki.lower())
 
     def test_archive_has_one_lifecycle_outcome(self) -> None:
         wiki = self.read("WIKI.md")
+        lifecycle = self.read(
+            ".agents/skills/source-extraction/references/intake-lifecycle.md"
+        )
         source_kinds = self.read(
             ".agents/skills/source-extraction/references/source-kinds.md"
         )
 
-        self.assertIn("one Source Review Gate outcome", wiki)
-        self.assertIn("one raw-state destination", wiki)
-        self.assertIn("every inspected member and its disposition", wiki)
+        self.assertIn("Source Review Gate", wiki)
+        self.assertIn("one Source Review Gate outcome", lifecycle)
+        self.assertIn("one raw-state destination", lifecycle)
+        self.assertIn("every inspected member and its disposition", lifecycle)
         self.assertIn("one lifecycle source", source_kinds)
         self.assertNotIn("classify each useful member separately", source_kinds)
 
@@ -116,7 +128,8 @@ class SourceContractTest(unittest.TestCase):
             ".agents/skills/source-extraction/scripts/audit_chunks.py"
         )
 
-        for content in (wiki, chunking):
+        self.assertIn("numeric", wiki)
+        for content in (chunking,):
             self.assertIn("`01.md`", content)
             self.assertIn("`01/`", content)
             self.assertIn("exact source", content.lower())

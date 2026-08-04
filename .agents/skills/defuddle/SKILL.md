@@ -25,7 +25,7 @@ Run once against the submitted URL:
 defuddle parse <url> --json
 ```
 
-Parse the JSON structurally. Require `contentMarkdown` to be a non-empty string and use that field as the capture body; `content` contains HTML. Do not add `--md` to structured mode: in Defuddle `0.19.2`, that combination changes `content` to Markdown and omits `contentMarkdown`. Use the returned metadata to serialize the deterministic source capture under `inbox/web/` according to `WIKI.md`. Stage that capture unchanged under `intake/tmp/`; do not run Defuddle against the capture again.
+Parse the JSON structurally. Require `contentMarkdown` to be a non-empty string and use that field as the capture body; `content` contains HTML. Do not add `--md` to structured mode: in Defuddle `0.19.2`, that combination changes `content` to Markdown and omits `contentMarkdown`. Use the returned metadata to serialize the deterministic source capture under `inbox/web/` according to `source-extraction/references/intake-lifecycle.md`. Stage that capture unchanged under `intake/tmp/`; do not run Defuddle against the capture again.
 
 ## General Webpage Cleanup
 

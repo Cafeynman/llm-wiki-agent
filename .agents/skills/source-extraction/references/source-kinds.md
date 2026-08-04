@@ -5,7 +5,7 @@ Classify source material before selecting a provider. Source kinds describe the 
 | Source kind | Description | Default policy meaning |
 | --- | --- | --- |
 | `document` | PDF, Word, PowerPoint, Excel, HTML files, and similar files submitted as documents. | Use the configured document provider. |
-| `webpage` | A live URL or saved web page intended to be extracted as readable page content. | For a live URL, use the configured provider to create the `WIKI.md` source capture under `inbox/web/`, then stage that capture for review. |
+| `webpage` | A live URL or saved web page intended to be extracted as readable page content. | For a live URL, use the configured provider to create the lifecycle-reference source capture under `inbox/web/`, then stage that capture for review. |
 | `image` | Standalone image files or sources whose useful content is locked in images. | Ask before OCR; if approved, OCR output enters intake as reviewable Markdown. Otherwise mark `needs-review` or `unsupported`, depending on `PROJECT.md`. |
 | `audio` | Audio files or source material whose content requires transcription. | Ask before transcription or mark unsupported, depending on `PROJECT.md`. |
 | `video` | Video files or sources whose content requires audio transcription or frame analysis. | Ask before transcription/frame OCR or mark unsupported, depending on `PROJECT.md`. |

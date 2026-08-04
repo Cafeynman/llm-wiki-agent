@@ -15,7 +15,7 @@
 
 ---
 
-> **Note:** [AGENTS.md](../AGENTS.md) is the agent entrypoint. [PROJECT.md](../PROJECT.md) holds your workspace's specific configuration. [WIKI.md](../WIKI.md) is the core operating guide. Keep `WIKI.md` stable, and edit `PROJECT.md` for day-to-day personalization.
+> **Note:** [AGENTS.md](../AGENTS.md) is the agent entrypoint. [PROJECT.md](../PROJECT.md) holds your workspace's specific configuration. [WIKI.md](../WIKI.md) is the core operating guide. At the beginning of every conversation, the agent reads the active workspace's complete `WIKI.md` and `PROJECT.md` before planning, searching, answering, delegating, or writing. Programming and resumed conversations use the same start. Conversation history and earlier reads are not substitutes. Keep `WIKI.md` stable, and edit `PROJECT.md` for day-to-day personalization.
 
 ## 🎯 1. Use Cases
 
@@ -32,7 +32,7 @@ It is **not** meant for one-off chatting. Its true value lies in durable accumul
 ## ⚙️ 2. Requirements
 
 Before you start, ensure you have:
-- [uv](https://docs.astral.sh/uv/) for Python environment management (the init scripts run `uv sync --locked` against the lockfile's official PyPI index).
+- [uv](https://docs.astral.sh/uv/) for Python environment management. Install it before initialization; the scripts run `uv sync --locked` against the lockfile's official PyPI index but do not install machine-level tools.
 - PowerShell (Windows) or Bash (macOS/Linux) for initialization scripts.
 - Node.js/npm when you want the default webpage extraction provider. If Defuddle CLI is missing, the agent explains the pinned global npm installation, requests approval, then installs and verifies it automatically.
 - Any standard Markdown editor. Obsidian is optional.
@@ -70,13 +70,16 @@ To create the structure inside a separate working directory, including an existi
 ./scripts/init.sh -VaultRoot "/path/to/your/vault"
 ```
 
-After external-root initialization, open or run the agent from the initialized root. The target receives the package-managed entrypoint files, local skills, scripts, docs, runtime directories, and project environment. Existing package-managed files in the target are replaced by the package copy; keep workspace-specific preferences in `PROJECT.md`.
+After external-root initialization, open or run the agent from the initialized root. The target receives the package-managed entrypoint files, local skills, scripts, docs, runtime directories, and project environment. Initialization uses the same overwrite guard as upgrade: identical managed files are skipped, and a differing existing file without a clean tracked Git baseline stops the operation before target writes. Keep workspace-specific preferences in `PROJECT.md`.
 
 **What this does:**
 1. Installs package-managed entrypoint files, local skills, scripts, and docs into the target root.
 2. Creates `PROJECT.md` when it is missing and leaves source extraction preferences there for the agent to confirm when they matter, including whether to configure MinerU, which MinerU profile to use for API mode, and whether to prefer MinerU when it is available.
 3. Creates missing workflow directories and default wiki files (`inbox/`, `raw/`, `intake/`, `reviews/`, `logs/`, `wiki/`, etc.) without overwriting existing runtime content.
-4. Seeds `.gitignore` when it is missing, or appends the default private runtime block when no wiki runtime policy is present.
+4. Seeds the default private `.gitignore` only for a new target with no tracked
+   wiki runtime. If durable runtime files are already tracked and `.gitignore`
+   is missing, it creates baseline secret and cache rules without hiding those
+   files. An existing `.gitignore` keeps its target-owned domain policy.
 5. Runs `uv sync --locked --default-index https://pypi.org/simple` in the initialized root to create or update the `.venv/` runtime state from the committed lockfile.
 
 ### Optional Obsidian and Claudian Interface
@@ -109,7 +112,9 @@ Use the upgrade scripts when applying a newer package release to an existing wor
 ./scripts/upgrade.sh -TargetRoot "/path/to/your/workspace"
 ```
 
-The upgrade covers entries listed in `scripts/upgrade-manifest.txt`, creates `PROJECT.md` when it is missing, reconciles missing runtime directories and default wiki files, and runs `uv sync --locked --default-index https://pypi.org/simple` in the target root. Listed files are overwritten. Listed directories, including `scenarios/`, are merged by overwriting package-managed files while leaving additional target entries in place. Existing `.gitignore` files are preserved; missing local baseline rules are appended, and the default private runtime block is appended only when no wiki runtime policy is present. Keep workspace-specific configuration in `PROJECT.md`.
+The upgrade first expands `scripts/upgrade-manifest.txt` and classifies each managed file as create, unchanged, replace, or conflict. A missing file is created, an identical file is skipped, and a differing file is replaced only when it is tracked and clean against the target repository's `HEAD`. A modified, staged, deleted, or differing same-name untracked managed file is a conflict. In a non-Git target, any differing existing managed file is also a conflict. The same preflight rejects links or reparse points in existing ancestors of the target root, the target root itself, or write paths, and rejects wrong file types at `PROJECT.md`, `.gitignore`, `.venv`, or fixed runtime paths. The script reports all conflicts and stops before target writes. Extra target files inside managed directories remain in place, `PROJECT.md` is preserved, and runtime knowledge content is outside the managed-file content check.
+
+For a reviewable upgrade, start from a clean, committed target state, create a dedicated branch after the exact Git action is authorized, run the upgrade once there, inspect the diff and tests, then integrate that verified commit into the recorded base branch. The script does not create branches, commits, or merges. After copying, it reconciles missing runtime structure, preserves the existing `.gitignore` domain policy while adding missing secret and cache baselines, and runs `uv sync --locked --default-index https://pypi.org/simple`.
 
 ### Local Service Secrets
 
@@ -143,7 +148,7 @@ Initialization and upgrade scripts install the non-secret `.env.example` templat
 
 ## 📥 5. First Source Intake Workflow
 
-For exact lifecycle rules, follow [WIKI.md](../WIKI.md). A first small intake normally looks like this:
+For the core lifecycle, follow [WIKI.md](../WIKI.md); detailed intake mechanics live in `source-extraction/references/intake-lifecycle.md`. A first small intake normally looks like this:
 
 1. **Submit Source:** Put original files into `inbox/`, or give the agent a live URL.
 2. **Prompt Agent:** Ask the agent: *"Process these sources according to AGENTS.md, PROJECT.md, and WIKI.md."*
@@ -170,7 +175,7 @@ Plain English requests are valid. You can ask for tasks such as:
 
 ## 🔍 6. Source Review Gate Outcomes
 
-This is a quick reference. The authoritative Source Review Gate rules live in [WIKI.md](../WIKI.md).
+This is a quick reference. The core outcomes live in [WIKI.md](../WIKI.md), and detailed quality and handling rules live in `source-extraction/references/intake-lifecycle.md`.
 
 | Outcome | Destination | Next Action |
 | --- | --- | --- |
@@ -206,7 +211,11 @@ relevant pages or sections:
 2. relevant pages under `wiki/sources/`, `wiki/entities/`, `wiki/concepts/`, `wiki/claims/`, `wiki/syntheses/`
 3. related investigations and deliverables in `questions/` and `artifacts/`
 
-Generated deliverables such as reports, templates, and drafts belong in the `artifacts/` directory.
+This local scope is checked before external research. If it is insufficient, the
+agent states the gap before expanding the search. Ordinary answers and
+corrections are returned in the conversation without changing files. The agent
+writes only when you explicitly ask or confirm; requested reports, templates,
+and drafts belong in `artifacts/`.
 
 ---
 
@@ -235,7 +244,7 @@ Run periodic maintenance by asking:
 
 <details>
 <summary><b>What if `uv` is missing?</b></summary>
-Run the initialization script first. If it fails, install <code>uv</code> manually and rerun the init script.
+Install <code>uv</code> from its official documentation, then rerun the initialization script. The script reports a missing executable after completing its target-path preflight.
 </details>
 
 <details>

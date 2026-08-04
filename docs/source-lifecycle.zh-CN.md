@@ -1,6 +1,6 @@
 # 来源生命周期示例
 
-这个示例说明 `inbox/` 中一批文件的预期生命周期。规范性规则仍以 `WIKI.md` 为准；本文件只是示例。
+这个示例说明 `inbox/` 中一批文件的预期生命周期。核心合同以 `WIKI.md` 为准，详细步骤由 `.agents/skills/source-extraction/references/intake-lifecycle.md` 维护；本文件只是示例。
 
 ## 实时 URL 入口
 

@@ -27,7 +27,7 @@ Treat extra process as a risk until justified. Compatibility layers, fallback ro
 
 ## Required Reading
 
-From the working root under review, read `AGENTS.md` and `WIKI.md` when they exist. Read the remaining files when they are relevant to the confirmed scope; for a full package contract review, read all applicable files in this list.
+Begin after the working root's complete `WIKI.md` and `PROJECT.md` have been read at conversation start and `AGENTS.md` has been read on first entry. Read the remaining files when they are relevant to the confirmed scope; for a full package contract review, read all applicable files in this list.
 
 1. `AGENTS.md` and any optional adapter entrypoints for repository workflow, runtime, skill-source, precedence, and ownership rules.
 2. `WIKI.md` for the stable wiki directory contract and Add Knowledge, Use Knowledge, and Maintain Wiki workflows.
@@ -37,6 +37,11 @@ From the working root under review, read `AGENTS.md` and `WIKI.md` when they exi
 6. `README.md`, `README.zh-CN.md`, and `docs/` only when user-facing setup or usage wording may conflict with the entrypoint and wiki contracts.
 7. `.gitignore`, `git ls-files`, and `git status --ignored --short` when reviewing package boundaries, local residue, or migration risk.
 8. `pyproject.toml`, `.env.example`, and provider setup references when reviewing runtime, dependency, or environment-variable contracts.
+9. Target-only skills and competing persistence surfaces such as `.learnings/`,
+   memory files, or skill-driven edits to entrypoint contracts when reviewing an
+   initialized vault. Check tracked project files for private service locations;
+   non-secret provider choices belong in `PROJECT.md`, while values belong only
+   in `.env`.
 
 If the user gives a separate vault root, inspect that initialized vault as the working root for runtime structure, and inspect the package root only for package source files and scripts.
 
@@ -61,6 +66,11 @@ Check whether each reviewed workflow has one clear canonical route for the confi
 4. Flag unnecessary branches such as duplicate commands, hidden fallbacks, compatibility routes, optional modes, speculative safeguards, or alternate output locations that are not contract-owned.
 5. Check process weight. The workflow should ask for only the review depth, delegation, external review, tests, or reports justified by the user's scope and the risk.
 6. Recommend the smallest correction that closes the loop: delete, narrow, merge, reroute to the owner, or clarify the canonical path. Do not add a new option or fallback to avoid a direct decision.
+7. Verify that every conversation begins by reading the active root's complete
+   `WIKI.md` and `PROJECT.md` before planning, searching, answering, delegating,
+   or writing. Programming, resumed conversations, and delegated conversations
+   use the same gate. Wording that limits it to apparent wiki work or to only
+   the files thought relevant is contract drift.
 
 ### 2. Script and Migration Fit
 
@@ -71,11 +81,17 @@ Check whether scripts and package-managed files match the current wiki structure
 3. Confirm `upgrade-manifest.txt` includes stable package files and directories that must migrate, including `.agents/skills`, `docs`, `scripts`, `AGENTS.md`, and `WIKI.md` when present. Optional runtime adapters may remain user-owned instead of package-managed.
 4. Confirm package-managed files are copied from the package root and workspace-specific context stays in `PROJECT.md`.
 5. Compare `git ls-files`, `git status --ignored --short`, and the manifest so untracked archives, ignored vault folders, adapter directories, caches, and runtime folders are not mistaken for package source. Treat untracked files inside manifest-managed directories as pending local changes, not package source, until they are deliberately tracked.
-6. Search scripts and skills for stale path contracts such as dated intake directories, old skill paths, missing `.agents/skills` prefixes, unsupported runtime folders, or hardcoded scenario-specific paths.
-7. Verify script examples in skills and docs are executable from the documented root and use `uv run` where the project contract requires it.
-8. If both English and translated docs exist, check that setup commands, script parameter names, root semantics, and package/runtime boundaries are aligned across languages.
-9. Check provider/helper skills against the owning workflow contract. Extraction helpers must not bypass `source-extraction`, `PROJECT.md` provider policy, Source Review Gate, or the text-first wiki lifecycle.
-10. Check `pyproject.toml`, lockfiles when present, `.env.example`, provider setup docs, and runtime commands for dependency or environment drift.
+6. Verify that initialization and upgrade preserve an existing target-owned
+   `.gitignore` domain policy. They may add required secret and technical-cache
+   rules, but must not infer a private or versioned wiki-runtime policy from an
+   unrecognized existing file. If `.gitignore` is absent but durable runtime
+   files are already tracked, creating it must not hide current or future wiki
+   records.
+7. Search scripts and skills for stale path contracts such as dated intake directories, old skill paths, missing `.agents/skills` prefixes, unsupported runtime folders, or hardcoded scenario-specific paths.
+8. Verify script examples in skills and docs are executable from the documented root and use `uv run` where the project contract requires it.
+9. If both English and translated docs exist, check that setup commands, script parameter names, root semantics, and package/runtime boundaries are aligned across languages.
+10. Check provider/helper skills against the owning workflow contract. Extraction helpers must not bypass `source-extraction`, `PROJECT.md` provider policy, Source Review Gate, or the text-first wiki lifecycle.
+11. Check `pyproject.toml`, lockfiles when present, `.env.example`, provider setup docs, and runtime commands for dependency or environment drift.
 
 ### 3. Full Local Skill Review
 
@@ -155,6 +171,11 @@ Look for:
 - Old workflow names, compatibility branches, fallback language, deprecated aliases, or migration notes that now act as instructions.
 - Workflows that branch without a contract-owned decision point, require more process than the current risk justifies, or fail to close each state with a log, artifact, question, cleanup step, or documented next action.
 - Local-only or ignored root artifacts such as vault settings, adapter workspaces, attachment folders, archives, caches, temporary outputs, or generated lockfiles that could be copied, committed, or mistaken for package source.
+- Target-only skills or learning and memory files that auto-trigger writes,
+  compete with `WIKI.md` runtime ownership, or promote rules into `AGENTS.md`,
+  `WIKI.md`, or `PROJECT.md` without an explicit user request.
+- Private service locations or credentials stored in `PROJECT.md`, tracked
+  documentation, manifests, logs, source cards, or skills instead of `.env`.
 - Skill auxiliary files such as `README.md`, `POST_INSTALL.md`, `_meta.json`, `package.json`, `assets/`, tests, hooks, or copied upstream references that are stale, redundant, or inconsistent with the package-local contract.
 - Provider/helper skill descriptions or examples that imply direct source processing without the wiki router, `source-extraction`, `PROJECT.md` policy, or Source Review Gate.
 - Runtime dependency files and environment templates that disagree with documented setup, provider setup references, or script behavior.

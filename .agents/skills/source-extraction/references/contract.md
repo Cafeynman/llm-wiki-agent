@@ -18,7 +18,7 @@ A provider receives:
 - Project preferences from `PROJECT.md`.
 - Provider-specific options approved for the current task.
 
-The `original-source-base-filename` segment is the original source file's base filename after removing only the extension. Preserve language, case, whitespace, punctuation, and special characters; do not translate, romanize, convert to pinyin, URL encode, slugify, force lowercase, case-normalize, or simplify it. Generated live-URL captures use the one deterministic title-and-hash filename defined in `WIKI.md`; do not apply that naming rule to submitted files.
+The `original-source-base-filename` segment is the original source file's base filename after removing only the extension. Preserve language, case, whitespace, punctuation, and special characters; do not translate, romanize, convert to pinyin, URL encode, slugify, force lowercase, case-normalize, or simplify it. Generated live-URL captures use the one deterministic title-and-hash filename defined in `intake-lifecycle.md`; do not apply that naming rule to submitted files.
 
 ## Provider Output
 
