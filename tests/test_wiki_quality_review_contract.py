@@ -36,6 +36,33 @@ class WikiQualityReviewContractTest(unittest.TestCase):
         self.assertIn("clear mechanical findings", skill)
         self.assertIn("findings always require an approved resolution", skill)
 
+    def test_quality_review_audits_source_to_wiki_coverage_without_mandating_optional_pages(
+        self,
+    ) -> None:
+        wiki = self.read("WIKI.md")
+        skill = self.read(".agents/skills/wiki-quality-review/SKILL.md")
+        wiki_text = " ".join(wiki.split())
+        skill_text = " ".join(skill.split())
+
+        self.assertIn("source-to-wiki coverage", wiki_text)
+        self.assertIn("construction opportunities", wiki_text)
+        self.assertIn("## Source-to-Wiki Coverage", skill_text)
+        self.assertIn("`raw/digested/`", skill_text)
+        self.assertIn("recommended ingest scope", skill_text)
+        self.assertIn("actual result pages", skill_text)
+        self.assertIn("do not prove coverage", skill_text)
+        self.assertIn("source card can be sufficient", skill_text)
+        self.assertIn("not itself a defect", skill_text)
+        self.assertIn("construction candidate", skill_text)
+        self.assertIn("improve reuse or traceability", skill_text)
+        self.assertIn("### KC-001", skill_text)
+        self.assertIn("`no-material-gap-found`", skill_text)
+        self.assertIn("`material-gap-found`", skill_text)
+        self.assertIn("`indeterminate`", skill_text)
+        self.assertIn("sampled", skill_text)
+        self.assertIn("route the approved write through `Add Knowledge`", skill_text)
+        self.assertIn("Do not generate an aggregate quality score", skill_text)
+
     def test_contract_review_excludes_page_level_content_quality(self) -> None:
         contract_review = self.read(
             ".agents/skills/wiki-contract-review/SKILL.md"

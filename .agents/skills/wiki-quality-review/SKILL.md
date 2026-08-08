@@ -1,6 +1,6 @@
 ---
 name: wiki-quality-review
-description: Use for a review, audit, or health check of an initialized wiki's runtime knowledge content, including evidence support, contradictions, stale or duplicate knowledge, and source-card quality. Do not use for source intake or package/workflow contract review.
+description: Use for a review, audit, or health check of an initialized wiki's runtime knowledge content, including evidence support, contradictions, stale or duplicate knowledge, source-card quality, accepted-source coverage, and construction opportunities. Do not use for source intake or package/workflow contract review.
 ---
 
 # Wiki Quality Review
@@ -62,7 +62,10 @@ presence of a citation as proof that the citation supports the claim.
    linked pages. Read cited source cards and their supporting intake or original
    source only when needed to judge whether a claim, summary, quotation, number,
    or contested interpretation is actually supported.
-4. **Apply the `Maintain Wiki` checks.** Give particular attention to:
+4. **Audit accepted-source coverage when it is in scope.** For a source, topic,
+   or whole-wiki health review, use the Source-to-Wiki Coverage procedure below
+   to identify material ingest gaps and useful construction opportunities.
+5. **Apply the `Maintain Wiki` checks.** Give particular attention to:
    claim-to-source support, unsupported inference presented as fact, missing
    counterevidence or limitations, contradictions, superseded or stale claims,
    duplicate knowledge, thin or inaccurate source summaries, repeated concepts
@@ -72,12 +75,12 @@ presence of a citation as proof that the citation supports the claim.
    inventories; index rows that do not match canonical records; and
    project-defined acceptance states unsupported by the available question,
    answer, classification, or evidence.
-5. **Check whole-wiki quality proportionately.** For a whole-wiki request,
+6. **Check whole-wiki quality proportionately.** For a whole-wiki request,
    inventory first and prioritize central pages, `draft` or `low`-confidence
    pages, stale claims, disputed topics, weakly sourced syntheses, and isolated
    clusters. Work in explicit batches when the corpus cannot be reviewed
    completely in one pass.
-6. **Finish according to the authorized scope.** For a review-only request,
+7. **Finish according to the authorized scope.** For a review-only request,
    report without writing. If the original request also asks for fixes, clear
    mechanical findings inside that requested scope are authorized; report and
    apply them, but leave judgment-based findings as proposals until the user
@@ -85,6 +88,69 @@ presence of a citation as proof that the citation supports the claim.
    excluded or sampled scope, lint result, findings, changes if any, and
    remaining uncertainty. Do not create a persistent review file unless the
    user explicitly requests one.
+
+## Source-to-Wiki Coverage
+
+Use this procedure to judge whether accepted source material has been
+represented well enough for the confirmed review scope and to recommend the
+next useful knowledge construction. It audits ingest results; it does not
+reopen Source Review Gate or define a fourth workflow.
+
+1. For a whole-wiki review, inventory lifecycle sources under
+   `raw/digested/`; for a narrower review, restrict the inventory to the
+   confirmed sources or topic. Locate each matching processed intake folder,
+   source card, and downstream knowledge pages. A missing required surface may
+   block the semantic judgment and should be reported under its existing
+   contract owner rather than silently reconstructed.
+2. Compare `summary.md`'s recommended ingest scope, `manifest.md`'s resulting
+   wiki, question, or artifact paths, the substantive source card, and the
+   actual result pages. Manifest entries, citations, and links help locate
+   representations but do not prove coverage; inspect the content that is
+   supposed to carry the source point.
+3. Record review depth as `deep`, `scoped`, `sampled`, or `blocked`. A pass that
+   reads only summaries, manifests, and source cards is scoped or sampled and
+   cannot establish that the original material was fully digested. To evaluate
+   that question, inspect the relevant accepted `source.md`, `chunks/index.md`,
+   and source regions or chunks. The source card may itself be incomplete.
+4. Evaluate only material that is useful within the confirmed project scope:
+   important claims, definitions, methods, decisions, evidence,
+   counterevidence, limitations, examples, or unresolved questions. Do not use
+   passage, heading, or chunk coverage as the goal. The source card can be
+   sufficient representation. The absence of an optional entity, concept,
+   claim, synthesis, or question page is not itself a defect.
+5. Give the report-only coverage judgment `no-material-gap-found`,
+   `material-gap-found`, or `indeterminate`. The first means only that no
+   material omission was found in the inspected scope, not that the source or
+   wiki is complete. Use `indeterminate` when extraction quality, source
+   access, review depth, or unresolved project context prevents a reliable
+   judgment.
+6. Report an omission as a `WQ-*` finding only when it materially weakens
+   correctness, trust, reuse, or navigation. Report a useful improvement that
+   is not a defect separately as a construction candidate. Prefer enriching an
+   existing source card or canonical page; suggest a new canonical page,
+   synthesis, or question only when it would improve reuse or traceability.
+   Suggest source reprocessing only when the accepted text cannot support the
+   judgment.
+7. State the inspected, sampled, excluded, and blocked scope, the source
+   location for each judgment, the existing representation checked, and the
+   remaining uncertainty. Review-only coverage work does not edit source
+   cards, manifests, knowledge pages, indexes, or logs. When the user approves
+   a construction candidate, re-read its evidence and route the approved write
+   through `Add Knowledge`.
+
+Use this shape for non-defect construction opportunities:
+
+```markdown
+### KC-001 Construction candidate title
+
+- Review confidence: high | medium | low
+- Source and locator: source identity plus the inspected heading, range, or chunk
+- Existing representation: source card or knowledge pages already checked
+- Opportunity: why the candidate would improve reuse, traceability, or synthesis
+- Proposed construction: enrich an existing page, create a justified canonical page, open a question, or reprocess the source
+- Decision needed: project context or user judgment required before writing
+- Affected files: complete paths expected to change if approved
+```
 
 ## Finding Standard
 
@@ -137,6 +203,9 @@ findings always require an approved resolution.
 - Do not expand the review into external research by default. Report evidence
   gaps; when external verification is required, state the expanded scope and
   route any new source material through `Add Knowledge`.
+- Do not equate adequate ingest with representing every source passage, heading,
+  or chunk. Do not persist coverage judgments as source-card or manifest state;
+  they are review-time conclusions that can become stale as the wiki changes.
 - Do not generate an aggregate quality score, dashboard, or new review directory
   unless the user asks and the existing contract cannot represent the result.
 - Do not automatically chain into `wiki-contract-review`; route package or

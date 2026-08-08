@@ -140,10 +140,10 @@ authorized scope, update the owning page, evidence, affected projections, and
 
 ## Maintain Wiki
 
-Use this workflow for lint, cleanup, health checks, broken links, duplicates, stale claims, contradictions, source-card quality, evidence support, and ownership consistency.
+Use this workflow for lint, cleanup, health checks, broken links, duplicates, stale claims, contradictions, source-card quality, evidence support, source-to-wiki coverage, construction opportunities, and ownership consistency.
 
 1. For a whole-wiki health or lint review, run `obsidian-wiki-lint` first for deterministic Markdown, link, footnote, frontmatter, traceability-path, and orphan diagnostics. A focused validator may reuse the same parser and resolver and run only the smallest relevant lint scope.
-2. Use `wiki-quality-review` for evidence support, counterevidence, contradictions, stale or duplicate knowledge, circular source chains, canonical-record mismatches, and project-defined acceptance states.
+2. Use `wiki-quality-review` for evidence support, counterevidence, contradictions, stale or duplicate knowledge, circular source chains, source-to-wiki coverage of accepted material, construction opportunities, canonical-record mismatches, and project-defined acceptance states.
 3. Use `wiki-contract-review` for package files, entrypoint contracts, skills, scripts, initialization, upgrades, and runtime-structure drift.
 
 A review, audit, or health-check request is read-only unless the user also asks for fixes. Report numbered findings and proposed changes first, then edit only clear mechanical findings inside an original fix request or findings for which the user explicitly approves a resolution.
