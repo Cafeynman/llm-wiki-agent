@@ -72,6 +72,18 @@ class TestLintWiki(unittest.TestCase):
         for call in mock_print.call_args_list:
             self.assertNotIn("Orphan: wiki/other.md", call[0][0] if call[0] else "")
 
+    def test_focused_file_scope_skips_orphan_diagnostics(self):
+        note_path = self.vault / "wiki" / "note.md"
+        note_path.write_text("Focused page.", encoding="utf-8")
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, "wiki/note.md")
+
+        self.assertEqual(result, 0)
+        output = "\n".join(call[0][0] for call in mock_print.call_args_list if call[0])
+        self.assertIn("Skipped for focused scope", output)
+        self.assertNotIn("Orphan: wiki/note.md", output)
+
     def test_nested_md_links_resolve_from_source_directory(self):
         section = self.vault / "wiki" / "section"
         section.mkdir()

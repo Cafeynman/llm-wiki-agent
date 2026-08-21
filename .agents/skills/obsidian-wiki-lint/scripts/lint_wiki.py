@@ -605,7 +605,8 @@ def lint(vault: Path, scope: str) -> int:
             if resolved not in all_files and not (vault / resolved).exists():
                 broken[resolved].append(rel)
 
-    orphans = [rel for rel in scoped_files if rel not in incoming]
+    check_orphans = scope == "wiki"
+    orphans = [rel for rel in scoped_files if rel not in incoming] if check_orphans else []
 
     print("=== Broken wikilinks ===")
     if not broken:
@@ -617,7 +618,9 @@ def lint(vault: Path, scope: str) -> int:
 
     print()
     print(f"=== Orphan pages under {scope} ===")
-    if not orphans:
+    if not check_orphans:
+        print("Skipped for focused scope; use --scope wiki for orphan diagnostics.")
+    elif not orphans:
         print("None")
     else:
         for rel in orphans:

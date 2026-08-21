@@ -177,6 +177,24 @@ class ExamWrongQuestionAuditTest(unittest.TestCase):
             self.assertEqual(result.returncode, 2)
             self.assertIn("Subject directory not found", result.stderr)
 
+    def test_missing_output_parent_returns_two_without_creating_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            vault = temp / "vault"
+            subject_root = vault / "wiki/syntheses/建设工程经济"
+            subject_root.mkdir(parents=True)
+            (subject_root / "wrong-question-index.md").write_text(
+                "# 错题索引\n\n当前暂无错题。\n",
+                encoding="utf-8",
+            )
+            output = temp / "missing" / "audit.json"
+
+            result = self.run_audit(vault, "建设工程经济", output)
+
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("Output parent directory not found", result.stderr)
+            self.assertFalse(output.parent.exists())
+
     def test_confirmed_subject_without_wrong_questions_is_clean(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp = Path(temp_dir)

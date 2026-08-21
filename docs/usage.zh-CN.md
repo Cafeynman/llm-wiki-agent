@@ -25,7 +25,7 @@
 - 个人知识库、阅读笔记和主题归档。
 - 需要溯源、关注声明、不确定性和矛盾的查询驱动型知识库。
 
-它**不是**用来进行一次性闲聊的工具。它的核心价值在于持久化的积累：将来源、判断和矛盾点作为可复用的 wiki 知识妥善保存。
+它的核心价值在于持久化积累：将来源、判断和矛盾点保存为可复用的 wiki 知识。
 
 ---
 
@@ -74,7 +74,7 @@ cd llm-wiki-agent
 
 **它的作用是：**
 1. 将包管理的入口文件、本地技能、脚本和文档安装到目标根目录。
-2. 在缺失时创建 `PROJECT.md`，并将来源提取偏好放在那里，由智能体在需要时确认，包括是否配置 MinerU、API 模式下使用哪个 MinerU profile，以及 MinerU 可用时是否优先使用 MinerU。
+2. 在缺失时创建 `PROJECT.md`，来源提取偏好由真正需要它的来源任务再确认。
 3. 补齐缺失的工作流目录和默认 wiki 文件 (`inbox/`, `raw/`, `intake/`, `reviews/`, `logs/`, `wiki/` 等)，不覆盖已有运行内容。
 4. 只有在新目标既没有 `.gitignore`、也没有已跟踪的 wiki 运行目录文件时，才写入默认私有模板。若运行目录文件已被 Git 跟踪，则只创建密钥和技术缓存基线规则，不隐藏这些文件。已有 `.gitignore` 保留其目标自有的领域策略。
 5. 在初始化后的根目录运行 `uv sync --locked --default-index https://pypi.org/simple`，根据已提交的锁文件创建或更新 `.venv` 本地运行环境。
@@ -91,8 +91,8 @@ Obsidian 和 Claudian 都不是必需项。本工作流包可以通过文件系�
 
 ```text
 根据 scenarios/exam-study/ 初始化当前库。
-先读场景 README，再询问我 PROJECT.md 中需要确认的字段，
-然后用 starter-pages.md 创建最小有用的起始页面。
+先读场景 README，只询问当前起始页面需要的 PROJECT.md 字段，
+然后创建最小有用的起始页面集合。
 ```
 
 场景初始化只能把已确认的项目级取值写入 `PROJECT.md`，只创建当前场景需要的最小起始页面，并保持 `WIKI.md` 和 `AGENTS.md` 不变。
@@ -109,7 +109,7 @@ Obsidian 和 Claudian 都不是必需项。本工作流包可以通过文件系�
 ./scripts/upgrade.sh -TargetRoot "/path/to/your/workspace"
 ```
 
-升级会先展开 `scripts/upgrade-manifest.txt`，把每个包管理文件判定为新建、相同、替换或冲突。缺失文件会创建，相同文件会跳过；内容不同的文件只有在目标仓库中已跟踪且相对 `HEAD` 干净时才会替换。已修改、已暂存、已删除或内容不同的同名未跟踪包管理文件都属于冲突；非 Git 目标中已有的不同文件也属于冲突。同一次预检还会拒绝目标根的既有祖先、目标根或待写路径中的符号链接、目录联接或 reparse point，以及 `PROJECT.md`、`.gitignore`、`.venv` 或固定运行路径的类型错误。脚本会一次列出全部冲突，并在写入目标前停止。包管理目录中的目标专有文件会保留，`PROJECT.md` 会保留，运行知识内容不进入包管理文件的内容冲突判断。
+升级会先展开 `scripts/upgrade-manifest.txt`；其中的目录项使用 `scripts/package-files.txt` 保存的确定性已跟踪文件清单，因此包目录里的未跟踪本地文件不会被意外发布。脚本把当前包管理文件判定为新建、相同、替换或冲突；同一 manifest 也可列出旧版本已经退役的明确包文件。缺失文件会创建，相同文件会跳过；内容不同的文件只有在目标仓库中已跟踪且相对 `HEAD` 干净时才会替换。退役文件也只在已跟踪且干净时移除；该路径存在已修改或未跟踪文件时按冲突处理。非 Git 目标中已有的不同文件或退役文件路径同样属于冲突。同一次预检还会拒绝目标根的既有祖先、目标根或待写路径中的符号链接、目录联接或 reparse point，以及 `PROJECT.md`、`.gitignore`、`.venv` 或固定运行路径的类型错误。脚本会一次列出全部冲突，并在写入目标前停止。包管理目录中的其他目标专有文件会保留，`PROJECT.md` 会保留，运行知识内容不进入包管理文件的内容冲突判断。
 
 可审查的升级从干净且已提交的目标状态开始。在相应 Git 操作得到明确授权后创建专用分支，只在该分支运行一次升级，检查差异并运行测试，再把已经验证的提交集成到记录的基准分支。升级脚本本身不创建分支、提交或合并。复制完成后，脚本会补齐缺失的运行结构，保留已有 `.gitignore` 的目标域规则并补齐密钥和缓存基线，最后运行 `uv sync --locked --default-index https://pypi.org/simple`。
 
@@ -119,7 +119,7 @@ Obsidian 和 Claudian 都不是必需项。本工作流包可以通过文件系�
 
 配置需要 smoke check 的 provider profile 后，首次提取前应先运行该检查。具体检查内容和所需本地变量由 profile 定义。
 
-首次确认项目上下文时，或来源提取偏好仍未确认时，智能体会询问你是否要配置 MinerU、API 模式下使用哪个 MinerU profile，以及 MinerU 可用时是否优先用于受支持的文档。如果你选择优先 MinerU，智能体会在 `PROJECT.md` 中把文档默认 provider 记录为 MinerU。如果你不配置或不设为优先，MarkItDown 仍是普通文档的默认 provider，MinerU 只用于明确选择或复杂文档提取。
+来源任务选择 MinerU 且所需选项尚未确认时，智能体只确认当前缺少的选项：API profile、本地凭据配置或是否优先用于受支持的文档。确认后的偏好写入 `PROJECT.md`；其余情况下，MarkItDown 仍是普通文档的默认 provider，MinerU 用于明确选择或复杂文档提取。
 
 真实 `.env` 是本地运行配置，已被 Git 忽略，不能写入 `PROJECT.md`, `WIKI.md`, manifest, log, review note, wiki 页面、source card 或提示词。依赖 `.env` 的智能体命令必须从项目根目录通过 `uv run --env-file .env ...` 运行；如果同一个 shell 中要重复执行 `uv run`，也可以先设置 `UV_ENV_FILE=.env`。
 

@@ -26,6 +26,10 @@ jobs:
       - name: Check Bash syntax
         if: runner.os == 'Linux'
         run: bash -n scripts/init.sh scripts/upgrade.sh
+      - name: Check dependency lock
+        run: uv lock --check
+        env:
+          UV_DEFAULT_INDEX: https://pypi.org/simple
       - name: Run package contract tests
         run: >-
           uv run --no-project python -m unittest -v

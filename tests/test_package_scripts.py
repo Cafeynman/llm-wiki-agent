@@ -47,6 +47,8 @@ PRIVATE_RUNTIME_LINES = (
     "/wiki/",
 )
 OTHER_RUNTIME_LINES = ("/intake/tmp/",)
+RETIRED_PACKAGE_FILE = ".agents/skills/markitdown-skill/README.md"
+MANAGED_DIRECTORIES = ("docs", "scenarios", "scripts", ".agents/skills")
 
 
 class PackageScriptTest(unittest.TestCase):
@@ -166,11 +168,17 @@ class PackageScriptTest(unittest.TestCase):
         self.assertTrue(calls)
         self.assertTrue(
             all(
-                call.strip()
-                == "sync --locked --default-index https://pypi.org/simple"
+                call.strip() in {
+                    "lock --check --default-index https://pypi.org/simple",
+                    "sync --locked --default-index https://pypi.org/simple",
+                }
                 for call in calls
             ),
             calls,
+        )
+        self.assertEqual(
+            calls.count("lock --check --default-index https://pypi.org/simple"),
+            calls.count("sync --locked --default-index https://pypi.org/simple"),
         )
         if with_sentinel:
             self.assertEqual(
@@ -255,6 +263,122 @@ class PackageScriptTest(unittest.TestCase):
                 )
 
             self.assert_target(target, call_log, with_sentinel=with_sentinel)
+
+    def assert_retired_package_file_cleanup(self, shell_kind: str) -> None:
+        git = shutil.which("git")
+        if git is None:
+            self.skipTest("Git is not available")
+
+        for state in (
+            "clean",
+            "dirty",
+            "assume_unchanged",
+            "skip_worktree",
+            "untracked",
+            "no_baseline",
+            "directory",
+        ):
+            with self.subTest(state=state), tempfile.TemporaryDirectory() as temp_dir:
+                temp = Path(temp_dir)
+                target = temp / "target"
+                retired = target / RETIRED_PACKAGE_FILE
+                target_only = target / ".agents/skills/self-improving-agent/user-owned.txt"
+                retired.parent.mkdir(parents=True)
+                target_only.parent.mkdir(parents=True)
+                if state == "directory":
+                    retired.mkdir()
+                else:
+                    retired.write_text("old package documentation\n", encoding="utf-8")
+                target_only.write_text("keep me\n", encoding="utf-8")
+
+                if state != "no_baseline":
+                    subprocess.run([git, "init", str(target)], check=True, capture_output=True)
+                    tracked = [target_only.relative_to(target).as_posix()]
+                    if state not in ("untracked", "directory"):
+                        tracked.append(RETIRED_PACKAGE_FILE)
+                    subprocess.run(
+                        [git, "-C", str(target), "add", *tracked],
+                        check=True,
+                        capture_output=True,
+                    )
+                    subprocess.run(
+                        [
+                            git,
+                            "-C",
+                            str(target),
+                            "-c",
+                            "user.name=Package Tests",
+                            "-c",
+                            "user.email=package-tests@example.invalid",
+                            "commit",
+                            "-m",
+                            "baseline",
+                        ],
+                        check=True,
+                        capture_output=True,
+                    )
+                if state in ("assume_unchanged", "skip_worktree"):
+                    flag = (
+                        "--assume-unchanged"
+                        if state == "assume_unchanged"
+                        else "--skip-worktree"
+                    )
+                    subprocess.run(
+                        [git, "-C", str(target), "update-index", flag, RETIRED_PACKAGE_FILE],
+                        check=True,
+                        capture_output=True,
+                    )
+                if state in ("dirty", "assume_unchanged", "skip_worktree"):
+                    retired.write_text("user-edited documentation\n", encoding="utf-8")
+
+                before = self.snapshot_working_tree(target)
+                env, call_log = self.make_fake_uv(temp)
+                result = subprocess.run(
+                    self.script_command(
+                        shell_kind,
+                        "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
+                        "-TargetRoot",
+                        target,
+                    ),
+                    cwd=ROOT,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                )
+
+                if state != "clean":
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(f"Conflict: {RETIRED_PACKAGE_FILE}", result.stdout + result.stderr)
+                    expected_reason = {
+                        "dirty": "tracked package file has uncommitted changes",
+                        "assume_unchanged": "tracked package file has uncommitted changes",
+                        "skip_worktree": "tracked package file has uncommitted changes",
+                        "untracked": "retired package file exists and is not tracked by the Git baseline",
+                        "no_baseline": "retired package file exists and no Git baseline is available",
+                        "directory": "retired package path is a directory",
+                    }[state]
+                    self.assertIn(expected_reason, result.stdout + result.stderr)
+                    self.assertEqual(self.snapshot_working_tree(target), before)
+                    self.assertFalse(call_log.exists())
+                else:
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertFalse(retired.exists())
+                    self.assertEqual(target_only.read_text(encoding="utf-8"), "keep me\n")
+                    self.assertTrue(call_log.exists())
+                    second = subprocess.run(
+                        self.script_command(
+                            shell_kind,
+                            "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
+                            "-TargetRoot",
+                            target,
+                        ),
+                        cwd=ROOT,
+                        env=env,
+                        capture_output=True,
+                        text=True,
+                    )
+                    self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
+                    self.assertFalse(retired.exists())
 
     def seed_tracked_runtime(self, target: Path) -> None:
         git = shutil.which("git")
@@ -443,6 +567,50 @@ class PackageScriptTest(unittest.TestCase):
     def test_manifest_leaves_runtime_adapters_user_owned(self) -> None:
         manifest = (ROOT / "scripts/upgrade-manifest.txt").read_text(encoding="utf-8")
         self.assertNotIn("file CLAUDE.md", manifest.splitlines())
+        self.assertIn(f"remove {RETIRED_PACKAGE_FILE}", manifest.splitlines())
+
+    def test_package_inventory_matches_tracked_managed_files(self) -> None:
+        git = shutil.which("git")
+        if git is None:
+            self.skipTest("Git is not available")
+        inventory_path = ROOT / "scripts/package-files.txt"
+        inventory = {
+            line.strip()
+            for line in inventory_path.read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        }
+        result = subprocess.run(
+            [git, "-c", "core.quotepath=false", "ls-files", *MANAGED_DIRECTORIES],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        tracked = set(result.stdout.splitlines())
+        tracked.add("scripts/package-files.txt")
+        self.assertEqual(inventory, tracked)
+
+    def test_upgrade_ignores_untracked_files_inside_managed_directories(self) -> None:
+        source_only = ROOT / "docs/untracked-upgrade-sentinel.txt"
+        self.assertFalse(source_only.exists())
+        source_only.write_text("must not be copied\n", encoding="utf-8")
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp = Path(temp_dir)
+                target = self.make_target(temp, with_sentinel=False)
+                env, _ = self.make_fake_uv(temp)
+                result = subprocess.run(
+                    self.script_command("powershell", "upgrade.ps1", "-TargetRoot", target),
+                    cwd=ROOT,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertFalse((target / "docs/untracked-upgrade-sentinel.txt").exists())
+        finally:
+            source_only.unlink(missing_ok=True)
 
     def test_init_scripts_are_thin_upgrade_wrappers(self) -> None:
         powershell = (ROOT / "scripts/init.ps1").read_text(encoding="utf-8")
@@ -474,6 +642,8 @@ class PackageScriptTest(unittest.TestCase):
         self.assertIn("ubuntu-latest", workflow)
         self.assertIn("windows-latest", workflow)
         self.assertIn("bash -n scripts/init.sh scripts/upgrade.sh", workflow)
+        self.assertIn("uv lock --check", workflow)
+        self.assertIn("UV_DEFAULT_INDEX: https://pypi.org/simple", workflow)
         self.assertIn("uv run --no-project python -m unittest", workflow)
         self.assertNotIn("uv sync", workflow)
 
@@ -592,12 +762,14 @@ class PackageScriptTest(unittest.TestCase):
                     text=True,
                 )
                 self.assertEqual(runtime_page.read_text(encoding="utf-8"), "# User runtime change\n")
-                self.assertEqual(len(call_log.read_text(encoding="utf-8").splitlines()), 1)
+                self.assertEqual(len(call_log.read_text(encoding="utf-8").splitlines()), 2)
 
             for conflict_case in (
                 "tracked_modified",
                 "staged_modified",
                 "tracked_deleted",
+                "assume_unchanged",
+                "skip_worktree",
                 "same_name_untracked",
             ):
                 with self.subTest(script=script_name, case=conflict_case), tempfile.TemporaryDirectory() as temp_dir:
@@ -639,6 +811,17 @@ class PackageScriptTest(unittest.TestCase):
                     if conflict_case == "tracked_deleted":
                         (target / "WIKI.md").unlink()
                     else:
+                        if conflict_case in ("assume_unchanged", "skip_worktree"):
+                            flag = (
+                                "--assume-unchanged"
+                                if conflict_case == "assume_unchanged"
+                                else "--skip-worktree"
+                            )
+                            subprocess.run(
+                                [git, "-C", str(target), "update-index", flag, "WIKI.md"],
+                                check=True,
+                                capture_output=True,
+                            )
                         (target / "WIKI.md").write_text(
                             "# Local managed-file change\n", encoding="utf-8"
                         )
@@ -797,6 +980,12 @@ class PackageScriptTest(unittest.TestCase):
 
     def test_bash_missing_uv_has_no_target_writes(self) -> None:
         self.assert_missing_uv_has_no_target_writes("bash")
+
+    def test_powershell_removes_only_clean_retired_package_files(self) -> None:
+        self.assert_retired_package_file_cleanup("powershell")
+
+    def test_bash_removes_only_clean_retired_package_files(self) -> None:
+        self.assert_retired_package_file_cleanup("bash")
 
 
 if __name__ == "__main__":

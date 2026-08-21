@@ -12,3 +12,25 @@ dir docs
 dir scenarios
 dir scripts
 dir .agents/skills
+
+# Known package files retired from earlier releases. Other target-only files are preserved.
+remove .agents/skills/markitdown-skill/README.md
+remove .agents/skills/markitdown-skill/POST_INSTALL.md
+remove .agents/skills/markitdown-skill/USAGE-GUIDE.md
+remove .agents/skills/markitdown-skill/reference.md
+remove .agents/skills/markitdown-skill/package.json
+remove .agents/skills/markitdown-skill/_meta.json
+remove .agents/skills/skill-creator/agents/analyzer.md
+remove .agents/skills/skill-creator/agents/comparator.md
+remove .agents/skills/skill-creator/agents/grader.md
+remove .agents/skills/skill-creator/assets/eval_review.html
+remove .agents/skills/skill-creator/eval-viewer/generate_review.py
+remove .agents/skills/skill-creator/eval-viewer/viewer.html
+remove .agents/skills/skill-creator/references/schemas.md
+remove .agents/skills/skill-creator/scripts/__init__.py
+remove .agents/skills/skill-creator/scripts/aggregate_benchmark.py
+remove .agents/skills/skill-creator/scripts/generate_report.py
+remove .agents/skills/skill-creator/scripts/improve_description.py
+remove .agents/skills/skill-creator/scripts/run_eval.py
+remove .agents/skills/skill-creator/scripts/run_loop.py
+remove .agents/skills/skill-creator/scripts/utils.py

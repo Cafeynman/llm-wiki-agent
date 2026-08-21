@@ -25,8 +25,9 @@ When the user asks to initialize this scenario:
 
 1. Read this file completely.
 2. Read `PROJECT.template.md`.
-3. Ask the user to confirm the subjects, naming preferences, classification
-   level, and any open constraints that are still blank.
+3. Confirm only the project fields that materially affect the requested starter
+   pages, beginning with the subject names. Leave unrelated fields for the task
+   that needs them.
 4. Update the root `PROJECT.md` with confirmed values only.
 5. Preserve the root `PROJECT.md` source extraction preferences unless the user
    explicitly confirms a scenario-specific change.
@@ -259,7 +260,7 @@ source lifecycle or become hidden monitoring.
 
 ```text
 Initialize this workspace according to scenarios/exam-study/.
-Read the scenario README first. Then use PROJECT.template.md to ask me for the
-missing project fields and use starter-pages.md to create the smallest useful
-starter pages.
+Read the scenario README first. Then use PROJECT.template.md to ask only for
+the missing fields needed by the requested starter pages, and use
+starter-pages.md to create the smallest useful set.
 ```

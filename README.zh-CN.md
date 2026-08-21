@@ -43,7 +43,7 @@ cd llm-wiki-agent
 
 初始化后的工作区中，所有对话一开始，智能体都先完整读取该工作区的 `WIKI.md` 和 `PROJECT.md`。编程、调试、普通问答、技术工作和文件操作都使用同一启动门；恢复已有对话时也重新读取，对话历史不能替代这一步。
 
-默认来源提取偏好记录在 `PROJECT.md`。首次确认项目上下文时，智能体会询问是否配置 MinerU、API 模式下使用哪个 MinerU profile，以及 MinerU 可用时是否优先使用 MinerU；选择该偏好时会把 MinerU 记录为文档默认 provider。
+默认来源提取偏好记录在 `PROJECT.md`。智能体只在当前来源任务需要时确认对应 provider 选择；选用 MinerU API 模式时，再确认所需 profile、本地凭据配置和是否优先使用 MinerU。
 如果使用需要本地服务配置的 provider 或 OCR 后端，请将 `.env.example` 复制为初始化后工作根目录中的 `.env`，并只填写所选 provider profile 真正需要的变量。真实 `.env` 已被 Git 忽略；智能体运行 provider 命令时应通过 `uv run --env-file .env` 加载它。
 后续升级包文件时，请使用 [使用指南](docs/usage.zh-CN.md#升级包文件) 中的 manifest 驱动升级脚本。
 默认 `.gitignore` 会让本地 wiki 运行内容保持私有；如果这个 checkout 本身是需要版本化的 wiki 项目，请参考 [Git Ignore 模板](docs/gitignore-templates.zh-CN.md)。
@@ -129,6 +129,7 @@ LLM Wiki Agent 可以直接通过文件系统运行，不需要安装 Obsidian �
 ├── scripts/
 │   ├── init.ps1
 │   ├── init.sh
+│   ├── package-files.txt
 │   ├── upgrade-manifest.txt
 │   ├── upgrade.ps1
 │   └── upgrade.sh

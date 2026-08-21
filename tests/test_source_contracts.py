@@ -65,7 +65,6 @@ class SourceContractTest(unittest.TestCase):
         )
         usage_docs = self.read("docs/usage.md") + self.read("docs/usage.zh-CN.md")
         wiki = self.read("WIKI.md")
-        agents = self.read("AGENTS.md")
         lifecycle = self.read(
             ".agents/skills/source-extraction/references/intake-lifecycle.md"
         )
@@ -84,7 +83,7 @@ class SourceContractTest(unittest.TestCase):
         self.assertNotIn("-o intake/tmp", defuddle_skill + defuddle_usage)
         self.assertIn("sole exception", lifecycle)
         self.assertIn("source-extraction", wiki)
-        self.assertIn("live-URL source captures", agents)
+        self.assertIn("Generated live-URL captures", wiki)
 
     def test_provider_attachments_share_intake_lifecycle(self) -> None:
         wiki = self.read("WIKI.md")

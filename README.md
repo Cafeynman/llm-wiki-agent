@@ -43,7 +43,7 @@ cd llm-wiki-agent
 
 Every conversation in the initialized workspace begins with the agent reading that workspace's complete `WIKI.md` and `PROJECT.md`. Programming, debugging, questions, technical work, and file operations all use this same automatic start; resumed conversations read them again, and conversation history is not a substitute.
 
-Default source extraction preferences are recorded in `PROJECT.md`. During first project-context confirmation, the agent asks whether to configure MinerU, which MinerU profile should be used when API mode is selected, and whether to prefer MinerU when it is available; choosing that preference records MinerU as the document default.
+Default source extraction preferences are recorded in `PROJECT.md`. The agent confirms only the provider choices needed by the current source task. When MinerU API mode is selected, this may include its profile, local credential setup, and whether MinerU should be preferred when available.
 For service-backed providers and OCR backends, copy `.env.example` to `.env` in the initialized working root and fill only the variables required by the selected provider profile. The real `.env` file is ignored by Git; agents should load it with `uv run --env-file .env` when running provider commands.
 For package upgrades, use the manifest-driven scripts documented in [Usage Guide](docs/usage.md#upgrade-package-files).
 The default `.gitignore` keeps local wiki runtime content private; refer to [Git Ignore Templates](docs/gitignore-templates.md) when this checkout is a versioned wiki project.
@@ -129,6 +129,7 @@ LLM Wiki Agent works directly from the filesystem without Obsidian or Claudian. 
 ├── scripts/
 │   ├── init.ps1
 │   ├── init.sh
+│   ├── package-files.txt
 │   ├── upgrade-manifest.txt
 │   ├── upgrade.ps1
 │   └── upgrade.sh

@@ -190,8 +190,9 @@ findings always require an approved resolution.
 3. Update `wiki/index.md`, `wiki/home.md`, intake manifests, questions, and
    `logs/wiki.md` only where the authorized content change requires it under
    `WIKI.md`.
-4. Rerun `obsidian-wiki-lint` on every changed top-level scope and inspect the
-   resulting pages or artifacts directly.
+4. Rerun `obsidian-wiki-lint` on each changed Markdown file or the smallest
+   affected scope and inspect the resulting pages or artifacts directly. Use
+   the whole `wiki/` scope for a whole-wiki change or migration batch.
 5. Report the applied identifiers, changed files, verification, and any
    authorized finding that could not be completed.
 

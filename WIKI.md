@@ -114,7 +114,7 @@ Each accepted intake folder contains `source.md`, `summary.md`, and `manifest.md
 1. Read `summary.md`, `manifest.md`, and `chunks/index.md` when available, then inspect only the source regions required for accuracy.
 2. Create or update the one source card and only the entity, concept, claim, synthesis, or question pages that improve reuse or traceability.
 3. Preserve disagreement, uncertainty, limitations, and claim-level evidence.
-4. Run `obsidian-wiki-lint` on every changed top-level scope.
+4. Run `obsidian-wiki-lint` on each changed Markdown file or the smallest affected scope. Use the whole `wiki/` scope for migrations, navigation-wide changes, and whole-wiki maintenance.
 5. Update the intake manifest, navigation projections, and operation log only where the content change requires them.
 
 ### Reflect
@@ -129,7 +129,7 @@ Use this workflow for questions, explanations, evidence checks, synthesis, compa
 2. Read the most relevant knowledge pages and cited evidence.
 3. Answer from compiled local knowledge. Separate direct answer, evidence, counterevidence, uncertainty, and open questions when they matter.
 4. Write a requested deliverable under `artifacts/`; save a durable synthesis or question only when the user asks or confirms.
-5. Run `obsidian-wiki-lint` when this workflow writes Markdown.
+5. When this workflow writes Markdown, lint the written file or the smallest affected scope.
 
 A request to answer, explain, check, or correct an answer is not by itself a
 request to write the wiki. A request to record a wrong question, correction,

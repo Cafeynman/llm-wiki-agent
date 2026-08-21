@@ -1,6 +1,6 @@
 ---
 name: obsidian-wiki-lint
-description: Foundational Obsidian wiki static linting tool for broken wikilinks, missing standard footnote definitions, orphan pages, and shared Markdown parsing. Run the full lint first for wiki health reviews and when the owning workflow requires a baseline. Focused project validators may reuse its parser without running an unrelated whole-wiki audit.
+description: Foundational Obsidian wiki static linting tool for broken wikilinks, missing standard footnote definitions, orphan pages, and shared Markdown parsing. Use the full wiki scope for health reviews and focused scopes for ordinary writes. Project validators may reuse its parser without running an unrelated whole-wiki audit.
 ---
 
 # Obsidian Wiki Lint
@@ -23,13 +23,17 @@ Keep executable Obsidian Markdown checks owned here. `WIKI.md` may require this 
 
 ## Core Workflow
 
-1. Run `lint_wiki.py` first. Treat its output as diagnostics, not as permission to rewrite pages.
+1. Run `lint_wiki.py` on the requested file or smallest affected scope. Use `--scope wiki` for a whole-wiki health baseline.
 2. For broken links caused by uniquely truncated source filenames, run `fix_truncated_links.py` without `--write` and inspect the proposed changes.
 3. For missing concept cross-links, run `crosslink_concepts.py` without `--write` and inspect the proposed changes.
-4. Add `--write` only when the fix is mechanical and the target scope is correct.
-5. After writes, rerun `lint_wiki.py`.
+4. Add `--write` only when the original request asks for fixes or the user has
+   approved the specific finding, and the fix is mechanical with the correct
+   target scope. Diagnostics alone never authorize a write.
+5. After writes, rerun `lint_wiki.py` on the affected scope.
 
 `lint_wiki.py` ignores link and footnote examples inside fenced or inline code. It resolves ordinary Markdown links relative to the containing note, while a leading `/` starts from the vault root and Obsidian wikilinks retain vault semantics. Links that resolve outside the vault are reported as broken. Links ending in `/` or `\` are explicit directory links. Existing directory links are checked for directory existence and do not count as page incoming links. Internal vault paths in frontmatter `sources:` must be complete quoted wikilinks. `intake/` wikilinks in frontmatter `sources:` are source traceability and are excluded from navigation broken-link reporting; body links to `intake/` remain checked. Every standard footnote reference must have a matching definition in the same note; repeated references may share one definition.
+
+Orphan diagnostics run only for `--scope wiki`, where the complete canonical navigation scope is available. Narrower scopes still check their Markdown, outbound links, frontmatter, tables, traceability paths, and footnotes without producing misleading local orphan reports.
 
 If the requested `--scope` contains no Markdown pages, `lint_wiki.py` exits with code `2`. Treat that as a wrong vault root or scope, not a clean wiki.
 

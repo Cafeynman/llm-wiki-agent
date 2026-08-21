@@ -24,11 +24,24 @@ done
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 package_root="$(cd "$script_dir/.." && pwd -P)"
 manifest_path="$script_dir/upgrade-manifest.txt"
+inventory_path="$script_dir/package-files.txt"
 
 if [[ ! -f "$manifest_path" ]]; then
   echo "Upgrade manifest not found: $manifest_path" >&2
   exit 1
 fi
+if [[ ! -f "$inventory_path" ]]; then
+  echo "Package file inventory not found: $inventory_path" >&2
+  exit 1
+fi
+
+inventory_paths=()
+while IFS= read -r inventory_line || [[ -n "$inventory_line" ]]; do
+  inventory_line="${inventory_line%$'\r'}"
+  [[ -z "${inventory_line//[[:space:]]/}" ]] && continue
+  [[ "$inventory_line" =~ ^[[:space:]]*# ]] && continue
+  inventory_paths+=("${inventory_line//\\//}")
+done < "$inventory_path"
 normalize_absolute_path() {
   local path="$1"
   local index
@@ -160,6 +173,36 @@ add_plan_record() {
   plan_reason+=("$reason")
 }
 
+add_removal_record() {
+  local relative_path="${1//\\//}"
+  local target_file="$2"
+  local action="UNCHANGED"
+  local reason=""
+
+  if contains_value "$relative_path" "${plan_rel[@]:-}"; then
+    echo "Duplicate package-managed path in manifest expansion: $relative_path" >&2
+    exit 1
+  fi
+
+  if [[ "$same_root" -eq 0 ]]; then
+    if [[ -d "$target_file" ]]; then
+      action="CONFLICT"
+      reason="retired package path is a directory"
+    elif [[ -f "$target_file" ]]; then
+      action="REMOVE"
+    elif [[ -e "$target_file" ]]; then
+      action="CONFLICT"
+      reason="retired package path is not a regular file"
+    fi
+  fi
+
+  plan_rel+=("$relative_path")
+  plan_source+=("")
+  plan_target+=("$target_file")
+  plan_action+=("$action")
+  plan_reason+=("$reason")
+}
+
 add_structure_conflict() {
   local key="$1"
   local message="$2"
@@ -250,12 +293,24 @@ while IFS= read -r line || [[ -n "$line" ]]; do
         exit 1
       fi
       manifest_directory_count=$((manifest_directory_count + 1))
-      source_full="$(cd "$source_path" && pwd -P)"
-      while IFS= read -r -d '' source_file; do
-        child="${source_file#"$source_full"/}"
-        expanded="$relative_path/$child"
+      directory_file_count=0
+      for expanded in "${inventory_paths[@]:-}"; do
+        [[ "$expanded" == "$relative_path/"* ]] || continue
+        source_file="$package_root/$expanded"
+        if [[ ! -f "$source_file" ]]; then
+          echo "Inventory file entry not found in package: $expanded" >&2
+          exit 1
+        fi
         add_plan_record "$expanded" "$source_file" "$target_path/$expanded"
-      done < <(find "$source_full" -type f ! -name '*.pyc' ! -path '*/__pycache__/*' -print0)
+        directory_file_count=$((directory_file_count + 1))
+      done
+      if [[ "$directory_file_count" -eq 0 ]]; then
+        echo "Manifest directory has no files in package inventory: $relative_path" >&2
+        exit 1
+      fi
+      ;;
+    remove)
+      add_removal_record "$relative_path" "$target_path/$relative_path"
       ;;
     *)
       echo "Invalid manifest entry kind: $kind" >&2
@@ -280,25 +335,40 @@ done
 
 git_baseline=0
 git_root=""
+head_paths=()
 tracked_paths=()
-dirty_paths=()
 if [[ "$same_root" -eq 0 && -d "$target_path" ]] && command -v git >/dev/null 2>&1; then
   if git -C "$target_path" rev-parse --is-inside-work-tree >/dev/null 2>&1 &&
      git -C "$target_path" rev-parse --verify HEAD >/dev/null 2>&1; then
     git_baseline=1
     git_root="$(git -C "$target_path" rev-parse --show-toplevel)"
+    while IFS= read -r head_path; do
+      [[ -n "$head_path" ]] && head_paths+=("$head_path")
+    done < <(git -c core.quotepath=false -C "$git_root" ls-tree -r --name-only HEAD)
     while IFS= read -r tracked_path; do
       [[ -n "$tracked_path" ]] && tracked_paths+=("$tracked_path")
     done < <(git -c core.quotepath=false -C "$git_root" ls-files)
-    while IFS= read -r dirty_path; do
-      [[ -n "$dirty_path" ]] && dirty_paths+=("$dirty_path")
-    done < <(git -c core.quotepath=false -C "$git_root" diff --name-only HEAD --)
   fi
 fi
+
+tracked_path_matches_head() {
+  local git_relative="$1"
+  local target_file="$2"
+  local head_object
+  local index_object
+  local working_object
+
+  head_object="$(git -C "$git_root" rev-parse --verify "HEAD:$git_relative" 2>/dev/null)" || return 1
+  index_object="$(git -C "$git_root" rev-parse --verify ":$git_relative" 2>/dev/null)" || return 1
+  [[ "$head_object" == "$index_object" ]] || return 1
+  working_object="$(git -C "$git_root" hash-object --path="$git_relative" -- "$target_file" 2>/dev/null)" || return 1
+  [[ "$head_object" == "$working_object" ]]
+}
 
 conflicts=("${structure_conflicts[@]}")
 create_count=0
 replace_count=0
+remove_count=0
 unchanged_count=0
 
 for ((i = 0; i < ${#plan_rel[@]}; i++)); do
@@ -317,6 +387,9 @@ for ((i = 0; i < ${#plan_rel[@]}; i++)); do
     REPLACE)
       replace_count=$((replace_count + 1))
       ;;
+    REMOVE)
+      remove_count=$((remove_count + 1))
+      ;;
     CONFLICT)
       conflicts+=("$relative_path: ${plan_reason[$i]}")
       continue
@@ -326,6 +399,8 @@ for ((i = 0; i < ${#plan_rel[@]}; i++)); do
   if [[ "$git_baseline" -eq 0 ]]; then
     if [[ "$action" == "REPLACE" ]]; then
       conflicts+=("$relative_path: existing file differs and no Git baseline is available")
+    elif [[ "$action" == "REMOVE" ]]; then
+      conflicts+=("$relative_path: retired package file exists and no Git baseline is available")
     fi
     continue
   fi
@@ -337,21 +412,26 @@ for ((i = 0; i < ${#plan_rel[@]}; i++)); do
   git_relative="${target_file#"$git_root"/}"
 
   if [[ "$action" == "CREATE" ]]; then
-    if contains_value "$git_relative" "${tracked_paths[@]:-}" &&
-       contains_value "$git_relative" "${dirty_paths[@]:-}"; then
+    if contains_value "$git_relative" "${head_paths[@]:-}" ||
+       contains_value "$git_relative" "${tracked_paths[@]:-}"; then
       conflicts+=("$relative_path: tracked package file is deleted in the working tree")
     fi
     continue
   fi
 
-  if ! contains_value "$git_relative" "${tracked_paths[@]:-}"; then
-    conflicts+=("$relative_path: existing file differs and is not tracked by the Git baseline")
-  elif contains_value "$git_relative" "${dirty_paths[@]:-}"; then
+  if ! contains_value "$git_relative" "${head_paths[@]:-}"; then
+    if [[ "$action" == "REMOVE" ]]; then
+      conflicts+=("$relative_path: retired package file exists and is not tracked by the Git baseline")
+    else
+      conflicts+=("$relative_path: existing file differs and is not tracked by the Git baseline")
+    fi
+  elif ! contains_value "$git_relative" "${tracked_paths[@]:-}" ||
+       ! tracked_path_matches_head "$git_relative" "$target_file"; then
     conflicts+=("$relative_path: tracked package file has uncommitted changes")
   fi
 done
 
-echo "Package file plan: create $create_count, replace $replace_count, unchanged $unchanged_count."
+echo "Package file plan: create $create_count, replace $replace_count, remove $remove_count, unchanged $unchanged_count."
 if [[ ${#conflicts[@]} -gt 0 ]]; then
   for conflict in "${conflicts[@]}"; do
     echo "Conflict: $conflict" >&2
@@ -364,8 +444,13 @@ if ! command -v uv >/dev/null 2>&1; then
   echo "uv was not found. Install uv manually, then run this script again." >&2
   exit 1
 fi
+if ! (cd "$package_root" && uv lock --check --default-index https://pypi.org/simple); then
+  echo "Package dependency lock is stale. Run 'uv lock --default-index https://pypi.org/simple' in the package root before upgrading." >&2
+  exit 1
+fi
 
 file_count=0
+removed_file_count=0
 created_runtime_count=0
 
 ensure_directory() {
@@ -388,6 +473,11 @@ ensure_file() {
 mkdir -p "$target_path"
 for ((i = 0; i < ${#plan_rel[@]}; i++)); do
   action="${plan_action[$i]}"
+  if [[ "$action" == "REMOVE" ]]; then
+    rm -f -- "${plan_target[$i]}"
+    removed_file_count=$((removed_file_count + 1))
+    continue
+  fi
   if [[ "$action" != "CREATE" && "$action" != "REPLACE" ]]; then
     continue
   fi
@@ -494,5 +584,6 @@ ensure_file "$target_path/wiki/overview.md" "# Overview"$'\n'
 echo "Upgraded package files at: $target_path"
 echo "Merged manifest directories: $manifest_directory_count"
 echo "Copied package files: $file_count"
+echo "Removed retired package files: $removed_file_count"
 echo "Created missing runtime entries: $created_runtime_count"
 echo "Existing .gitignore domain rules are preserved; only secret and technical-cache baseline rules are added."

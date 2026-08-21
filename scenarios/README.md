@@ -11,7 +11,8 @@ scenario package, for example:
 
 ```text
 Initialize this workspace according to scenarios/exam-study/.
-Read the scenario README first, then ask me for any missing PROJECT.md fields.
+Read the scenario README first, then ask only for missing PROJECT.md fields
+needed by the requested starter pages.
 ```
 
 The agent should then:

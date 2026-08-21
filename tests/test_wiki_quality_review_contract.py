@@ -12,14 +12,8 @@ class WikiQualityReviewContractTest(unittest.TestCase):
         return (ROOT / relative_path).read_text(encoding="utf-8")
 
     def test_quality_review_is_a_read_only_maintain_wiki_procedure(self) -> None:
-        agents = self.read("AGENTS.md")
         wiki = self.read("WIKI.md")
         skill = self.read(".agents/skills/wiki-quality-review/SKILL.md")
-
-        self.assertIn("`wiki-quality-review` skill within `Maintain Wiki`", agents)
-        self.assertIn("review-only request is read-only", agents)
-        self.assertIn("explicitly approves", agents)
-        self.assertIn("follow the write boundary in `WIKI.md`", agents)
 
         self.assertIn(
             "A review, audit, or health-check request is read-only", wiki
@@ -91,6 +85,7 @@ class WikiQualityReviewContractTest(unittest.TestCase):
 
     def test_every_conversation_begins_with_local_context_and_answering_is_read_only(self) -> None:
         agents = self.read("AGENTS.md")
+        agents_text = " ".join(agents.split())
         wiki = self.read("WIKI.md")
         usage = self.read("docs/usage.md")
         usage_zh = self.read("docs/usage.zh-CN.md")
@@ -110,8 +105,9 @@ class WikiQualityReviewContractTest(unittest.TestCase):
         self.assertNotIn("For the first wiki task", agents)
         self.assertNotIn("Before handling any wiki task", agents)
         self.assertNotIn("At the start of every user task", agents)
-        self.assertIn("Before external search", agents)
-        self.assertIn("read-only by default", agents)
+        self.assertIn("before external search", agents_text)
+        self.assertIn("sole owner of the", agents)
+        self.assertIn("state and write boundaries", agents_text)
         self.assertIn("target-only skills", agents)
         self.assertIn("At the beginning of every conversation", usage)
         self.assertIn("所有对话一开始", usage_zh)
@@ -127,6 +123,64 @@ class WikiQualityReviewContractTest(unittest.TestCase):
         self.assertIn("wiki-quality-review", wiki)
         self.assertIn("respectively unfinished", wiki)
         self.assertIn("strong direct support", wiki)
+
+    def test_agents_points_to_wiki_without_repeating_its_detailed_contract(self) -> None:
+        agents = self.read("AGENTS.md")
+        agents_text = " ".join(agents.split())
+
+        self.assertIn("`WIKI.md` is the sole owner", agents)
+        self.assertIn("Use the smallest workflow it defines", agents_text)
+        self.assertIn("assigns detailed procedures", agents_text)
+        self.assertIn("use `.agents/skills/obsidian-markdown/`", agents_text)
+        self.assertIn("use `.agents/skills/source-extraction/`", agents_text)
+
+        for duplicated_heading in (
+            "## Wiki Markdown and Frontmatter",
+            "## Intake Output Names",
+            "## Source Extraction Providers",
+            "## Workflow Router",
+            "## Wiki Agent Behavior",
+            "## Large Sources",
+        ):
+            self.assertNotIn(duplicated_heading, agents)
+
+        for wiki_owned_detail in (
+            "Frontmatter `sources:` entries",
+            "Use `Add Knowledge` when",
+            "Use `Use Knowledge` when",
+            "Use `Maintain Wiki` when",
+            "Record one concise `logs/wiki.md` entry",
+            "Update `wiki/index.md` only when",
+            "Update `wiki/home.md` only when",
+        ):
+            self.assertNotIn(wiki_owned_detail, agents)
+
+        owned_contracts = {
+            "WIKI.md": (
+                "Preserve the source-relative parent path",
+                "Frontmatter `sources:` entries are quoted wikilink strings",
+                "A review, audit, or health-check request is read-only",
+                "`wiki/index.md` changes only when",
+                "`wiki/home.md` changes only when",
+                "one concise operation-log entry",
+            ),
+            ".agents/skills/source-extraction/references/intake-lifecycle.md": (
+                "inbox/web/<source-language-page-title>--<url-hash>.md",
+                "Source Review Gate",
+            ),
+            ".agents/skills/source-extraction/references/large-source-chunking.md": (
+                "this file owns chunking mechanics",
+                "## Splitting Rules",
+            ),
+            ".agents/skills/obsidian-markdown/references/PROPERTIES.md": (
+                "quote",
+                "wikilink",
+            ),
+        }
+        for owner, markers in owned_contracts.items():
+            content = self.read(owner)
+            for marker in markers:
+                self.assertIn(marker, content, f"{owner} no longer owns {marker!r}")
 
     def test_startup_wiki_routes_detailed_procedures_to_existing_skills(self) -> None:
         wiki = self.read("WIKI.md")
@@ -150,10 +204,24 @@ class WikiQualityReviewContractTest(unittest.TestCase):
 
         self.assertIn("Read `provider-registry.md` when", extraction)
         self.assertIn("read `contract.md` when", extraction)
-        self.assertIn("Focused project validators may reuse", lint)
+        self.assertIn("focused scopes for ordinary writes", lint)
         self.assertNotIn("ALWAYS run this skill first", lint)
         self.assertIn("Add only required frontmatter", markdown)
         self.assertIn("when the user requests them", creator)
+
+    def test_optional_configuration_and_validation_are_proportionate(self) -> None:
+        agents = self.read("AGENTS.md")
+        project = self.read("PROJECT.md")
+        wiki = self.read("WIKI.md")
+        scenario = self.read("scenarios/exam-study/README.md")
+
+        self.assertIn("current source task needs a choice", agents)
+        self.assertNotIn("During first project-context confirmation", agents)
+        self.assertIn("confirmed source-extraction preferences", project)
+        self.assertNotIn("when a source task needs", project)
+        self.assertIn("smallest affected scope", wiki)
+        self.assertIn("Use the whole `wiki/` scope", wiki)
+        self.assertIn("Confirm only the project fields", scenario)
 
     def test_exam_scenario_uses_one_evidence_backed_wrong_question_inventory(self) -> None:
         scenario = self.read("scenarios/exam-study/README.md")

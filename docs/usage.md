@@ -25,7 +25,7 @@
 - Personal knowledge bases, reading notes, and topic archives.
 - Source-backed questions where traceability, claims, uncertainty, and contradictions matter.
 
-It is **not** meant for one-off chatting. Its true value lies in durable accumulation: preserving sources, judgments, and contradictions as reusable wiki knowledge.
+Its core value is durable accumulation: preserving sources, judgments, and contradictions as reusable wiki knowledge.
 
 ---
 
@@ -74,7 +74,7 @@ After external-root initialization, open or run the agent from the initialized r
 
 **What this does:**
 1. Installs package-managed entrypoint files, local skills, scripts, and docs into the target root.
-2. Creates `PROJECT.md` when it is missing and leaves source extraction preferences there for the agent to confirm when they matter, including whether to configure MinerU, which MinerU profile to use for API mode, and whether to prefer MinerU when it is available.
+2. Creates `PROJECT.md` when it is missing and leaves source extraction preferences there for the source task that needs them.
 3. Creates missing workflow directories and default wiki files (`inbox/`, `raw/`, `intake/`, `reviews/`, `logs/`, `wiki/`, etc.) without overwriting existing runtime content.
 4. Seeds the default private `.gitignore` only for a new target with no tracked
    wiki runtime. If durable runtime files are already tracked and `.gitignore`
@@ -94,8 +94,8 @@ Scenario packages under `scenarios/` provide optional initialization guidance fo
 
 ```text
 Initialize this workspace according to scenarios/exam-study/.
-Read the scenario README first, ask me for any missing PROJECT.md fields,
-then use starter-pages.md to create the smallest useful starter pages.
+Read the scenario README first, ask only for PROJECT.md fields needed by the
+requested starter pages, then create the smallest useful set.
 ```
 
 Scenario initialization should update `PROJECT.md` only with confirmed project-specific values, create only the smallest useful starter pages, and leave `WIKI.md` and `AGENTS.md` unchanged.
@@ -112,7 +112,7 @@ Use the upgrade scripts when applying a newer package release to an existing wor
 ./scripts/upgrade.sh -TargetRoot "/path/to/your/workspace"
 ```
 
-The upgrade first expands `scripts/upgrade-manifest.txt` and classifies each managed file as create, unchanged, replace, or conflict. A missing file is created, an identical file is skipped, and a differing file is replaced only when it is tracked and clean against the target repository's `HEAD`. A modified, staged, deleted, or differing same-name untracked managed file is a conflict. In a non-Git target, any differing existing managed file is also a conflict. The same preflight rejects links or reparse points in existing ancestors of the target root, the target root itself, or write paths, and rejects wrong file types at `PROJECT.md`, `.gitignore`, `.venv`, or fixed runtime paths. The script reports all conflicts and stops before target writes. Extra target files inside managed directories remain in place, `PROJECT.md` is preserved, and runtime knowledge content is outside the managed-file content check.
+The upgrade expands `scripts/upgrade-manifest.txt`; directory entries use the deterministic tracked-file inventory in `scripts/package-files.txt`, so untracked local files in package directories are never published accidentally. It classifies active managed files as create, unchanged, replace, or conflict. The same manifest may name known package files retired by earlier releases. A missing file is created, an identical file is skipped, and a differing file is replaced only when it is tracked and clean against the target repository's `HEAD`. A retired file is removed only when it is tracked and clean; a modified or untracked file at that path is a conflict. In a non-Git target, differing managed files and existing retired-file paths are conflicts. The same preflight rejects links or reparse points in existing ancestors of the target root, the target root itself, or write paths, and rejects wrong file types at `PROJECT.md`, `.gitignore`, `.venv`, or fixed runtime paths. The script reports all conflicts and stops before target writes. Other target files inside managed directories remain in place, `PROJECT.md` is preserved, and runtime knowledge content is outside the managed-file content check.
 
 For a reviewable upgrade, start from a clean, committed target state, create a dedicated branch after the exact Git action is authorized, run the upgrade once there, inspect the diff and tests, then integrate that verified commit into the recorded base branch. The script does not create branches, commits, or merges. After copying, it reconciles missing runtime structure, preserves the existing `.gitignore` domain policy while adding missing secret and cache baselines, and runs `uv sync --locked --default-index https://pypi.org/simple`.
 
@@ -122,7 +122,7 @@ When a provider needs local credentials or deployment-specific endpoints, copy `
 
 After configuring a provider profile that needs a smoke check, run that check before the first extraction. The profile defines what the check verifies and what local variables are required.
 
-During the first project-context confirmation, or when source-extraction preferences are still unconfirmed, the agent asks whether you want to configure MinerU, which MinerU profile to use for API mode, and whether MinerU should be preferred for supported documents when it is available. If you choose the MinerU preference, the agent records MinerU as the document default in `PROJECT.md`. If you decline, MarkItDown remains the ordinary document default and MinerU stays available for explicitly chosen or complex document extraction.
+When a source task selects MinerU and a required choice is still unconfirmed, the agent asks only for that choice: the API profile, local credential setup, or whether MinerU should be preferred for supported documents. A confirmed preference is recorded in `PROJECT.md`; otherwise MarkItDown remains the ordinary document default and MinerU stays available for explicitly chosen or complex document extraction.
 
 The real `.env` file is local runtime configuration. It is ignored by Git and must not be written into `PROJECT.md`, `WIKI.md`, manifests, logs, review notes, wiki pages, source cards, or prompts. Agent commands that depend on `.env` must run from the project root with `uv run --env-file .env ...`, or with `UV_ENV_FILE=.env` set in the current shell for repeated `uv run` commands.
 

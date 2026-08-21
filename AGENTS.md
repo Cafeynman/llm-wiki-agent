@@ -12,7 +12,7 @@ Read `PROJECT.md` in full at the beginning of every conversation as required by 
 
 When confirming project context fields such as theme, goal, audience, scope, terminology, wiki structure, classification, naming, project-specific rules, constraints, and open questions, ask open-ended questions. Do not present preset choices, inferred defaults, or suggested category schemes for those fields unless the user asks for examples.
 
-During first project-context confirmation, ask whether the user wants to configure MinerU credentials, which MinerU profile should be used for API mode, and whether MinerU should be preferred when available. Record only non-secret choices in `PROJECT.md`; direct the user to copy `.env.example` to `.env` and fill only the variables required by the selected profile.
+Confirm source-extraction preferences when the current source task needs a choice that is not already settled in `PROJECT.md`, or when the user asks to configure a provider. Ask only for the choices needed by the selected source kind and provider. For MinerU API mode, those choices may include the profile, whether MinerU should be preferred when available, and whether local credentials need configuration. Record only non-secret choices in `PROJECT.md`; direct the user to copy `.env.example` to `.env` and fill only the variables required by the selected profile.
 
 Use yes/no questions or short choices only for bounded operational preferences such as whether to configure MinerU, which MinerU profile to use for API mode, whether to prefer MinerU when available, or whether to enable OCR, transcription, or frame OCR.
 
@@ -56,19 +56,12 @@ project-profile requirement before normal work. A blank or template
 `PROJECT.md` must still be read; ask for missing values only when they
 materially affect the conversation.
 
-Route every request through `WIKI.md`. Before external search, locate the
-relevant local scope with the smallest useful index entry, exact search, linked
-page, or source card, then read the relevant pages and cited sources. If local
-knowledge does not answer the request, state the gap and follow the workflow's
-rule for the next action; do not silently replace the wiki with web search.
-
-An ordinary question, explanation, answer check, or correction uses `Use
-Knowledge` and is read-only by default. Persist knowledge only when the user
-explicitly asks or confirms; then route the write through `Add Knowledge` or the
-applicable reflection path and update the contract-owned projections and log.
-Before creating a project-specific path, category, subject, name, acceptance
-state, or source policy, read `PROJECT.md` and confirm any missing context that
-would materially change the write.
+Route every request through `WIKI.md`. Locate the relevant local scope before
+external search. `WIKI.md` is the sole owner of the stable knowledge workflows,
+their state and write boundaries, traceability invariants, and completion
+conditions. Use the smallest workflow it defines, then follow the local skill
+or reference to which it assigns detailed procedures. Entrypoints and helper
+skills must not create a competing route or restate another owner's procedure.
 
 ## Initialization Requirement
 
@@ -110,70 +103,17 @@ Repository-level workflow instructions, agent behavior rules, runtime usage guid
 
 Keep `WIKI.md`, `AGENTS.md`, and other agent entrypoint files stable and replaceable. Project-specific preferences and requirements belong in `PROJECT.md`, not in `WIKI.md` or agent entrypoint files.
 
-## Package Rules
+## Package Boundaries
 
-1. Keep package files, runtime configuration, helper scripts, and local skills inside the project root.
-2. Keep the local uv virtual environment at `.venv/` when used, and do not commit it.
-3. Put all temporary files and one-off working scripts under `tmp/` to keep the project workspace clean.
-4. Prefer existing package skills under `.agents/skills/` before creating any new skill.
-5. Use `wiki/home.md` as the human-facing wiki home.
-6. Use `wiki/index.md` as the structured catalog.
-7. Use `logs/wiki.md` as the operation history.
-8. Put user-facing deliverables in `artifacts/`.
-9. Track open investigation questions in `questions/`.
-10. Use `inbox/` as the entry point for user-submitted original files and generated live-URL source captures.
-11. Preserve raw source traceability and do not edit lifecycle source artifacts under `raw/` unless the user explicitly asks.
-12. Treat the package as text-first: source material must become reviewable Markdown before it enters `intake/processed/` or `wiki/`. Providers may automatically preserve returned attachments and images under the same intake folder as `source.md`; promote or delete them with that folder. Passive preservation does not make them first-class wiki content or authorize OCR, visual interpretation, or image-derived knowledge.
+Keep package files, runtime configuration, helper scripts, and local skills
+inside the project root. Keep `.venv/` and task-owned temporary files out of
+version control; put temporary files and one-off working scripts under `tmp/`.
+Prefer the existing package skills under `.agents/skills/` before creating a new
+skill.
 
-## Wiki Markdown and Frontmatter
-
-Use the local `.agents/skills/obsidian-markdown/` skill for the repository's Obsidian-compatible syntax, table-cell wikilinks, embeds, callouts, and properties. This is a file-format contract and does not require the Obsidian application. Traceability links to vault-internal files and notes must use wikilinks.
-
-Frontmatter `sources:` entries for vault-internal files must be quoted wikilink strings such as `"[[raw/digested/source-relative-parent/original-filename.ext]]"` or `"[[intake/processed/source-relative-parent/original-source-base-filename/source.md]]"`. Omit `source-relative-parent/` only when the source is directly under the intake root. Free-text values derived from users, sources, filenames, titles, paths, URLs, or descriptions must be quoted or emitted by a YAML serializer; see `.agents/skills/obsidian-markdown/references/PROPERTIES.md`.
-
-Preserve source-derived text exactly as content. Encode or quote values only at the output boundary that needs it, such as YAML frontmatter, Markdown table cells, wikilinks, or command examples.
-
-## Intake Output Names
-
-When generating intake Markdown from an original file, including MarkItDown, manual normalization, repaired document extraction, or any other provider, the intake directory name must preserve the original file's base filename and source language. Except for removing the extension, do not replace, delete, transcode, URL encode, change case, translate, romanize, convert to pinyin, or slugify any character.
-
-Also preserve the source-relative parent path defined in `WIKI.md` when writing `intake/tmp/`, `intake/processed/`, and `wiki/sources/`. Do not add a date directory under `intake/tmp/` or `intake/processed/`; processing dates belong in manifests, logs, and review records.
-
-Use the same source-relative parent and the `WIKI.md` source-language naming rule for `wiki/sources/` source cards. Do not translate, romanize, convert to pinyin, or slugify a source title unless the user explicitly asks for that naming scheme.
-
-For a submitted live URL, follow the deterministic Defuddle source-capture naming rule in `.agents/skills/source-extraction/references/intake-lifecycle.md`. The generated URL capture is the lifecycle source artifact for that non-file source and is the sole exception to original-file naming and to the rule that generated Markdown does not enter `raw/`. Do not apply that exception to summaries, normalized provider output, chunks, or user-submitted files.
-
-## Source Extraction Providers
-
-Before source extraction, use the local `.agents/skills/source-extraction/` skill. Document, webpage, image, audio, and video extraction choices belong in `PROJECT.md`, not in agent entrypoint files.
-
-OCR, active image extraction or interpretation, audio transcription, and video frame/audio extraction must follow `PROJECT.md`; do not enable them automatically. Copying images already returned by the selected provider into the same intake folder is passive source preservation and does not require separate approval. Real API keys, tokens, and private service URLs belong only in the local project-root `.env` file and must not be written into project instructions, manifests, logs, wiki pages, source cards, or skill files. Provider setup documents may name required environment variables, but local values must stay in `.env`.
-
-## Workflow Router
-
-Route requests to one of the three workflows in `WIKI.md`.
-
-Use `Add Knowledge` when the user asks to review sources, intake files, process raw material, ingest a source, extract claims, reflect on a discussion, or file knowledge back into the wiki.
-
-Use `Use Knowledge` when the user asks what the wiki says, asks for evidence or counterarguments, requests a synthesis, or wants an artifact such as a report, brief, outline, draft, template, or comparison table.
-
-Use `Maintain Wiki` when the user asks for lint, cleanup, health check, broken link repair, duplicate detection, stale claim review, or consistency maintenance.
-
-For a review or audit of wiki content or overall knowledge quality, use the local `wiki-quality-review` skill within `Maintain Wiki`. A review-only request is read-only: report numbered findings and proposed changes, then edit only the findings the user explicitly approves. If the request also asks for fixes, follow the write boundary in `WIKI.md`. Source review remains part of `Add Knowledge`; package and workflow contract review remains owned by `wiki-contract-review`.
-
-When a request could fit multiple workflows, start with the smallest workflow that can produce the requested result, then continue only if the task requires it.
-
-## Wiki Agent Behavior
-
-Work like a careful Markdown wiki maintainer: prefer small traceable updates, preserve useful existing structure, do not invent facts or citations, mark uncertainty clearly, keep raw originals unmodified, and use the shortest workflow that fully satisfies the user's request.
-
-Record one concise `logs/wiki.md` entry for each completed wiki operation or
-coherent batch, not one entry per page. Update `wiki/index.md` only when its
-navigation changes, such as when a page is added, removed, moved, renamed, or
-its one-line purpose changes. Update `wiki/home.md` only when the wiki purpose,
-main topics, current artifacts, or major open questions change. Create pages
-when they improve reuse, traceability, or synthesis, not for every named thing.
-
-## Large Sources
-
-For large, structured, or noisy sources, use `.agents/skills/source-extraction/references/large-source-chunking.md` for chunking mechanics and the source-extraction lifecycle reference for the matching intake outcome.
+`WIKI.md` owns runtime paths and knowledge behavior. For exact Obsidian syntax,
+use `.agents/skills/obsidian-markdown/`. For source processing, use
+`.agents/skills/source-extraction/`, whose references own provider selection,
+intake naming, live-URL capture, Source Review Gate, and large-source mechanics.
+Project-specific provider and OCR or transcription choices belong in
+`PROJECT.md`; secret values and private endpoints belong only in `.env`.

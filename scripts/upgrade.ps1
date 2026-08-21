@@ -8,6 +8,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $PackageRoot = Split-Path -Parent $ScriptDir
 $PackagePath = (Resolve-Path -LiteralPath $PackageRoot).Path
 $ManifestPath = Join-Path $ScriptDir "upgrade-manifest.txt"
+$InventoryPath = Join-Path $ScriptDir "package-files.txt"
 $PathComparer = if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT) {
     [System.StringComparer]::OrdinalIgnoreCase
 } else {
@@ -15,6 +16,7 @@ $PathComparer = if ([System.Environment]::OSVersion.Platform -eq [System.Platfor
 }
 
 $script:FileCount = 0
+$script:RemovedFileCount = 0
 $script:ManifestDirectoryCount = 0
 $script:CreatedRuntimeCount = 0
 $RuntimeDirectories = @(
@@ -248,6 +250,43 @@ function Add-PackagePlanRecord {
     }) | Out-Null
 }
 
+function Add-RemovalPlanRecord {
+    param(
+        [System.Collections.Generic.List[object]]$Records,
+        [System.Collections.Generic.HashSet[string]]$Seen,
+        [string]$RelativePath,
+        [string]$TargetPath,
+        [bool]$SameRoot
+    )
+
+    $relative = $RelativePath.Replace("\", "/")
+    if (-not $Seen.Add($relative)) {
+        throw "Duplicate package-managed path in manifest expansion: $relative"
+    }
+
+    $action = "UNCHANGED"
+    $reason = $null
+    if (-not $SameRoot) {
+        if (Test-Path -LiteralPath $TargetPath -PathType Container) {
+            $action = "CONFLICT"
+            $reason = "retired package path is a directory"
+        } elseif (Test-Path -LiteralPath $TargetPath -PathType Leaf) {
+            $action = "REMOVE"
+        } elseif (Test-Path -LiteralPath $TargetPath) {
+            $action = "CONFLICT"
+            $reason = "retired package path is not a regular file"
+        }
+    }
+
+    $Records.Add([pscustomobject]@{
+        RelativePath = $relative
+        SourcePath = $null
+        TargetPath = $TargetPath
+        Action = $action
+        Reason = $reason
+    }) | Out-Null
+}
+
 function Get-PackagePlan {
     param(
         [string]$TargetPath,
@@ -257,9 +296,17 @@ function Get-PackagePlan {
     if (-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) {
         throw "Upgrade manifest not found: $ManifestPath"
     }
+    if (-not (Test-Path -LiteralPath $InventoryPath -PathType Leaf)) {
+        throw "Package file inventory not found: $InventoryPath"
+    }
 
     $records = [System.Collections.Generic.List[object]]::new()
     $seen = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
+    $inventory = @(
+        Get-Content -LiteralPath $InventoryPath |
+            ForEach-Object { $_.Trim().Replace("\", "/") } |
+            Where-Object { $_ -and -not $_.StartsWith("#") }
+    )
 
     foreach ($manifestLine in Get-Content -LiteralPath $ManifestPath) {
         $line = $manifestLine.Trim()
@@ -289,16 +336,23 @@ function Get-PackagePlan {
                 throw "Manifest directory entry not found in package: $relativePath"
             }
             $script:ManifestDirectoryCount += 1
-            $sourceFull = (Resolve-Path -LiteralPath $source).Path
-            foreach ($sourceFile in Get-ChildItem -LiteralPath $sourceFull -File -Recurse -Force |
-                Where-Object {
-                    $_.Name -notlike "*.pyc" -and
-                    $_.FullName -notmatch "(^|[\\/])__pycache__([\\/]|$)"
-                }) {
-                $child = [System.IO.Path]::GetRelativePath($sourceFull, $sourceFile.FullName).Replace("\", "/")
-                $expanded = "$relativePath/$child"
-                Add-PackagePlanRecord $records $seen $expanded $sourceFile.FullName (Join-Path $TargetPath $expanded) $SameRoot
+            $prefix = "$relativePath/"
+            $expandedPaths = @($inventory | Where-Object { $_.StartsWith($prefix, [System.StringComparison]::Ordinal) })
+            if ($expandedPaths.Count -eq 0) {
+                throw "Manifest directory has no files in package inventory: $relativePath"
             }
+            foreach ($expanded in $expandedPaths) {
+                $sourceFile = Join-Path $PackagePath $expanded
+                if (-not (Test-Path -LiteralPath $sourceFile -PathType Leaf)) {
+                    throw "Inventory file entry not found in package: $expanded"
+                }
+                Add-PackagePlanRecord $records $seen $expanded $sourceFile (Join-Path $TargetPath $expanded) $SameRoot
+            }
+            continue
+        }
+
+        if ($kind -eq "remove") {
+            Add-RemovalPlanRecord $records $seen $relativePath (Join-Path $TargetPath $relativePath) $SameRoot
             continue
         }
 
@@ -332,32 +386,61 @@ function Get-GitBaseline {
         return $null
     }
     $gitRoot = (Resolve-Path -LiteralPath $gitRootOutput[0]).Path
-    $tracked = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
-    $dirty = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
+    $headTracked = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
+    $indexTracked = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
+
+    foreach ($path in @(& git -c core.quotepath=false -C $gitRoot ls-tree -r --name-only HEAD 2>$null)) {
+        if ($path) {
+            $headTracked.Add($path.Replace("\", "/")) | Out-Null
+        }
+    }
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to read paths from Git HEAD baseline: $gitRoot"
+    }
 
     foreach ($path in @(& git -c core.quotepath=false -C $gitRoot ls-files 2>$null)) {
         if ($path) {
-            $tracked.Add($path.Replace("\", "/")) | Out-Null
+            $indexTracked.Add($path.Replace("\", "/")) | Out-Null
         }
     }
     if ($LASTEXITCODE -ne 0) {
-        throw "Unable to read tracked paths from Git baseline: $gitRoot"
-    }
-
-    foreach ($path in @(& git -c core.quotepath=false -C $gitRoot diff --name-only HEAD -- 2>$null)) {
-        if ($path) {
-            $dirty.Add($path.Replace("\", "/")) | Out-Null
-        }
-    }
-    if ($LASTEXITCODE -ne 0) {
-        throw "Unable to compare Git baseline: $gitRoot"
+        throw "Unable to read paths from Git index: $gitRoot"
     }
 
     return [pscustomobject]@{
         Root = $gitRoot
-        Tracked = $tracked
-        Dirty = $dirty
+        HeadTracked = $headTracked
+        IndexTracked = $indexTracked
     }
+}
+
+function Test-GitPathMatchesHead {
+    param(
+        $GitBaseline,
+        [string]$GitRelative,
+        [string]$WorkingPath
+    )
+
+    $headOutput = @(& git -C $GitBaseline.Root rev-parse --verify "HEAD:$GitRelative" 2>$null)
+    if ($LASTEXITCODE -ne 0 -or $headOutput.Count -ne 1) {
+        throw "Unable to read Git HEAD object for package path: $GitRelative"
+    }
+
+    $indexOutput = @(& git -C $GitBaseline.Root rev-parse --verify ":$GitRelative" 2>$null)
+    if ($LASTEXITCODE -ne 0 -or $indexOutput.Count -ne 1) {
+        return $false
+    }
+    if ($headOutput[0].Trim() -cne $indexOutput[0].Trim()) {
+        return $false
+    }
+
+    $workingOutput = @(
+        & git -C $GitBaseline.Root hash-object "--path=$GitRelative" -- $WorkingPath 2>$null
+    )
+    if ($LASTEXITCODE -ne 0 -or $workingOutput.Count -ne 1) {
+        throw "Unable to compare package path with Git HEAD: $GitRelative"
+    }
+    return $headOutput[0].Trim() -ceq $workingOutput[0].Trim()
 }
 
 function Get-PlanConflicts {
@@ -379,6 +462,8 @@ function Get-PlanConflicts {
         if ($null -eq $GitBaseline) {
             if ($record.Action -eq "REPLACE") {
                 $conflicts.Add("$($record.RelativePath): existing file differs and no Git baseline is available") | Out-Null
+            } elseif ($record.Action -eq "REMOVE") {
+                $conflicts.Add("$($record.RelativePath): retired package file exists and no Git baseline is available") | Out-Null
             }
             continue
         }
@@ -390,31 +475,60 @@ function Get-PlanConflicts {
         }
 
         if ($record.Action -eq "CREATE") {
-            if ($GitBaseline.Tracked.Contains($gitRelative) -and $GitBaseline.Dirty.Contains($gitRelative)) {
+            if (
+                $GitBaseline.HeadTracked.Contains($gitRelative) -or
+                $GitBaseline.IndexTracked.Contains($gitRelative)
+            ) {
                 $conflicts.Add("$($record.RelativePath): tracked package file is deleted in the working tree") | Out-Null
             }
             continue
         }
 
-        if (-not $GitBaseline.Tracked.Contains($gitRelative)) {
-            $conflicts.Add("$($record.RelativePath): existing file differs and is not tracked by the Git baseline") | Out-Null
-        } elseif ($GitBaseline.Dirty.Contains($gitRelative)) {
+        if (-not $GitBaseline.HeadTracked.Contains($gitRelative)) {
+            $message = if ($record.Action -eq "REMOVE") {
+                "retired package file exists and is not tracked by the Git baseline"
+            } else {
+                "existing file differs and is not tracked by the Git baseline"
+            }
+            $conflicts.Add("$($record.RelativePath): $message") | Out-Null
+        } elseif (
+            -not $GitBaseline.IndexTracked.Contains($gitRelative) -or
+            -not (Test-GitPathMatchesHead $GitBaseline $gitRelative $record.TargetPath)
+        ) {
             $conflicts.Add("$($record.RelativePath): tracked package file has uncommitted changes") | Out-Null
         }
     }
     return @($conflicts)
 }
 
-function Copy-PackageFiles {
+function Apply-PackagePlan {
     param([object[]]$Plan)
 
     foreach ($record in $Plan) {
+        if ($record.Action -eq "REMOVE") {
+            Remove-Item -LiteralPath $record.TargetPath -Force
+            $script:RemovedFileCount += 1
+            continue
+        }
         if ($record.Action -notin @("CREATE", "REPLACE")) {
             continue
         }
         Ensure-Directory (Split-Path -Parent $record.TargetPath) $false
         Copy-Item -LiteralPath $record.SourcePath -Destination $record.TargetPath -Force
         $script:FileCount += 1
+    }
+}
+
+function Test-PackageLock {
+    Push-Location $PackagePath
+    try {
+        & uv lock --check --default-index https://pypi.org/simple
+        if ($LASTEXITCODE -ne 0) {
+            throw "Package dependency lock is stale. Run 'uv lock --default-index https://pypi.org/simple' in the package root before upgrading."
+        }
+    }
+    finally {
+        Pop-Location
     }
 }
 
@@ -561,8 +675,9 @@ $conflicts = @(
 
 $createCount = @($plan | Where-Object Action -eq "CREATE").Count
 $replaceCount = @($plan | Where-Object Action -eq "REPLACE").Count
+$removeCount = @($plan | Where-Object Action -eq "REMOVE").Count
 $unchangedCount = @($plan | Where-Object Action -eq "UNCHANGED").Count
-Write-Host "Package file plan: create $createCount, replace $replaceCount, unchanged $unchangedCount."
+Write-Host "Package file plan: create $createCount, replace $replaceCount, remove $removeCount, unchanged $unchangedCount."
 
 if ($conflicts.Count -gt 0) {
     foreach ($conflict in $conflicts) {
@@ -574,9 +689,10 @@ if ($conflicts.Count -gt 0) {
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
     throw "uv was not found. Install uv manually, then run this script again."
 }
+Test-PackageLock
 
 Ensure-Directory $TargetPath $false
-Copy-PackageFiles $plan
+Apply-PackagePlan $plan
 Ensure-ProjectFile $TargetPath
 Ensure-GitIgnoreFile $TargetPath
 Ensure-RuntimeStructure $TargetPath
@@ -592,5 +708,6 @@ finally {
 Write-Host "Upgraded package files at: $TargetPath"
 Write-Host "Merged manifest directories: $script:ManifestDirectoryCount"
 Write-Host "Copied package files: $script:FileCount"
+Write-Host "Removed retired package files: $script:RemovedFileCount"
 Write-Host "Created missing runtime entries: $script:CreatedRuntimeCount"
 Write-Host "Existing .gitignore domain rules are preserved; only secret and technical-cache baseline rules are added."

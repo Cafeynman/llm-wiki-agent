@@ -228,7 +228,12 @@ def main() -> int:
         report = build_report(args.vault, args.subject)
         rendered = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=False) + "\n"
         if args.output:
-            args.output.write_text(rendered, encoding="utf-8")
+            output = args.output.resolve()
+            if output.exists() and not output.is_file():
+                raise ValueError(f"Output path is not a regular file: {output}")
+            if not output.parent.is_dir():
+                raise FileNotFoundError(f"Output parent directory not found: {output.parent}")
+            output.write_text(rendered, encoding="utf-8")
         else:
             sys.stdout.write(rendered)
     except (OSError, UnicodeError, ValueError) as error:
