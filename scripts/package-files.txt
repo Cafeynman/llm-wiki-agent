@@ -1,5 +1,6 @@
 # Deterministic inventory for directory entries in upgrade-manifest.txt.
 .agents/skills/defuddle/SKILL.md
+.agents/skills/grill-decisions/SKILL.md
 .agents/skills/json-canvas/SKILL.md
 .agents/skills/json-canvas/references/EXAMPLES.md
 .agents/skills/markitdown-skill/SKILL.md
