@@ -12,8 +12,8 @@ from pathlib import Path
 from urllib.parse import unquote
 
 from markdown_code import mask_inline_code, mask_markdown_code
+from obsidian_links import WIKILINK_RE, split_wikilink
 
-WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
 MD_LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 FOOTNOTE_REF_RE = re.compile(r"(?<!\\)\[\^([^\]\r\n]+)\]")
 FOOTNOTE_DEF_RE = re.compile(r"^[ \t]{0,3}\[\^([^\]\r\n]+)\]:")
@@ -39,6 +39,13 @@ SKIP_DIRS = {
     "node_modules",
     "tmp",
 }
+SOURCE_CARD_TEMPLATE_PLACEHOLDERS = (
+    "Explain what the source is about and why it matters to the wiki.",
+    "- Point grounded in the source.",
+    "- Claim or claim page this source can support.",
+    "State the time period, geography, domain, method, dataset, or context covered by the source.",
+    "State missing context, weak extraction, image-only material, uncertain claims, age, bias, or other constraints.",
+)
 
 
 def to_posix(path: Path) -> str:
@@ -54,14 +61,6 @@ def iter_markdown_files(vault: Path) -> list[Path]:
             if name.endswith(".md"):
                 files.append(root_path / name)
     return sorted(files)
-
-
-def split_wikilink(inner: str) -> str:
-    normalized = inner.replace(r"\|", "|")
-    target = normalized.split("|", 1)[0].strip()
-    if "#" in target:
-        target = target.split("#", 1)[0].strip()
-    return target
 
 
 def normalize_link_path(target: str) -> str:
@@ -461,6 +460,17 @@ def lint_footnote_references(content: str, rel: str) -> list[str]:
     return errors
 
 
+def lint_source_card_placeholders(content: str, rel: str) -> list[str]:
+    if not rel.startswith("wiki/sources/"):
+        return []
+    matches = [placeholder for placeholder in SOURCE_CARD_TEMPLATE_PLACEHOLDERS if placeholder in content]
+    if not matches:
+        return []
+    return [
+        f"{rel}: source card retains {len(matches)} exact template placeholder(s); replace them with source-specific content"
+    ]
+
+
 def build_lookup(markdown_files: list[Path], vault: Path) -> tuple[set[str], dict[str, list[str]]]:
     all_files: set[str] = set()
     by_stem: dict[str, list[str]] = defaultdict(list)
@@ -555,9 +565,15 @@ def lint(vault: Path, scope: str) -> int:
     table_wikilink_errors: list[str] = []
     traceability_path_errors: list[str] = []
     footnote_reference_errors: list[str] = []
+    source_card_placeholder_errors: list[str] = []
+    unreadable_markdown_errors: list[str] = []
 
     for rel in scoped_files:
-        content = (vault / rel).read_text(encoding="utf-8")
+        try:
+            content = (vault / rel).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            unreadable_markdown_errors.append(f"{rel}: cannot read UTF-8 Markdown: {exc}")
+            continue
         link_content = mask_markdown_code(content)
         ignored_frontmatter_intake_links = frontmatter_intake_source_link_spans(content)
         frontmatter_source_errors.extend(lint_frontmatter_sources(content, rel))
@@ -565,6 +581,7 @@ def lint(vault: Path, scope: str) -> int:
         table_wikilink_errors.extend(lint_table_wikilink_aliases(content, rel))
         traceability_path_errors.extend(lint_bare_traceability_paths(content, rel))
         footnote_reference_errors.extend(lint_footnote_references(content, rel))
+        source_card_placeholder_errors.extend(lint_source_card_placeholders(content, rel))
         for match in WIKILINK_RE.finditer(link_content):
             if match.span() in ignored_frontmatter_intake_links:
                 continue
@@ -667,6 +684,22 @@ def lint(vault: Path, scope: str) -> int:
             print(f"Invalid: {error}")
 
     print()
+    print("=== Source card placeholders ===")
+    if not source_card_placeholder_errors:
+        print("None")
+    else:
+        for error in source_card_placeholder_errors:
+            print(f"Invalid: {error}")
+
+    print()
+    print("=== Unreadable Markdown ===")
+    if not unreadable_markdown_errors:
+        print("None")
+    else:
+        for error in unreadable_markdown_errors:
+            print(f"Invalid: {error}")
+
+    print()
     print("=== Stats ===")
     print(f"Markdown pages: {len(all_files)}")
     print(f"Scoped pages: {len(scoped_files)}")
@@ -677,6 +710,8 @@ def lint(vault: Path, scope: str) -> int:
     print(f"Markdown table errors: {len(table_wikilink_errors)}")
     print(f"Traceability path errors: {len(traceability_path_errors)}")
     print(f"Footnote reference errors: {len(footnote_reference_errors)}")
+    print(f"Source card placeholder errors: {len(source_card_placeholder_errors)}")
+    print(f"Unreadable Markdown errors: {len(unreadable_markdown_errors)}")
     return 1 if (
         broken
         or frontmatter_source_errors
@@ -684,6 +719,8 @@ def lint(vault: Path, scope: str) -> int:
         or table_wikilink_errors
         or traceability_path_errors
         or footnote_reference_errors
+        or source_card_placeholder_errors
+        or unreadable_markdown_errors
     ) else 0
 
 

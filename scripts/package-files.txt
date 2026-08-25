@@ -18,9 +18,11 @@
 .agents/skills/obsidian-wiki-lint/scripts/fix_truncated_links.py
 .agents/skills/obsidian-wiki-lint/scripts/lint_wiki.py
 .agents/skills/obsidian-wiki-lint/scripts/markdown_code.py
+.agents/skills/obsidian-wiki-lint/scripts/obsidian_links.py
 .agents/skills/obsidian-wiki-lint/tests/test_crosslink_concepts.py
 .agents/skills/obsidian-wiki-lint/tests/test_fix_truncated_links.py
 .agents/skills/obsidian-wiki-lint/tests/test_lint_wiki.py
+.agents/skills/obsidian-wiki-lint/tests/test_obsidian_links.py
 .agents/skills/skill-creator/LICENSE.txt
 .agents/skills/skill-creator/SKILL.md
 .agents/skills/skill-creator/scripts/package_skill.py
@@ -53,8 +55,11 @@
 .agents/skills/source-extraction/references/source-kinds.md
 .agents/skills/source-extraction/scripts/audit_chunks.py
 .agents/skills/source-extraction/scripts/audit_intake_file.py
+.agents/skills/source-extraction/scripts/chunk_contract.py
+.agents/skills/source-extraction/scripts/record_chunk_exception.py
 .agents/skills/source-extraction/tests/test_audit_chunks.py
 .agents/skills/source-extraction/tests/test_audit_intake_file.py
+.agents/skills/source-extraction/tests/test_record_chunk_exception.py
 .agents/skills/wiki-contract-review/SKILL.md
 .agents/skills/wiki-quality-review/SKILL.md
 docs/acknowledgements.md

@@ -4,13 +4,14 @@
 from __future__ import annotations
 
 import argparse
-import re
+import os
+import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
 from markdown_code import mask_markdown_code
-
-WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
+from obsidian_links import WIKILINK_RE, build_wikilink_inner, parse_wikilink_inner
 
 
 @dataclass(frozen=True)
@@ -19,59 +20,80 @@ class Change:
     new: str
 
 
-def to_posix(path: Path) -> str:
-    return path.as_posix()
-
-
-def split_inner(inner: str) -> tuple[str, str, bool]:
-    escaped = r"\|" in inner
-    normalized = inner.replace(r"\|", "|")
-    parts = normalized.split("|")
-    target = parts[0].strip()
-    alias = "|".join(parts[1:]).strip() if len(parts) > 1 else ""
-    return target, alias, escaped
-
-
-def build_inner(target: str, alias: str, escaped: bool) -> str:
-    inner = f"{target}|{alias}" if alias else target
-    return inner.replace("|", r"\|") if escaped else inner
-
-
 def collect_markdown_names(target_dir: Path) -> set[str]:
     return {path.stem for path in target_dir.iterdir() if path.is_file() and path.suffix == ".md"}
 
 
-def fix_links(vault: Path, source_file: Path, target_dir: Path, write: bool) -> int:
-    source_abs = (vault / source_file).resolve()
-    target_abs = (vault / target_dir).resolve()
-    names = collect_markdown_names(target_abs)
-    target_prefix = to_posix(target_dir)
+def require_within_vault(path: Path, vault: Path, label: str) -> None:
+    if path != vault and vault not in path.parents:
+        raise ValueError(f"{label} must resolve inside the declared vault: {path}")
 
-    content = source_abs.read_text(encoding="utf-8")
+
+def atomic_write_text(path: Path, text: str) -> None:
+    descriptor, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    temp_path = Path(temp_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="") as handle:
+            handle.write(text)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp_path, path)
+    except BaseException:
+        temp_path.unlink(missing_ok=True)
+        raise
+
+
+def read_text_exact(path: Path) -> str:
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        return handle.read()
+
+
+def fix_links(vault: Path, source_file: Path, target_dir: Path, write: bool) -> int:
+    vault_abs = vault.resolve()
+    source_abs = (vault_abs / source_file).resolve()
+    target_abs = (vault_abs / target_dir).resolve()
+    require_within_vault(source_abs, vault_abs, "source file")
+    require_within_vault(target_abs, vault_abs, "target directory")
+    if not source_abs.is_file():
+        raise ValueError(f"source file is not a file: {source_abs}")
+    if target_abs == vault_abs or not target_abs.is_dir():
+        raise ValueError(f"target directory must be an existing vault subdirectory: {target_abs}")
+    names = collect_markdown_names(target_abs)
+    target_prefix = target_abs.relative_to(vault_abs).as_posix()
+
+    content = read_text_exact(source_abs)
     changes: list[Change] = []
 
-    def replace(match: re.Match[str]) -> str:
-        inner = match.group(1)
-        link_target, alias, escaped = split_inner(inner)
+    def replace(match) -> str:
+        original_link = content[match.start() : match.end()]
+        inner = content[match.start(1) : match.end(1)]
+        parts = parse_wikilink_inner(inner)
+        link_target = parts.target
         if not link_target.startswith(target_prefix + "/"):
-            return match.group(0)
+            return original_link
 
-        filename = Path(link_target).name
-        if filename in names:
-            return match.group(0)
+        remainder = link_target[len(target_prefix) + 1 :]
+        if not remainder or "/" in remainder or "\\" in remainder:
+            return original_link
+        filename = remainder
+        explicit_suffix = filename.lower().endswith(".md")
+        lookup_name = Path(filename).stem if explicit_suffix else filename
+        if lookup_name in names:
+            return original_link
 
-        candidates = sorted(name for name in names if name.startswith(filename))
+        candidates = sorted(name for name in names if name.startswith(lookup_name))
         if len(candidates) != 1:
             if len(candidates) > 1:
-                print(f"Ambiguous: {filename} -> {', '.join(candidates)}")
+                print(f"Ambiguous: {lookup_name} -> {', '.join(candidates)}")
             else:
-                print(f"No match: {filename}")
-            return match.group(0)
+                print(f"No match: {lookup_name}")
+            return original_link
 
-        new_target = f"{target_prefix}/{candidates[0]}"
-        new_inner = build_inner(new_target, alias, escaped)
+        suffix = ".md" if explicit_suffix else ""
+        new_target = f"{target_prefix}/{candidates[0]}{suffix}"
+        new_inner = build_wikilink_inner(parts, target=new_target)
         new_link = f"[[{new_inner}]]"
-        changes.append(Change(match.group(0), new_link))
+        changes.append(Change(original_link, new_link))
         return new_link
 
     masked = mask_markdown_code(content)
@@ -92,23 +114,27 @@ def fix_links(vault: Path, source_file: Path, target_dir: Path, write: bool) -> 
         print(f"{change.old} -> {change.new}")
 
     if write:
-        source_abs.write_text(updated, encoding="utf-8")
-        print(f"Wrote {len(changes)} change(s): {to_posix(source_file)}")
+        atomic_write_text(source_abs, updated)
+        print(f"Wrote {len(changes)} change(s): {source_abs.relative_to(vault_abs).as_posix()}")
     else:
         print(f"Dry run: {len(changes)} change(s). Add --write to apply.")
     return 0
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Fix uniquely truncated wikilinks.")
     parser.add_argument("--vault", default=".", help="Vault or package root.")
     parser.add_argument("--source-file", required=True, type=Path, help="Markdown file to update.")
     parser.add_argument("--target-dir", required=True, type=Path, help="Directory containing real Markdown targets.")
     parser.add_argument("--write", action="store_true", help="Write changes. Defaults to dry-run.")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     vault = Path(args.vault).resolve()
-    return fix_links(vault, args.source_file, args.target_dir, args.write)
+    try:
+        return fix_links(vault, args.source_file, args.target_dir, args.write)
+    except (OSError, UnicodeDecodeError, ValueError) as exc:
+        print(f"link fix failed: {exc}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

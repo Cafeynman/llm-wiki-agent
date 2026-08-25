@@ -46,12 +46,12 @@ presence of a citation as proof that the citation supports the claim.
 
 1. **Set the scope.** Identify the target root, requested pages or topic, and
    whether the user asked for a scoped or whole-wiki review. Use the Wiki
-   Surface Budget Policy in `WIKI.md`; do not load growing indexes, overviews,
+   `Growing Surfaces` policy in `WIKI.md`; do not load growing indexes, overviews,
    or logs in full when a bounded read can answer the question.
 2. **Establish the static baseline.** From the working root, run:
 
    ```powershell
-   uv run --no-project python .agents/skills/obsidian-wiki-lint/scripts/lint_wiki.py --vault . --scope wiki
+   uv run --no-project .agents/skills/obsidian-wiki-lint/scripts/lint_wiki.py --vault . --scope wiki
    ```
 
    Adapt the scope when the confirmed target is narrower. Record failures and
@@ -115,7 +115,12 @@ reopen Source Review Gate or define a fourth workflow.
 4. Evaluate only material that is useful within the confirmed project scope:
    important claims, definitions, methods, decisions, evidence,
    counterevidence, limitations, examples, or unresolved questions. Do not use
-   passage, heading, or chunk coverage as the goal. The source card can be
+   passage, heading, or chunk coverage as the goal. First reject any exact
+   source-card template placeholders reported by the standard lint. Then judge
+   whether the remaining text is actually source-specific and locates its
+   evidence; static placeholder checks are not proof of semantic quality. Do
+   not require a fixed number of bullets, clause numbers, or numeric boundaries.
+   The source card can be
    sufficient representation. The absence of an optional entity, concept,
    claim, synthesis, or question page is not itself a defect.
 5. Give the report-only coverage judgment `no-material-gap-found`,

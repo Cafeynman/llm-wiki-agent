@@ -64,7 +64,9 @@ Intake 先暂存 Markdown 文件，或将非 Markdown 原始文件提取为临�
             `-- source.md
 ```
 
-每个 `source.md` 创建后，对该文件运行 source-extraction 的 intake file audit。正常文件不输出内容。若审计报告 `large_source`，并且来源中存在可靠语义边界，则在 Source Review Gate 前创建语义化 `chunks/`。Chunk 路径使用 `01.md` 这样的数字组件；来源原文标题和顺序标记完整保留在标题与就近 `index.md` 中。创建 chunks 后，对临时 intake 文件夹运行 chunk audit；推进前先解决 hard errors，将 warnings 带入审查记录。
+每个 `source.md` 创建后，对该文件运行 source-extraction 的 intake file audit。正常文件在人类输出模式下保持安静，JSON 模式始终返回 schema 2。空白、占位、导航 stub 和无可评审文本会在 Source Review Gate 前停止。若审计报告 `large_source`，并且来源中存在可靠语义边界，则在 Source Review Gate 前创建语义化 `chunks/`，且不修改 canonical `source.md`。Chunk 路径使用 `01.md` 这样的数字组件；来源原文标题和顺序标记完整保留在标题与就近五列 `index.md` 中。每个非空 leaf 低于 2000 单位都提示，脚本不判断是否适合合并；高于 10000 单位则 hard fail。只有评审者写明理由后，再由 `record_chunk_exception.py` 把当前内容、理由、路径和 policy 身份登记到根 index，才会停止重复提示。创建 chunks 后，对临时 intake 文件夹运行 chunk audit；推进前先解决 hard errors，将未解决 warnings 带入审查记录。
+
+`digested` 文件夹到达最终 `intake/processed/` 路径后，对该文件夹或每个最终改动的 Markdown 文件运行聚焦 Obsidian lint，并在 ingest 前解决断链。只有显式目标目录内唯一的文件名前缀截断可以在审核 dry-run 后机械修复；歧义和模糊候选继续报告。
 
 如果 `corrupted.pdf` 无法提取，应立即停止处理该文件：
 

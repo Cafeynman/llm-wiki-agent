@@ -55,6 +55,8 @@ State missing context, weak extraction, image-only material, uncertain claims, a
 - Manifest: [[intake/processed/source-relative-parent/original-source-base-filename/manifest]]
 ```
 
+The sentences inside this template are scaffolding, not acceptable source-card content. Before a card can represent a `digested` source, replace every exact instructional placeholder with source-specific text and real traceability links. The standard lint rejects the known placeholder sentences above; it does not use fuzzy token matching, require a fixed number of points, or pretend to judge semantic quality. If the accepted source does not support a substantive summary or claim, keep the card `draft` and route the gap to a question instead of filling it with generic prose.
+
 For a Defuddle live-URL capture, keep the raw capture wikilink as the first source and also add the exact submitted URL as a quoted plain string under `sources:`. Add `Submitted URL: <url>` under Traceability. Do not replace the raw capture link with the external URL.
 
 ## Citation Placement

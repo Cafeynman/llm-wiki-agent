@@ -46,6 +46,57 @@ class TestLintWiki(unittest.TestCase):
             
         self.assertEqual(result, 1, "Lint should report broken links for missing files.")
 
+    def test_single_closing_bracket_in_wikilink_target_resolves(self):
+        (self.vault / "wiki" / "entry.md").write_text(
+            "See [[wiki/国家电网生[2009]133号|法规]].",
+            encoding="utf-8",
+        )
+        (self.vault / "wiki" / "国家电网生[2009]133号.md").write_text(
+            "# 法规\n",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        output = "\n".join(call[0][0] for call in mock_print.call_args_list if call[0])
+        self.assertEqual(result, 0, output)
+        self.assertNotIn("Broken:", output)
+        self.assertNotIn("internal traceability path must use a wikilink", output)
+
+    def test_source_card_exact_template_placeholder_is_rejected(self):
+        sources = self.vault / "wiki/sources"
+        sources.mkdir()
+        card = sources / "source.md"
+        card.write_text(
+            "# Actual source\n\n## Summary\n\n"
+            "Explain what the source is about and why it matters to the wiki.\n",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, "wiki/sources/source.md")
+
+        output = "\n".join(call[0][0] for call in mock_print.call_args_list if call[0])
+        self.assertEqual(result, 1)
+        self.assertIn("exact template placeholder", output)
+
+    def test_source_specific_card_content_is_not_rejected_by_static_layer(self):
+        sources = self.vault / "wiki/sources"
+        sources.mkdir()
+        card = sources / "source.md"
+        card.write_text(
+            "# Actual source\n\n## Summary\n\n"
+            "This regulation defines the review boundary for the named grid connection process.\n",
+            encoding="utf-8",
+        )
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, "wiki/sources/source.md")
+
+        output = "\n".join(call[0][0] for call in mock_print.call_args_list if call[0])
+        self.assertEqual(result, 0, output)
+
     def test_empty_scope_returns_input_error(self):
         with patch("builtins.print") as mock_print:
             result = lint_wiki.lint(self.vault, self.scope)
@@ -911,6 +962,18 @@ Fenced example[^fenced].
             result = lint_wiki.lint(self.vault, self.scope)
 
         self.assertEqual(result, 0)
+
+    def test_invalid_utf8_markdown_is_reported_without_traceback(self):
+        note_path = self.vault / "wiki" / "invalid.md"
+        note_path.write_bytes(b"\xff\xfe\xfa")
+
+        with patch("builtins.print") as mock_print:
+            result = lint_wiki.lint(self.vault, self.scope)
+
+        output = "\n".join(str(call[0][0]) for call in mock_print.call_args_list if call[0])
+        self.assertEqual(result, 1)
+        self.assertIn("wiki/invalid.md: cannot read UTF-8 Markdown", output)
+        self.assertNotIn("Traceback", output)
 
 if __name__ == "__main__":
     unittest.main()

@@ -4,11 +4,11 @@ Use this reference when a source is too large to review, ingest, or retrieve as 
 
 ## Intake File Audit
 
-Before chunking, run the bundled intake file audit helper against the current temporary `source.md`. The helper owns the size calculation and reports `large_source` only when a semantic chunking decision is needed.
+Before chunking, run the bundled intake file audit helper against the current temporary `source.md`. It rejects empty, known placeholder, known chunk-navigation-stub, and no-reviewable-text inputs; Markdown, Wikilink, reference-style, and HTML image markup do not count as body text, while actual table, code, mathematics, and prose do. Sparse text and `large_source` are warnings for Source Review Gate. The helper owns normalized content units: remove one leading UTF-8 BOM, convert CRLF and CR to LF, encode as UTF-8, divide the byte count by three, and round up. The algorithm identifier is `utf8-normalized-ceil-div3-v1`.
 
-Allow oversized chunks when splitting would break a table, formula group, legal clause, continuous argument, long quotation, or source region without a clear semantic boundary.
+`source.md` is the canonical reviewable extraction accepted by Source Review Gate. Chunk generation, index generation, promotion, and rebuilding do not overwrite, truncate, or reorder it. Ordinary extraction and provider-part assembly keep the complete extracted text there. Only the explicit Excerpt-Type contract in `intake-lifecycle.md` permits a narrower review surface. `chunks/` is a derived navigation copy, not the source of truth.
 
-If a leaf chunk remains oversized, record the reason in the nearest `index.md` that lists that leaf chunk. After acceptance, also record it in `manifest.md` when it affects traceability or review.
+Generate one source's proposed `chunks/` under a sibling staging directory. Validate the proposed tree, then replace only that source's derived chunk tree. Do not include `source.md` in the replacement. A failed or interrupted build leaves the accepted source and previous accepted chunk tree intact. One writer owns a source at a time; different sources may stage independently.
 
 ## Chunk Audit
 
@@ -18,26 +18,34 @@ After creating `chunks/`, run the bundled chunk audit helper against the current
 uv run --no-project .agents/skills/source-extraction/scripts/audit_chunks.py <intake-folder>
 ```
 
-Run this on the temporary intake folder before Source Review Gate assigns `digested`. Hard errors must be resolved before promoting the chunked source to `intake/processed/`.
+Run this on the temporary intake folder before Source Review Gate assigns `digested`. The audit rechecks the current canonical `source.md` for hard reviewability failures as well as the derived chunk tree. Hard errors must be resolved before promoting the chunked source to `intake/processed/`.
 
-Use `--json` when another script needs structured output. The JSON output uses this stable shape:
+The default soft minimum is 2000 content units and the hard maximum is 10000. The minimum is independent of the maximum. The audit reports every non-empty leaf below the minimum; it does not decide whether adjacent chunks can merge or whether merging would cross a semantic boundary. A reviewer either improves the split or accepts a visible reason. Every leaf above the maximum is a hard error until it is split or has a valid accepted reason. Empty leaves are always hard errors and cannot be excepted.
+
+Use `--min-threshold` and `--threshold` to override the minimum and maximum for one run. Use `--json` when another script needs structured output. JSON schema 2 has this stable top-level shape:
 
 ```json
 {
-  "schema": 1,
+  "schema": 2,
   "path": "intake/tmp/source/source-name",
-  "content_unit_threshold": 10000,
+  "thresholds": {
+    "min": 2000,
+    "max": 10000,
+    "units_algo": "utf8-normalized-ceil-div3-v1"
+  },
   "status": "pass | warn | fail",
   "errors": [],
-  "warnings": []
+  "warnings": [],
+  "accepted_exceptions": [],
+  "summary": {}
 }
 ```
 
-Each error or warning has `code`, `path`, and `message`. Exit code `0` means no hard errors were found, even if warnings exist. Exit code `1` means hard errors were found. Exit code `2` means the input path could not be read.
+Each error or warning has `code`, `path`, and `message`. Diagnostics sort by path and code; accepted exceptions sort by path and kind. Exit code `0` means no hard errors were found, even if warnings exist. Exit code `1` means deterministic hard errors were found. Exit code `2` means parameters, paths, or UTF-8 inputs could not be read. JSON mode always emits valid JSON for these states.
 
-Hard errors are limited to deterministic structure problems: missing `chunks/` or `chunks/index.md`, index entries that point outside `chunks/` or to missing files, leaf chunks not listed by their nearest `index.md`, nested chunk directories without local `index.md`, invalid or non-sequential numeric chunk paths, oversized leaf chunks without a recorded reason, or final `summary.md`/`manifest.md` existing while hard chunk errors remain.
+Primary hard errors include a missing or no-longer-reviewable canonical `source.md`, a missing chunk directory or root index, a zero-leaf tree, an empty or image-only leaf without reviewable text, a non-canonical index, missing or outside targets, unlisted leaves or nested indexes, invalid numeric paths or non-lowercase `.md` suffixes, missing descriptive headings, an exception registry outside the root index, malformed/duplicate/orphan exception metadata, an oversized leaf without a current acceptance, and final metadata written while hard failures remain. When the root structure is absent, the audit suppresses dependent per-leaf cascades.
 
-Warnings are review cues, not automatic blockers. They include unresolved local image references, possible table-of-contents-like repeated headings, and possible missing numbered parents such as a `4.1` heading without an observed `4` parent. Source Review Gate still decides whether warnings make the source `digested` or `needs-review`.
+Warnings include every undersized leaf without a current acceptance, exact index-size drift, obsolete exceptions, unresolved local images, possible table-of-contents-like repeated headings, and possible missing numbered parents such as `4.1` without an observed `4` parent. Source Review Gate judges warnings; the script never infers semantic mergeability.
 
 ## Directory Shape
 
@@ -63,6 +71,8 @@ intake/processed/source-relative-parent/original-source-base-filename/
 
 Use one numeric sequence for the direct chunk files and chunk directories at each level. Use `01.md` for a leaf file and `01/` for a nested directory. Start at `01`, continue without gaps, and use the same sequence whether a child is a leaf file or a nested directory. Use at least two digits; after `99`, continue with `100`. A source-provided order token never replaces the numeric path component.
 
+The sequence includes only Markdown leaf files and directories that contain Markdown chunks or an `index.md`. Asset-only directories containing images or other non-Markdown side outputs are not chunk nodes and do not enter the numeric sequence. Keep them only when needed to preserve resolvable references; prefer the lifecycle's sibling `images/` location when the provider already supplied one.
+
 The paths and their display labels are separate:
 
 ```text
@@ -81,15 +91,68 @@ When a chunk generation or restructuring script moves Markdown into the final `c
 
 ## Chunk Index Requirements
 
-`chunks/index.md` is the navigation surface for the complete extracted source. It must include:
+`chunks/index.md` is the navigation surface for the complete extracted source. It includes the source title and original path, the chunking rule, and one canonical five-column table. Each nested directory `index.md` uses the same table and lists only its local child chunks and child directories.
 
-1. The source title and original path.
-2. The chunking rule used for this source.
-3. A table or list of chunk paths in source order.
-4. For each chunk: title, source page or section range when known, approximate size, extraction caveats, and review or ingest status.
-5. Links to nested `index.md` files when the source has chapter directories.
+| 块 | 标题与覆盖范围 | 内容说明 | 规模与尺寸裁决 | 内容评审 |
+| --- | --- | --- | --- | --- |
+| [01](01.md) | 第1章 范围 | — | 4200 · normal | reviewed |
+| [02](02.md) | 第2章 术语 | — | 760 · accepted-under — 本章虽短但语义独立；并入第3章会破坏章节边界 | reviewed |
+| [03](03.md) | 第3章 表3-1至表3-8 | 连续表格共用表头和脚注 | 12640 · accepted-over — 拆分后各块无法独立解释 | reviewed |
 
-Each nested directory `index.md` should list only its local child chunks and child directories.
+Use Markdown links in the `块` cell. The `标题与覆盖范围` cell preserves the source-language title and supplies source pages, sections, or another stable locator when known. `内容说明` may be `—` for one clearly named heading; it is required when a chunk spans multiple headings, uses a fallback split, or its title cannot explain the contents. A fallback split records a continuous page range, line range, or another stable locator. Numeric filenames are keys only. The leaf's first heading and the index title must be descriptive; a bare number, filename, or continuation label is insufficient.
+
+The `规模与尺寸裁决` grammar is exact:
+
+```text
+<non-negative integer> · normal
+<non-negative integer> · undersized
+<non-negative integer> · oversized
+<non-negative integer> · accepted-under — <single-line reason>
+<non-negative integer> · accepted-over — <single-line reason>
+— · group
+```
+
+The first exact ` — ` separates an accepted token from its reason. Audit recomputes the integer exactly and reports any mismatch. `— · group` is only for a row that links to the `index.md` of one direct child directory; self-links and skipped hierarchy levels are invalid. `内容评审` is `pending` or `reviewed`; whole-source `digested` and ingest status belong to the lifecycle and manifest.
+
+### Accepted size exceptions
+
+The visible accepted token and reason live only in the nearest index row. The root `chunks/index.md` contains at most one machine registry in this exact HTML-comment container:
+
+```html
+<!-- chunk-size-exceptions
+{
+  "schema": 1,
+  "policy": {
+    "min": 2000,
+    "max": 10000,
+    "units_algo": "utf8-normalized-ceil-div3-v1"
+  },
+  "items": [
+    {
+      "path": "02.md",
+      "kind": "under",
+      "content_sha256": "<64 lowercase hex>",
+      "reason_sha256": "<64 lowercase hex>",
+      "review_ref": "reviews/source-review/YYYY-MM-DD.md#decision"
+    }
+  ]
+}
+-->
+```
+
+The registry is machine identity inside the same canonical index surface, not a second table or file. Policy is stored once at the root; items do not copy units or reason text. Paths are POSIX paths relative to `chunks/`. Content hash covers the entire decoded leaf, including frontmatter and headings, after removing one leading BOM and changing only CRLF/CR to LF; trailing Markdown whitespace and final newlines remain significant. Reason hash uses the visible, trimmed reason with the same BOM/EOL normalization. `review_ref` is a required vault-root-relative POSIX path under `reviews/`, optionally followed by a non-empty heading or block fragment. The audit checks this stable syntax but does not invent the decision or require the referenced review file to exist while the source is still staged.
+
+After the reviewer changes a row to `accepted-under` or `accepted-over`, marks it `reviewed`, and records the decision, use the sanctioned writer:
+
+```powershell
+uv run --no-project .agents/skills/source-extraction/scripts/record_chunk_exception.py <intake-folder> --chunk 02.md --review-ref "reviews/source-review/YYYY-MM-DD.md#decision"
+```
+
+The writer validates the current size, row token, exact integer, reason, and review status, then updates the root comment through a same-directory temporary file and atomic replace. It preserves a leading BOM and the root index's current line-ending style, normalizes trailing whitespace at the end of the root index to one final newline, and is idempotent. Use `--remove` to delete an obsolete or deleted chunk's entry. The audit remains read-only.
+
+Diagnostic precedence is: malformed, duplicate, or orphan registry; empty leaf; currently normal with registry becomes `obsolete_chunk_exception`; a current violation with a complete match becomes accepted; every other current violation is missing or stale at its base severity. A registered item whose nearest row is not the matching visible acceptance is a hard `registry_table_status_mismatch`. Content, path, kind, reason, min, max, or algorithm changes make acceptance invalid and cause the original undersized warning or oversized hard severity to return. An empty chunk is never accepted. A legitimately deleted chunk leaves an orphan hard error until its registry item is explicitly removed.
+
+Old list indexes and free-text `oversized: ...` reasons are migration candidates. They do not count as accepted and receive `legacy_chunk_index_format`; rewrite the five-column table and re-review each exception rather than preserving a permanent legacy branch.
 
 ## Splitting Rules
 
@@ -110,6 +173,6 @@ Do not split:
 
 ## Source Entry Point
 
-`source.md` remains the canonical intake entrypoint. For chunked sources, it should either contain the full extracted text when practical or clearly state that the complete review surface is split under `chunks/` and link to `chunks/index.md`.
+`source.md` remains the canonical accepted extraction and is not a chunk-navigation stub. For ordinary extraction and provider-part assembly, it contains the complete extracted text. The narrow Excerpt-Type path remains governed by `intake-lifecycle.md`. Add navigation to `chunks/index.md` without replacing or shrinking the accepted text.
 
 Do not move agent-generated chunks into `raw/`. Temporary chunks stay under `intake/tmp/.../chunks/` until accepted, then the same structure is promoted to `intake/processed/.../chunks/`.

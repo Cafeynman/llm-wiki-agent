@@ -64,7 +64,9 @@ Intake first stages Markdown files or extracts non-Markdown originals into tempo
             `-- source.md
 ```
 
-After each `source.md` is created, run the source-extraction intake file audit on that file. Normal files produce no output. If the audit reports `large_source`, create semantic `chunks/` before Source Review Gate when reliable source boundaries exist. Chunk paths use numeric components such as `01.md`; exact source titles and order tokens remain in headings and local indexes. When chunks are created, run the chunk audit on the temporary intake folder; resolve hard errors before promotion and carry warnings into review notes.
+After each `source.md` is created, run the source-extraction intake file audit on that file. Human output is quiet for normal files; JSON mode always returns schema 2. Empty, placeholder, navigation-stub, and no-reviewable-text inputs stop before Source Review Gate. If the audit reports `large_source`, create semantic `chunks/` before Source Review Gate when reliable source boundaries exist, without modifying canonical `source.md`. Chunk paths use numeric components such as `01.md`; exact source titles and order tokens remain in headings and the canonical five-column local indexes. Every non-empty leaf below 2000 units warns, without an automated mergeability decision; every leaf above 10000 is a hard error. A reviewed reason is silenced only after `record_chunk_exception.py` records its current content, reason, path, and policy identity in the root index. When chunks are created, run the chunk audit on the temporary intake folder; resolve hard errors before promotion and carry unresolved warnings into review notes.
+
+After a `digested` folder reaches its final `intake/processed/` path, run focused Obsidian lint on that folder or on each final changed Markdown file. Resolve broken links there before ingest. A unique truncated filename prefix may be repaired with the reviewed dry-run fixer; ambiguous or fuzzy candidates stay reported.
 
 If `corrupted.pdf` cannot be extracted, stop handling that file immediately:
 

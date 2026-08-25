@@ -27,9 +27,9 @@ Use this skill before any wiki intake step that turns original material into rev
 4. Apply the configured approval gate for OCR, transcription, or frame OCR.
 5. Run one selected provider against the lifecycle source. Defuddle creates a live URL's first deterministic capture; later intake stages that capture unchanged. Provider output never becomes input to a second provider.
 6. Write or stage `source.md` at the path defined by `references/intake-lifecycle.md`, preserving source-derived names and content.
-7. Run `audit_intake_file.py`; when it reports `large_source`, follow `large-source-chunking.md` and run `audit_chunks.py` after creating chunks.
+7. Run `audit_intake_file.py`; resolve hard reviewability failures. When it reports `large_source`, keep `source.md` unchanged and follow the chunk construction, audit, warning disposition, and reviewed-exception procedure in `large-source-chunking.md`.
 8. Keep provider-returned side outputs with the same temporary intake folder and record warnings, missing content, and relevant audit findings.
-9. Continue through the outcome, movement, cleanup, and logging steps in `references/intake-lifecycle.md`. The provider does not choose the Source Review Gate outcome.
+9. Continue through the outcome, movement, cleanup, final-path focused lint, and logging steps in `references/intake-lifecycle.md`. The provider does not choose the Source Review Gate outcome.
 
 ## Security Rules
 

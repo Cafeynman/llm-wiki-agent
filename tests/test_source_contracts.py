@@ -142,6 +142,77 @@ class SourceContractTest(unittest.TestCase):
         ):
             self.assertNotIn(stale_text, wiki + chunking + audit)
 
+    def test_canonical_source_and_chunk_size_exception_contract(self) -> None:
+        lifecycle = self.read(
+            ".agents/skills/source-extraction/references/intake-lifecycle.md"
+        )
+        chunking = self.read(
+            ".agents/skills/source-extraction/references/large-source-chunking.md"
+        )
+        source_audit = self.read(
+            ".agents/skills/source-extraction/scripts/audit_intake_file.py"
+        )
+        chunk_audit = self.read(
+            ".agents/skills/source-extraction/scripts/audit_chunks.py"
+        )
+        chunk_contract = self.read(
+            ".agents/skills/source-extraction/scripts/chunk_contract.py"
+        )
+        recorder = self.read(
+            ".agents/skills/source-extraction/scripts/record_chunk_exception.py"
+        )
+
+        self.assertIn("canonical accepted Markdown extraction", lifecycle)
+        self.assertIn("do not overwrite, truncate, or reorder", lifecycle)
+        self.assertIn("Excerpt-Type", lifecycle + chunking)
+        self.assertNotIn("either contain the full extracted text", chunking)
+        self.assertIn("default soft minimum is 2000", chunking)
+        self.assertIn("hard maximum is 10000", chunking)
+        self.assertIn("does not decide whether adjacent chunks can merge", chunking)
+        self.assertIn("块 | 标题与覆盖范围 | 内容说明 | 规模与尺寸裁决 | 内容评审", chunking)
+        self.assertIn("<!-- chunk-size-exceptions", chunking)
+        self.assertIn("record_chunk_exception.py", chunking)
+        self.assertIn('SCHEMA_VERSION = 2', source_audit)
+        self.assertIn('SCHEMA_VERSION = 2', chunk_audit)
+        self.assertIn('DEFAULT_SMALL_CHUNK_THRESHOLD = 2000', chunk_contract)
+        self.assertIn('DEFAULT_SMALL_CHUNK_THRESHOLD', chunk_audit)
+        self.assertIn("atomic_write_text", recorder)
+
+    def test_manifest_is_thin_and_final_processed_markdown_is_linted(self) -> None:
+        lifecycle = self.read(
+            ".agents/skills/source-extraction/references/intake-lifecycle.md"
+        )
+
+        for required in (
+            "canonical raw source link",
+            "provider, profile or mode",
+            "OCR, transcription, and frame-OCR state",
+            "Source Review outcome",
+            "intake-log link",
+            "focused Obsidian lint",
+        ):
+            self.assertIn(required, lifecycle)
+        self.assertIn("Do not copy chunk mapping", lifecycle)
+
+    def test_wikilink_scanner_is_shared_and_source_card_placeholders_are_exact(self) -> None:
+        lint = self.read(".agents/skills/obsidian-wiki-lint/scripts/lint_wiki.py")
+        fixer = self.read(
+            ".agents/skills/obsidian-wiki-lint/scripts/fix_truncated_links.py"
+        )
+        scanner = self.read(
+            ".agents/skills/obsidian-wiki-lint/scripts/obsidian_links.py"
+        )
+        templates = self.read("docs/wiki-page-templates.md")
+        quality = self.read(".agents/skills/wiki-quality-review/SKILL.md")
+
+        self.assertNotIn('re.compile(r"\\[\\[([^\\]]+)\\]\\]")', lint + fixer)
+        self.assertIn("from obsidian_links import WIKILINK_RE", lint)
+        self.assertIn("from obsidian_links import WIKILINK_RE", fixer)
+        self.assertIn('text.find("]]", start + 2)', scanner)
+        self.assertIn("exact instructional placeholder", templates)
+        self.assertIn("template placeholders reported by the standard lint", quality)
+        self.assertIn("fixed number of bullets", quality)
+
     def test_page_type_values_are_scoped(self) -> None:
         wiki = self.read("WIKI.md")
 
