@@ -4,12 +4,12 @@
 wiki 项目，并且用户明确希望提交 wiki 内容时，才参考“可版本化 wiki 项目”模板。
 
 两个模板都应继续忽略 `.env`, `.venv/`, 缓存，以及 `.claude/`, `.claudian/`,
-`.codex/` 等本地工具状态。只替换 `.gitignore` 中的 `# Local wiki runtime content.`
+`.codex/`, `.obsidian/` 等本地工具状态。只替换 `.gitignore` 中的 `# Local wiki runtime content.`
 这一段。
 初始化和升级脚本会保留已有 `.gitignore` 的领域策略，只补齐缺失的密钥和技术缓存
-基线规则，不会推断或追加 wiki 运行目录策略。若 `.gitignore` 缺失，仅在没有已跟踪
-的持久 wiki 运行目录文件时写入默认私有模板；若已有运行目录文件被 Git 跟踪，则只
-创建基线规则，确保当前和后续 wiki 记录仍对 Git 可见。
+基线规则，不会推断或追加 wiki 运行目录策略。若 `.gitignore` 缺失，脚本直接写入
+默认私有模板，不读取目标 Git 状态。若目标需要可版本化策略，应在初始化前创建并
+保存相应的目标自有 `.gitignore`。
 
 ## 私有本地运行模式
 
@@ -30,6 +30,7 @@ tmp/
 .claude/
 .claudian/
 .codex/
+.obsidian/
 
 # Local wiki runtime content.
 /inbox/*
@@ -62,6 +63,7 @@ tmp/
 .claude/
 .claudian/
 .codex/
+.obsidian/
 
 # Local source intake and temporary extraction state.
 /inbox/*

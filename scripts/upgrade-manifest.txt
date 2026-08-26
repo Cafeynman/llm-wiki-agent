@@ -1,4 +1,5 @@
 # Stable package files and directories managed by the upgrade scripts.
+inventory all
 file AGENTS.md
 file WIKI.md
 file README.md

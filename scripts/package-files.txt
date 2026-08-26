@@ -1,90 +1,124 @@
-# Deterministic inventory for directory entries in upgrade-manifest.txt.
-.agents/skills/defuddle/SKILL.md
-.agents/skills/grill-decisions/SKILL.md
-.agents/skills/json-canvas/SKILL.md
-.agents/skills/json-canvas/references/EXAMPLES.md
-.agents/skills/markitdown-skill/SKILL.md
-.agents/skills/markitdown-skill/scripts/batch_convert.py
-.agents/skills/obsidian-bases/SKILL.md
-.agents/skills/obsidian-bases/references/FUNCTIONS_REFERENCE.md
-.agents/skills/obsidian-cli/SKILL.md
-.agents/skills/obsidian-markdown/SKILL.md
-.agents/skills/obsidian-markdown/references/CALLOUTS.md
-.agents/skills/obsidian-markdown/references/EMBEDS.md
-.agents/skills/obsidian-markdown/references/PROPERTIES.md
-.agents/skills/obsidian-wiki-lint/SKILL.md
-.agents/skills/obsidian-wiki-lint/agents/openai.yaml
-.agents/skills/obsidian-wiki-lint/scripts/crosslink_concepts.py
-.agents/skills/obsidian-wiki-lint/scripts/fix_truncated_links.py
-.agents/skills/obsidian-wiki-lint/scripts/lint_wiki.py
-.agents/skills/obsidian-wiki-lint/scripts/markdown_code.py
-.agents/skills/obsidian-wiki-lint/scripts/obsidian_links.py
-.agents/skills/obsidian-wiki-lint/tests/test_crosslink_concepts.py
-.agents/skills/obsidian-wiki-lint/tests/test_fix_truncated_links.py
-.agents/skills/obsidian-wiki-lint/tests/test_lint_wiki.py
-.agents/skills/obsidian-wiki-lint/tests/test_obsidian_links.py
-.agents/skills/skill-creator/LICENSE.txt
-.agents/skills/skill-creator/SKILL.md
-.agents/skills/skill-creator/scripts/package_skill.py
-.agents/skills/skill-creator/scripts/quick_validate.py
-.agents/skills/source-extraction/SKILL.md
-.agents/skills/source-extraction/references/contract.md
-.agents/skills/source-extraction/references/intake-lifecycle.md
-.agents/skills/source-extraction/references/large-source-chunking.md
-.agents/skills/source-extraction/references/pdf-preflight.md
-.agents/skills/source-extraction/references/provider-registry.md
-.agents/skills/source-extraction/references/providers/defuddle/setup.md
-.agents/skills/source-extraction/references/providers/defuddle/usage.md
-.agents/skills/source-extraction/references/providers/markitdown/setup.md
-.agents/skills/source-extraction/references/providers/markitdown/usage.md
-.agents/skills/source-extraction/references/providers/mineru/api.md
-.agents/skills/source-extraction/references/providers/mineru/profiles/fastapi.md
-.agents/skills/source-extraction/references/providers/mineru/profiles/public-api.md
-.agents/skills/source-extraction/references/providers/mineru/scripts/api_common.py
-.agents/skills/source-extraction/references/providers/mineru/scripts/api_parse.py
-.agents/skills/source-extraction/references/providers/mineru/scripts/fastapi_parse.py
-.agents/skills/source-extraction/references/providers/mineru/scripts/fastapi_smoke_check.py
-.agents/skills/source-extraction/references/providers/mineru/scripts/smoke_check.py
-.agents/skills/source-extraction/references/providers/mineru/setup.md
-.agents/skills/source-extraction/references/providers/mineru/tests/fixtures/1512.03385-resnet.pdf
-.agents/skills/source-extraction/references/providers/mineru/tests/test_api_parse.py
-.agents/skills/source-extraction/references/providers/mineru/tests/test_fastapi_parse.py
-.agents/skills/source-extraction/references/providers/mineru/tests/test_fastapi_smoke_check.py
-.agents/skills/source-extraction/references/providers/mineru/tests/test_smoke_check.py
-.agents/skills/source-extraction/references/providers/mineru/usage.md
-.agents/skills/source-extraction/references/source-kinds.md
-.agents/skills/source-extraction/scripts/audit_chunks.py
-.agents/skills/source-extraction/scripts/audit_intake_file.py
-.agents/skills/source-extraction/scripts/chunk_contract.py
-.agents/skills/source-extraction/scripts/record_chunk_exception.py
-.agents/skills/source-extraction/tests/test_audit_chunks.py
-.agents/skills/source-extraction/tests/test_audit_intake_file.py
-.agents/skills/source-extraction/tests/test_record_chunk_exception.py
-.agents/skills/wiki-maintenance-feedback/SKILL.md
-.agents/skills/wiki-maintenance-feedback/references/report-template.md
-.agents/skills/wiki-contract-review/SKILL.md
-.agents/skills/wiki-quality-review/SKILL.md
-docs/acknowledgements.md
-docs/acknowledgements.zh-CN.md
-docs/gitignore-templates.md
-docs/gitignore-templates.zh-CN.md
-docs/references.md
-docs/references.zh-CN.md
-docs/source-lifecycle.md
-docs/source-lifecycle.zh-CN.md
-docs/usage.md
-docs/usage.zh-CN.md
-docs/wiki-page-templates.md
-docs/wiki-page-templates.zh-CN.md
-docs/通用底座改进计划.md
-scenarios/README.md
-scenarios/exam-study/PROJECT.template.md
-scenarios/exam-study/README.md
-scenarios/exam-study/scripts/audit_wrong_questions.py
-scenarios/exam-study/starter-pages.md
-scripts/init.ps1
-scripts/init.sh
-scripts/package-files.txt
-scripts/upgrade-manifest.txt
-scripts/upgrade.ps1
-scripts/upgrade.sh
+# Complete package-ownership activation inventory for upgrade-manifest.txt.
+# inventory-format: complete
+# Every active file and retired path is listed; this file is committed last.
+# Format: active <path> or remove <path>.
+active AGENTS.md
+active WIKI.md
+active README.md
+active README.zh-CN.md
+active LICENSE
+active pyproject.toml
+active uv.lock
+active .gitattributes
+active .env.example
+active .agents/skills/defuddle/SKILL.md
+active .agents/skills/grill-decisions/SKILL.md
+active .agents/skills/json-canvas/SKILL.md
+active .agents/skills/json-canvas/references/EXAMPLES.md
+active .agents/skills/markitdown-skill/SKILL.md
+active .agents/skills/markitdown-skill/scripts/batch_convert.py
+active .agents/skills/obsidian-bases/SKILL.md
+active .agents/skills/obsidian-bases/references/FUNCTIONS_REFERENCE.md
+active .agents/skills/obsidian-cli/SKILL.md
+active .agents/skills/obsidian-markdown/SKILL.md
+active .agents/skills/obsidian-markdown/references/CALLOUTS.md
+active .agents/skills/obsidian-markdown/references/EMBEDS.md
+active .agents/skills/obsidian-markdown/references/PROPERTIES.md
+active .agents/skills/obsidian-wiki-lint/SKILL.md
+active .agents/skills/obsidian-wiki-lint/agents/openai.yaml
+active .agents/skills/obsidian-wiki-lint/scripts/crosslink_concepts.py
+active .agents/skills/obsidian-wiki-lint/scripts/fix_truncated_links.py
+active .agents/skills/obsidian-wiki-lint/scripts/lint_wiki.py
+active .agents/skills/obsidian-wiki-lint/scripts/markdown_code.py
+active .agents/skills/obsidian-wiki-lint/scripts/obsidian_links.py
+active .agents/skills/obsidian-wiki-lint/tests/test_crosslink_concepts.py
+active .agents/skills/obsidian-wiki-lint/tests/test_fix_truncated_links.py
+active .agents/skills/obsidian-wiki-lint/tests/test_lint_wiki.py
+active .agents/skills/obsidian-wiki-lint/tests/test_obsidian_links.py
+active .agents/skills/skill-creator/LICENSE.txt
+active .agents/skills/skill-creator/SKILL.md
+active .agents/skills/skill-creator/scripts/package_skill.py
+active .agents/skills/skill-creator/scripts/quick_validate.py
+active .agents/skills/source-extraction/SKILL.md
+active .agents/skills/source-extraction/references/contract.md
+active .agents/skills/source-extraction/references/intake-lifecycle.md
+active .agents/skills/source-extraction/references/large-source-chunking.md
+active .agents/skills/source-extraction/references/pdf-preflight.md
+active .agents/skills/source-extraction/references/provider-registry.md
+active .agents/skills/source-extraction/references/providers/defuddle/setup.md
+active .agents/skills/source-extraction/references/providers/defuddle/usage.md
+active .agents/skills/source-extraction/references/providers/markitdown/setup.md
+active .agents/skills/source-extraction/references/providers/markitdown/usage.md
+active .agents/skills/source-extraction/references/providers/mineru/api.md
+active .agents/skills/source-extraction/references/providers/mineru/profiles/fastapi.md
+active .agents/skills/source-extraction/references/providers/mineru/profiles/public-api.md
+active .agents/skills/source-extraction/references/providers/mineru/scripts/api_common.py
+active .agents/skills/source-extraction/references/providers/mineru/scripts/api_parse.py
+active .agents/skills/source-extraction/references/providers/mineru/scripts/fastapi_parse.py
+active .agents/skills/source-extraction/references/providers/mineru/scripts/fastapi_smoke_check.py
+active .agents/skills/source-extraction/references/providers/mineru/scripts/smoke_check.py
+active .agents/skills/source-extraction/references/providers/mineru/setup.md
+active .agents/skills/source-extraction/references/providers/mineru/tests/fixtures/1512.03385-resnet.pdf
+active .agents/skills/source-extraction/references/providers/mineru/tests/test_api_parse.py
+active .agents/skills/source-extraction/references/providers/mineru/tests/test_fastapi_parse.py
+active .agents/skills/source-extraction/references/providers/mineru/tests/test_fastapi_smoke_check.py
+active .agents/skills/source-extraction/references/providers/mineru/tests/test_smoke_check.py
+active .agents/skills/source-extraction/references/providers/mineru/usage.md
+active .agents/skills/source-extraction/references/source-kinds.md
+active .agents/skills/source-extraction/scripts/audit_chunks.py
+active .agents/skills/source-extraction/scripts/audit_intake_file.py
+active .agents/skills/source-extraction/scripts/chunk_contract.py
+active .agents/skills/source-extraction/scripts/record_chunk_exception.py
+active .agents/skills/source-extraction/tests/test_audit_chunks.py
+active .agents/skills/source-extraction/tests/test_audit_intake_file.py
+active .agents/skills/source-extraction/tests/test_record_chunk_exception.py
+active .agents/skills/wiki-maintenance-feedback/SKILL.md
+active .agents/skills/wiki-maintenance-feedback/references/report-template.md
+active .agents/skills/wiki-contract-review/SKILL.md
+active .agents/skills/wiki-quality-review/SKILL.md
+active docs/acknowledgements.md
+active docs/acknowledgements.zh-CN.md
+active docs/gitignore-templates.md
+active docs/gitignore-templates.zh-CN.md
+active docs/references.md
+active docs/references.zh-CN.md
+active docs/source-lifecycle.md
+active docs/source-lifecycle.zh-CN.md
+active docs/usage.md
+active docs/usage.zh-CN.md
+active docs/wiki-page-templates.md
+active docs/wiki-page-templates.zh-CN.md
+active docs/通用底座改进计划.md
+active scenarios/README.md
+active scenarios/exam-study/PROJECT.template.md
+active scenarios/exam-study/README.md
+active scenarios/exam-study/scripts/audit_wrong_questions.py
+active scenarios/exam-study/starter-pages.md
+active scripts/init.ps1
+active scripts/init.sh
+active scripts/package-files.txt
+active scripts/upgrade-manifest.txt
+active scripts/upgrade.ps1
+active scripts/upgrade.sh
+
+# Retired package paths remain activated tombstones.
+remove .agents/skills/markitdown-skill/README.md
+remove .agents/skills/markitdown-skill/POST_INSTALL.md
+remove .agents/skills/markitdown-skill/USAGE-GUIDE.md
+remove .agents/skills/markitdown-skill/reference.md
+remove .agents/skills/markitdown-skill/package.json
+remove .agents/skills/markitdown-skill/_meta.json
+remove .agents/skills/skill-creator/agents/analyzer.md
+remove .agents/skills/skill-creator/agents/comparator.md
+remove .agents/skills/skill-creator/agents/grader.md
+remove .agents/skills/skill-creator/assets/eval_review.html
+remove .agents/skills/skill-creator/eval-viewer/generate_review.py
+remove .agents/skills/skill-creator/eval-viewer/viewer.html
+remove .agents/skills/skill-creator/references/schemas.md
+remove .agents/skills/skill-creator/scripts/__init__.py
+remove .agents/skills/skill-creator/scripts/aggregate_benchmark.py
+remove .agents/skills/skill-creator/scripts/generate_report.py
+remove .agents/skills/skill-creator/scripts/improve_description.py
+remove .agents/skills/skill-creator/scripts/run_eval.py
+remove .agents/skills/skill-creator/scripts/run_loop.py
+remove .agents/skills/skill-creator/scripts/utils.py

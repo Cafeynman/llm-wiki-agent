@@ -50,7 +50,7 @@ If the user gives a separate vault root, inspect that initialized vault as the w
 Start every review by stating the target root, whether it is a package root or initialized vault, and the specific surfaces in scope. For full package reviews, use at least three independent repository scans before concluding. For scoped reviews, run the smallest set of scans that can prove or disprove the scoped risk and name any excluded surfaces.
 
 1. **Flow and simplicity scan:** trace input, owner, decision gates, state transitions, outputs, logs, cleanup, and next action. Flag unclosed states, duplicate routes, hidden side paths, and branches that exist only as speculative safety or historical residue.
-2. **Contract scan:** inventory tracked files, hidden files, manifest entries, scripts, entrypoint docs, and package-managed skills.
+2. **Contract scan:** inventory package source files, hidden files, old/new ownership metadata, scripts, entrypoint docs, and package-managed skills.
 3. **Full local skill scan:** enumerate all `.agents/skills/*/SKILL.md` files, validate each skill, inspect auxiliary files, and compare trigger/ownership boundaries across skills.
 4. **Residue scan:** search for stale paths, conflicting wording, duplicated rules, obsolete workflow terms, local runtime artifacts, and generated files that should not be treated as package source.
 
@@ -78,20 +78,20 @@ Check whether scripts and package-managed files match the current wiki structure
 
 1. Derive the expected runtime directories from `WIKI.md` and the initialization rules in `AGENTS.md`.
 2. Confirm `init` and `upgrade` scripts create the same required runtime directories and seed files.
-3. Confirm `upgrade-manifest.txt` includes stable package files and directories that must migrate, including `.agents/skills`, `docs`, `scripts`, `AGENTS.md`, and `WIKI.md` when present. Optional runtime adapters may remain user-owned instead of package-managed.
-4. Confirm package-managed files are copied from the package root and workspace-specific context stays in `PROJECT.md`.
-5. Compare `git ls-files`, `git status --ignored --short`, and the manifest so untracked archives, ignored vault folders, adapter directories, caches, and runtime folders are not mistaken for package source. Treat untracked files inside manifest-managed directories as pending local changes, not package source, until they are deliberately tracked.
-6. Verify that initialization and upgrade preserve an existing target-owned
+3. Confirm `upgrade-manifest.txt` includes stable package files and directories that must migrate, including `.agents/skills`, `docs`, `scripts`, `AGENTS.md`, and `WIKI.md` when present. Optional runtime adapters may remain user-owned instead of package-owned.
+4. Confirm initialization and upgrade derive target ownership only from the target's old manifest/inventory and the current package's new manifest/inventory. They must not use target Git state, version numbers, or guessed hashes as ownership evidence. Check the create, adopt, replace, explicit-remove, conflict, legacy-adoption, and metadata-last paths. Only two absent old metadata files may enter legacy adoption; a marked complete inventory may stand alone as an interruption checkpoint, while a lone manifest, an unmarked lone inventory, or invalid metadata blocks. After dependency synchronization, a legacy path-only inventory must first be atomically normalized to the same old ownership; a target without old metadata must receive a typed checkpoint that claims only the inventory control file the upgrade just created. The new manifest is then committed before the final complete inventory. Verify every interruption window remains conservative and resumable both with no intervening target edit and with a conflicting edit to a newly copied business path.
+5. Confirm package-owned files are copied from the package root and workspace-specific context stays in `PROJECT.md`.
+6. Compare `git ls-files`, `git status --ignored --short`, and the current package manifest so untracked archives, ignored vault folders, adapter directories, caches, and runtime folders are not mistaken for publishable package source. This source-package integrity check does not define ownership in an initialized target.
+7. Verify that initialization and upgrade preserve an existing target-owned
    `.gitignore` domain policy. They may add required secret and technical-cache
    rules, but must not infer a private or versioned wiki-runtime policy from an
-   unrecognized existing file. If `.gitignore` is absent but durable runtime
-   files are already tracked, creating it must not hide current or future wiki
-   records.
-7. Search scripts and skills for stale path contracts such as dated intake directories, old skill paths, missing `.agents/skills` prefixes, unsupported runtime folders, or hardcoded scenario-specific paths.
-8. Verify script examples in skills and docs are executable from the documented root and use `uv run` where the project contract requires it.
-9. If both English and translated docs exist, check that setup commands, script parameter names, root semantics, and package/runtime boundaries are aligned across languages.
-10. Check provider/helper skills against the owning workflow contract. Extraction helpers must not bypass `source-extraction`, `PROJECT.md` provider policy, Source Review Gate, or the text-first wiki lifecycle.
-11. Check `pyproject.toml`, lockfiles when present, `.env.example`, provider setup docs, and runtime commands for dependency or environment drift.
+   unrecognized existing file. If `.gitignore` is absent, they install the
+   package's default private runtime policy without consulting target Git state.
+8. Search scripts and skills for stale path contracts such as dated intake directories, old skill paths, missing `.agents/skills` prefixes, unsupported runtime folders, or hardcoded scenario-specific paths.
+9. Verify script examples in skills and docs are executable from the documented root and use `uv run` where the project contract requires it.
+10. If both English and translated docs exist, check that setup commands, script parameter names, root semantics, and package/runtime boundaries are aligned across languages.
+11. Check provider/helper skills against the owning workflow contract. Extraction helpers must not bypass `source-extraction`, `PROJECT.md` provider policy, Source Review Gate, or the text-first wiki lifecycle.
+12. Check `pyproject.toml`, lockfiles when present, `.env.example`, provider setup docs, and runtime commands for dependency or environment drift.
 
 ### 3. Full Local Skill Review
 

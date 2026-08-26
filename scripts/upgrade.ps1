@@ -9,10 +9,13 @@ $PackageRoot = Split-Path -Parent $ScriptDir
 $PackagePath = (Resolve-Path -LiteralPath $PackageRoot).Path
 $ManifestPath = Join-Path $ScriptDir "upgrade-manifest.txt"
 $InventoryPath = Join-Path $ScriptDir "package-files.txt"
-$PathComparer = if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT) {
-    [System.StringComparer]::OrdinalIgnoreCase
+$PathComparer = [System.StringComparer]::OrdinalIgnoreCase
+$Utf8NoBomStrict = New-Object System.Text.UTF8Encoding($false, $true)
+$CompleteInventoryMarker = "# inventory-format: complete"
+$RootPathComparison = if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT) {
+    [System.StringComparison]::OrdinalIgnoreCase
 } else {
-    [System.StringComparer]::Ordinal
+    [System.StringComparison]::Ordinal
 }
 
 $script:FileCount = 0
@@ -67,7 +70,7 @@ function Ensure-File {
     )
     if (-not (Test-Path -LiteralPath $Path)) {
         Ensure-Directory (Split-Path -Parent $Path)
-        Set-Content -LiteralPath $Path -Value $Content -Encoding UTF8
+        [System.IO.File]::WriteAllText($Path, $Content, $Utf8NoBomStrict)
         $script:CreatedRuntimeCount += 1
     }
 }
@@ -77,8 +80,27 @@ function Test-SameFileContent {
         [string]$SourcePath,
         [string]$TargetPath
     )
-    return (Get-FileHash -Algorithm SHA256 -LiteralPath $SourcePath).Hash -ceq
-        (Get-FileHash -Algorithm SHA256 -LiteralPath $TargetPath).Hash
+    $sourceAlgorithm = [System.Security.Cryptography.SHA256]::Create()
+    $targetAlgorithm = [System.Security.Cryptography.SHA256]::Create()
+    $sourceStream = $null
+    $targetStream = $null
+    try {
+        $sourceStream = [System.IO.File]::OpenRead($SourcePath)
+        $targetStream = [System.IO.File]::OpenRead($TargetPath)
+        $sourceHash = [System.BitConverter]::ToString($sourceAlgorithm.ComputeHash($sourceStream))
+        $targetHash = [System.BitConverter]::ToString($targetAlgorithm.ComputeHash($targetStream))
+        return $sourceHash -ceq $targetHash
+    }
+    finally {
+        if ($null -ne $sourceStream) {
+            $sourceStream.Dispose()
+        }
+        if ($null -ne $targetStream) {
+            $targetStream.Dispose()
+        }
+        $sourceAlgorithm.Dispose()
+        $targetAlgorithm.Dispose()
+    }
 }
 
 function Test-ReparsePoint {
@@ -86,6 +108,80 @@ function Test-ReparsePoint {
 
     return $null -ne $Item -and
         ($Item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0
+}
+
+function Get-RelativePathCompat {
+    param(
+        [string]$BasePath,
+        [string]$Path
+    )
+
+    $baseFullPath = [System.IO.Path]::GetFullPath($BasePath)
+    $fullPath = [System.IO.Path]::GetFullPath($Path)
+    if ([string]::Equals($baseFullPath, $fullPath, $RootPathComparison)) {
+        return "."
+    }
+
+    $basePrefix = $baseFullPath.TrimEnd(
+        [System.IO.Path]::DirectorySeparatorChar,
+        [System.IO.Path]::AltDirectorySeparatorChar
+    ) + [System.IO.Path]::DirectorySeparatorChar
+    if ($fullPath.StartsWith($basePrefix, $RootPathComparison)) {
+        return $fullPath.Substring($basePrefix.Length)
+    }
+    return $fullPath
+}
+
+function Get-PathItemNoFollow {
+    param([string]$Path)
+
+    $item = Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+    if ($null -ne $item) {
+        return $item
+    }
+
+    $parent = Split-Path -Parent $Path
+    $leaf = Split-Path -Leaf $Path
+    if (-not $parent -or -not (Test-Path -LiteralPath $parent -PathType Container)) {
+        return $null
+    }
+    return @(
+        Get-ChildItem -LiteralPath $parent -Force -ErrorAction SilentlyContinue |
+            Where-Object { [string]::Equals($_.Name, $leaf, $RootPathComparison) }
+    ) | Select-Object -First 1
+}
+
+function Assert-PackageSourcePathSafe {
+    param(
+        [string]$RootPath,
+        [string]$RelativePath,
+        [ValidateSet("file", "directory")]
+        [string]$ExpectedType,
+        [string]$Context
+    )
+
+    $current = $RootPath
+    $segments = $RelativePath.Split("/")
+    for ($index = 0; $index -lt $segments.Count; $index += 1) {
+        $current = Join-Path $current $segments[$index]
+        $item = Get-PathItemNoFollow $current
+        if ($null -eq $item) {
+            throw "$Context not found: $RelativePath"
+        }
+        if (Test-ReparsePoint $item) {
+            throw "$Context contains a link or reparse point: $RelativePath"
+        }
+        $isLast = $index -eq $segments.Count - 1
+        if (-not $isLast -and -not $item.PSIsContainer) {
+            throw "$Context contains a non-directory ancestor: $RelativePath"
+        }
+        if ($isLast -and $ExpectedType -eq "file" -and $item.PSIsContainer) {
+            throw "$Context is not a regular file: $RelativePath"
+        }
+        if ($isLast -and $ExpectedType -eq "directory" -and -not $item.PSIsContainer) {
+            throw "$Context is not a directory: $RelativePath"
+        }
+    }
 }
 
 function Assert-TargetRootPath {
@@ -96,12 +192,12 @@ function Assert-TargetRootPath {
         throw "Target root has no filesystem root: $TargetPath"
     }
 
-    $relative = [System.IO.Path]::GetRelativePath($root, $TargetPath).Replace("\", "/")
+    $relative = (Get-RelativePathCompat $root $TargetPath).Replace("\", "/")
     $segments = @($relative -split "/" | Where-Object { $_ -and $_ -ne "." })
     $current = $root
     foreach ($segment in $segments) {
         $current = Join-Path $current $segment
-        $item = Get-Item -LiteralPath $current -Force -ErrorAction SilentlyContinue
+        $item = Get-PathItemNoFollow $current
         if ($null -eq $item) {
             break
         }
@@ -158,7 +254,7 @@ function Get-TargetStructureConflicts {
             }
             continue
         }
-        $relativeCheck = [System.IO.Path]::GetRelativePath($TargetPath, $fullPath).Replace("\", "/")
+        $relativeCheck = (Get-RelativePathCompat $TargetPath $fullPath).Replace("\", "/")
         if (
             [System.IO.Path]::IsPathRooted($relativeCheck) -or
             $relativeCheck -eq ".." -or
@@ -174,12 +270,12 @@ function Get-TargetStructureConflicts {
         $current = $TargetPath
         for ($index = 0; $index -lt $segments.Count; $index += 1) {
             $current = Join-Path $current $segments[$index]
-            $item = Get-Item -LiteralPath $current -Force -ErrorAction SilentlyContinue
+            $item = Get-PathItemNoFollow $current
             if ($null -eq $item) {
                 break
             }
 
-            $displayPath = [System.IO.Path]::GetRelativePath($TargetPath, $current).Replace("\", "/")
+            $displayPath = (Get-RelativePathCompat $TargetPath $current).Replace("\", "/")
             if (Test-ReparsePoint $item) {
                 if ($reported.Add("reparse:$displayPath")) {
                     $conflicts.Add("$($displayPath): target path is a link or reparse point") | Out-Null
@@ -211,300 +307,514 @@ function Get-TargetStructureConflicts {
     return @($conflicts)
 }
 
-function Add-PackagePlanRecord {
+function ConvertTo-PackageRelativePath {
+    param(
+        [string]$RawPath,
+        [string]$Context
+    )
+
+    $relative = $RawPath.TrimStart([char]0xFEFF).Trim().Replace("\", "/")
+    if (
+        -not $relative -or
+        $relative.StartsWith("/") -or
+        $relative.EndsWith("/") -or
+        $relative.Contains("//") -or
+        $relative.Contains(":") -or
+        [System.IO.Path]::IsPathRooted($relative)
+    ) {
+        throw "$Context contains an invalid package path: $RawPath"
+    }
+    foreach ($segment in $relative.Split("/")) {
+        if (-not $segment -or $segment -in @(".", "..")) {
+            throw "$Context contains an invalid package path: $RawPath"
+        }
+    }
+    return $relative
+}
+
+function Get-SafeTargetFileState {
+    param(
+        [string]$TargetPath,
+        [string]$RelativePath
+    )
+
+    $current = $TargetPath
+    $segments = $RelativePath.Split("/")
+    for ($index = 0; $index -lt $segments.Count; $index += 1) {
+        $current = Join-Path $current $segments[$index]
+        $item = Get-PathItemNoFollow $current
+        if ($null -eq $item) {
+            return [pscustomobject]@{ State = "MISSING"; Reason = $null }
+        }
+        $displayPath = (Get-RelativePathCompat $TargetPath $current).Replace("\", "/")
+        if (Test-ReparsePoint $item) {
+            return [pscustomobject]@{
+                State = "CONFLICT"
+                Reason = "$displayPath is a link or reparse point"
+            }
+        }
+        $isLast = $index -eq $segments.Count - 1
+        if (-not $isLast -and -not $item.PSIsContainer) {
+            return [pscustomobject]@{
+                State = "CONFLICT"
+                Reason = "$displayPath is not a directory"
+            }
+        }
+        if ($isLast) {
+            if ($item.PSIsContainer) {
+                return [pscustomobject]@{ State = "CONFLICT"; Reason = "target path is a directory" }
+            }
+            return [pscustomobject]@{ State = "FILE"; Reason = $null }
+        }
+    }
+    return [pscustomobject]@{ State = "MISSING"; Reason = $null }
+}
+
+function Assert-OwnershipMetadataPathSafe {
+    param(
+        [string]$TargetPath,
+        [string]$RelativePath
+    )
+
+    $current = $TargetPath
+    $segments = $RelativePath.Split("/")
+    for ($index = 0; $index -lt $segments.Count; $index += 1) {
+        $current = Join-Path $current $segments[$index]
+        $item = Get-PathItemNoFollow $current
+        if ($null -eq $item) {
+            return
+        }
+        if (Test-ReparsePoint $item) {
+            throw "Old package ownership metadata path is a link or reparse point: $RelativePath"
+        }
+        $isLast = $index -eq $segments.Count - 1
+        if (-not $isLast -and -not $item.PSIsContainer) {
+            throw "Old package ownership metadata parent is not a directory: $RelativePath"
+        }
+        if ($isLast -and $item.PSIsContainer) {
+            throw "Old package ownership metadata path is not a regular file: $RelativePath"
+        }
+    }
+}
+
+function Read-PackageOwnershipMetadata {
+    param(
+        [string]$RootPath,
+        [string]$ManifestFile,
+        [string]$InventoryFile,
+        [bool]$RequireSourceFiles,
+        [string]$Label
+    )
+
+    $manifestDirectActive = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
+    $manifestRemoved = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
+    $manifestDirectories = [System.Collections.Generic.List[string]]::new()
+    $manifestDirectorySeen = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
+    $manifestExplicitSeen = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
+    $inventoryMode = "directories"
+    $inventoryDirectiveSeen = $false
+    $ownershipEntrySeen = $false
+    $completeInventoryMarkerSeen = $false
+
+    foreach ($inventoryLine in [System.IO.File]::ReadAllLines($InventoryFile, $Utf8NoBomStrict)) {
+        $line = $inventoryLine.TrimStart([char]0xFEFF).Trim()
+        if ($line -ceq $CompleteInventoryMarker) {
+            if ($completeInventoryMarkerSeen) {
+                throw "$Label inventory contains a duplicate complete-format marker."
+            }
+            $completeInventoryMarkerSeen = $true
+        }
+    }
+
+    $manifestAvailable = -not [string]::IsNullOrEmpty($ManifestFile)
+    if ($manifestAvailable) {
+        foreach ($manifestLine in [System.IO.File]::ReadAllLines($ManifestFile, $Utf8NoBomStrict)) {
+            $line = $manifestLine.TrimStart([char]0xFEFF).Trim()
+            if (-not $line -or $line.StartsWith("#")) {
+                continue
+            }
+            $parts = $line -split "\s+", 2
+            if ($parts.Count -ne 2) {
+                throw "Invalid $Label manifest line: $line"
+            }
+            $kind = $parts[0]
+            if ($kind -ceq "inventory") {
+                if ($parts[1] -cne "all") {
+                    throw "Invalid $Label inventory directive: $line"
+                }
+                if ($inventoryDirectiveSeen -or $ownershipEntrySeen) {
+                    throw "$Label manifest must declare 'inventory all' exactly once before ownership entries."
+                }
+                $inventoryDirectiveSeen = $true
+                $inventoryMode = "all"
+                continue
+            }
+            if ($kind -cnotin @("file", "dir", "remove")) {
+                throw "Invalid $Label manifest entry kind: $kind"
+            }
+
+            $relativePath = ConvertTo-PackageRelativePath $parts[1] "$Label manifest"
+            $ownershipEntrySeen = $true
+            if ($kind -cin @("file", "remove") -and -not $manifestExplicitSeen.Add($relativePath)) {
+                throw "$Label manifest contains a duplicate package path: $relativePath"
+            }
+
+            if ($kind -ceq "file") {
+                $manifestDirectActive.Add($relativePath) | Out-Null
+                continue
+            }
+            if ($kind -ceq "dir") {
+                if (-not $manifestDirectorySeen.Add($relativePath)) {
+                    throw "$Label manifest contains a duplicate directory entry: $relativePath"
+                }
+                $manifestDirectories.Add($relativePath) | Out-Null
+                continue
+            }
+
+            if ($relativePath -in @("scripts/upgrade-manifest.txt", "scripts/package-files.txt")) {
+                throw "$Label manifest cannot retire ownership metadata: $relativePath"
+            }
+            $manifestRemoved.Add($relativePath) | Out-Null
+        }
+    }
+
+    $manifestInventoryMode = $inventoryMode
+    if ($RequireSourceFiles -and $manifestInventoryMode -ne "all") {
+        throw "$Label manifest must declare 'inventory all' before ownership entries."
+    }
+    if ($RequireSourceFiles -and -not $completeInventoryMarkerSeen) {
+        throw "$Label inventory must declare '$CompleteInventoryMarker'."
+    }
+    if (-not $manifestAvailable -and -not $completeInventoryMarkerSeen) {
+        throw "$Label ownership metadata is incomplete; a standalone inventory must declare '$CompleteInventoryMarker'."
+    }
+    if ($completeInventoryMarkerSeen) {
+        $inventoryMode = "all"
+    } elseif ($manifestInventoryMode -eq "all") {
+        throw "$Label complete manifest is paired with an unmarked inventory; restore the matching ownership metadata pair and rerun."
+    }
+
+    $active = [System.Collections.Generic.Dictionary[string, string]]::new($PathComparer)
+    $removed = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
+    $directoryCount = $manifestDirectories.Count
+
+    if ($inventoryMode -eq "directories") {
+        $inventory = [System.Collections.Generic.List[string]]::new()
+        $inventorySeen = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
+        foreach ($inventoryLine in [System.IO.File]::ReadAllLines($InventoryFile, $Utf8NoBomStrict)) {
+            $line = $inventoryLine.TrimStart([char]0xFEFF).Trim()
+            if (-not $line -or $line.StartsWith("#")) {
+                continue
+            }
+            $relativePath = ConvertTo-PackageRelativePath $line "$Label inventory"
+            if (-not $inventorySeen.Add($relativePath)) {
+                throw "$Label inventory contains a duplicate package path: $relativePath"
+            }
+            $inventory.Add($relativePath) | Out-Null
+        }
+
+        foreach ($relativePath in $manifestDirectActive) {
+            $active.Add($relativePath, (Join-Path $RootPath $relativePath))
+        }
+
+        $consumedInventory = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
+        foreach ($directoryPath in $manifestDirectories) {
+            $prefix = "$directoryPath/"
+            $expandedPaths = @(
+                $inventory | Where-Object {
+                    $_.StartsWith($prefix, [System.StringComparison]::Ordinal)
+                }
+            )
+            if ($expandedPaths.Count -eq 0) {
+                throw "$Label manifest directory has no files in its inventory: $directoryPath"
+            }
+            foreach ($relativePath in $expandedPaths) {
+                if ($active.ContainsKey($relativePath) -or $removed.Contains($relativePath)) {
+                    throw "$Label manifest contains a duplicate package path: $relativePath"
+                }
+                $active.Add($relativePath, (Join-Path $RootPath $relativePath))
+                $consumedInventory.Add($relativePath) | Out-Null
+            }
+        }
+
+        foreach ($relativePath in $manifestRemoved) {
+            if ($active.ContainsKey($relativePath) -or -not $removed.Add($relativePath)) {
+                throw "$Label manifest contains a duplicate package path: $relativePath"
+            }
+        }
+
+        foreach ($relativePath in $inventory) {
+            if (-not $consumedInventory.Contains($relativePath)) {
+                throw "$Label inventory path is not owned by a manifest directory: $relativePath"
+            }
+        }
+
+        return [pscustomobject]@{
+            Available = $true
+            ActivePaths = $active
+            RemovedPaths = $removed
+            DirectoryCount = $directoryCount
+            InventoryMode = $inventoryMode
+        }
+    }
+
+    $inventoryKinds = [System.Collections.Generic.Dictionary[string, string]]::new($PathComparer)
+    $inventoryPaths = [System.Collections.Generic.List[string]]::new()
+    foreach ($inventoryLine in [System.IO.File]::ReadAllLines($InventoryFile, $Utf8NoBomStrict)) {
+        $line = $inventoryLine.TrimStart([char]0xFEFF).Trim()
+        if (-not $line -or $line.StartsWith("#")) {
+            continue
+        }
+        $parts = $line -split "\s+", 2
+        if ($parts.Count -ne 2 -or $parts[0] -cnotin @("active", "remove")) {
+            throw "Invalid $Label complete inventory line: $line"
+        }
+        $inventoryKind = $parts[0]
+        $relativePath = ConvertTo-PackageRelativePath $parts[1] "$Label inventory"
+        if ($inventoryKinds.ContainsKey($relativePath)) {
+            throw "$Label inventory contains a duplicate package path: $relativePath"
+        }
+        $inventoryKinds.Add($relativePath, $inventoryKind)
+        $inventoryPaths.Add($relativePath) | Out-Null
+    }
+
+    foreach ($relativePath in $inventoryPaths) {
+        $inventoryKind = $inventoryKinds[$relativePath]
+        $declaredActive = $manifestDirectActive.Contains($relativePath)
+        foreach ($directoryPath in $manifestDirectories) {
+            if ($relativePath.StartsWith("$directoryPath/", [System.StringComparison]::Ordinal)) {
+                $declaredActive = $true
+                break
+            }
+        }
+        $declaredRemoved = $manifestRemoved.Contains($relativePath)
+        if ($RequireSourceFiles) {
+            if (-not $declaredActive -and -not $declaredRemoved) {
+                throw "$Label inventory path is not classified by the manifest: $relativePath"
+            }
+            if ($inventoryKind -ceq "active" -and (-not $declaredActive -or $declaredRemoved)) {
+                throw "$Label inventory classification does not match the manifest: active $relativePath"
+            }
+            if ($inventoryKind -ceq "remove" -and -not $declaredRemoved) {
+                throw "$Label inventory classification does not match the manifest: remove $relativePath"
+            }
+        }
+
+        if ($inventoryKind -ceq "active") {
+            $source = Join-Path $RootPath $relativePath
+            if ($RequireSourceFiles) {
+                Assert-PackageSourcePathSafe $RootPath $relativePath "file" "$Label active inventory entry"
+            }
+            $active.Add($relativePath, $source)
+        } else {
+            $removed.Add($relativePath) | Out-Null
+        }
+    }
+
+    if ($RequireSourceFiles) {
+        foreach ($relativePath in $manifestDirectActive) {
+            if (
+                -not $inventoryKinds.ContainsKey($relativePath) -or
+                $inventoryKinds[$relativePath] -cne "active"
+            ) {
+                throw "$Label inventory is missing active manifest path: $relativePath"
+            }
+        }
+        foreach ($relativePath in $manifestRemoved) {
+            if (
+                -not $inventoryKinds.ContainsKey($relativePath) -or
+                $inventoryKinds[$relativePath] -cne "remove"
+            ) {
+                throw "$Label inventory is missing retired manifest path: $relativePath"
+            }
+        }
+        foreach ($directoryPath in $manifestDirectories) {
+            $prefix = "$directoryPath/"
+            $hasActivePath = $false
+            foreach ($relativePath in $inventoryPaths) {
+                if (
+                    $inventoryKinds[$relativePath] -ceq "active" -and
+                    $relativePath.StartsWith($prefix, [System.StringComparison]::Ordinal)
+                ) {
+                    $hasActivePath = $true
+                    break
+                }
+            }
+            if (-not $hasActivePath) {
+                throw "$Label manifest directory has no active files in its inventory: $directoryPath"
+            }
+            Assert-PackageSourcePathSafe $RootPath $directoryPath "directory" "$Label manifest directory entry"
+        }
+    }
+
+    return [pscustomobject]@{
+        Available = $true
+        ActivePaths = $active
+        RemovedPaths = $removed
+        DirectoryCount = $directoryCount
+        InventoryMode = $inventoryMode
+    }
+}
+
+function Get-OldPackageOwnershipMetadata {
+    param([string]$TargetPath)
+
+    $oldManifest = Join-Path $TargetPath "scripts/upgrade-manifest.txt"
+    $oldInventory = Join-Path $TargetPath "scripts/package-files.txt"
+    Assert-OwnershipMetadataPathSafe $TargetPath "scripts/upgrade-manifest.txt"
+    Assert-OwnershipMetadataPathSafe $TargetPath "scripts/package-files.txt"
+
+    $manifestExists = Test-Path -LiteralPath $oldManifest -PathType Leaf
+    $inventoryExists = Test-Path -LiteralPath $oldInventory -PathType Leaf
+    if (-not $manifestExists -and -not $inventoryExists) {
+        return [pscustomobject]@{
+            Available = $false
+            ActivePaths = [System.Collections.Generic.Dictionary[string, string]]::new($PathComparer)
+            RemovedPaths = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
+            DirectoryCount = 0
+            InventoryMode = "none"
+        }
+    }
+    if (-not $manifestExists -and $inventoryExists) {
+        return Read-PackageOwnershipMetadata $TargetPath $null $oldInventory $false "Old package"
+    }
+    if (-not $manifestExists -or -not $inventoryExists) {
+        throw "Old package ownership metadata is incomplete; both scripts/upgrade-manifest.txt and scripts/package-files.txt are required."
+    }
+    return Read-PackageOwnershipMetadata $TargetPath $oldManifest $oldInventory $false "Old package"
+}
+
+function Add-PlanRecord {
     param(
         [System.Collections.Generic.List[object]]$Records,
         [System.Collections.Generic.HashSet[string]]$Seen,
         [string]$RelativePath,
         [string]$SourcePath,
         [string]$TargetPath,
-        [bool]$SameRoot
+        [string]$Action,
+        [string]$Reason
     )
 
-    $relative = $RelativePath.Replace("\", "/")
-    if (-not $Seen.Add($relative)) {
-        throw "Duplicate package-managed path in manifest expansion: $relative"
+    if (-not $Seen.Add($RelativePath)) {
+        throw "Duplicate package path while building the ownership plan: $RelativePath"
     }
-
-    $action = "CREATE"
-    $reason = $null
-    if ($SameRoot) {
-        $action = "UNCHANGED"
-    } elseif (Test-Path -LiteralPath $TargetPath -PathType Container) {
-        $action = "CONFLICT"
-        $reason = "target path is a directory"
-    } elseif (Test-Path -LiteralPath $TargetPath -PathType Leaf) {
-        if (Test-SameFileContent $SourcePath $TargetPath) {
-            $action = "UNCHANGED"
-        } else {
-            $action = "REPLACE"
-        }
+    $metadataOrder = switch ($RelativePath) {
+        "scripts/upgrade-manifest.txt" { 1 }
+        "scripts/package-files.txt" { 2 }
+        default { 0 }
     }
-
     $Records.Add([pscustomobject]@{
-        RelativePath = $relative
+        RelativePath = $RelativePath
         SourcePath = $SourcePath
         TargetPath = $TargetPath
-        Action = $action
-        Reason = $reason
-    }) | Out-Null
-}
-
-function Add-RemovalPlanRecord {
-    param(
-        [System.Collections.Generic.List[object]]$Records,
-        [System.Collections.Generic.HashSet[string]]$Seen,
-        [string]$RelativePath,
-        [string]$TargetPath,
-        [bool]$SameRoot
-    )
-
-    $relative = $RelativePath.Replace("\", "/")
-    if (-not $Seen.Add($relative)) {
-        throw "Duplicate package-managed path in manifest expansion: $relative"
-    }
-
-    $action = "UNCHANGED"
-    $reason = $null
-    if (-not $SameRoot) {
-        if (Test-Path -LiteralPath $TargetPath -PathType Container) {
-            $action = "CONFLICT"
-            $reason = "retired package path is a directory"
-        } elseif (Test-Path -LiteralPath $TargetPath -PathType Leaf) {
-            $action = "REMOVE"
-        } elseif (Test-Path -LiteralPath $TargetPath) {
-            $action = "CONFLICT"
-            $reason = "retired package path is not a regular file"
-        }
-    }
-
-    $Records.Add([pscustomobject]@{
-        RelativePath = $relative
-        SourcePath = $null
-        TargetPath = $TargetPath
-        Action = $action
-        Reason = $reason
+        Action = $Action
+        Reason = $Reason
+        MetadataOrder = $metadataOrder
     }) | Out-Null
 }
 
 function Get-PackagePlan {
     param(
         [string]$TargetPath,
-        [bool]$SameRoot
+        [bool]$SameRoot,
+        $NewMetadata,
+        $OldMetadata
     )
-
-    if (-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) {
-        throw "Upgrade manifest not found: $ManifestPath"
-    }
-    if (-not (Test-Path -LiteralPath $InventoryPath -PathType Leaf)) {
-        throw "Package file inventory not found: $InventoryPath"
-    }
 
     $records = [System.Collections.Generic.List[object]]::new()
     $seen = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
-    $inventory = @(
-        Get-Content -LiteralPath $InventoryPath |
-            ForEach-Object { $_.Trim().Replace("\", "/") } |
-            Where-Object { $_ -and -not $_.StartsWith("#") }
-    )
 
-    foreach ($manifestLine in Get-Content -LiteralPath $ManifestPath) {
-        $line = $manifestLine.Trim()
-        if ($line.Length -eq 0 -or $line.StartsWith("#")) {
-            continue
-        }
-
-        $parts = $line -split "\s+", 2
-        if ($parts.Count -ne 2) {
-            throw "Invalid manifest line: $line"
-        }
-
-        $kind = $parts[0]
-        $relativePath = $parts[1].Replace("\", "/")
-        $source = Join-Path $PackagePath $relativePath
-
-        if ($kind -eq "file") {
-            if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
-                throw "Manifest file entry not found in package: $relativePath"
+    foreach ($relativePath in @($NewMetadata.ActivePaths.Keys | Sort-Object)) {
+        $source = $NewMetadata.ActivePaths[$relativePath]
+        $target = Join-Path $TargetPath $relativePath
+        $oldOwns = $OldMetadata.Available -and $OldMetadata.ActivePaths.ContainsKey($relativePath)
+        $action = "CREATE"
+        $reason = $null
+        $targetState = Get-SafeTargetFileState $TargetPath $relativePath
+        if ($SameRoot) {
+            $action = "UNCHANGED"
+        } elseif ($targetState.State -eq "CONFLICT") {
+            $action = "CONFLICT"
+            $reason = $targetState.Reason
+        } elseif ($targetState.State -eq "FILE") {
+            if (Test-SameFileContent $source $target) {
+                $action = "UNCHANGED"
+            } elseif ($oldOwns) {
+                $action = "REPLACE"
+            } else {
+                $action = "CONFLICT"
+                $reason = "new package-owned path already exists with different content"
             }
-            Add-PackagePlanRecord $records $seen $relativePath $source (Join-Path $TargetPath $relativePath) $SameRoot
-            continue
         }
+        Add-PlanRecord $records $seen $relativePath $source $target $action $reason
+    }
 
-        if ($kind -eq "dir") {
-            if (-not (Test-Path -LiteralPath $source -PathType Container)) {
-                throw "Manifest directory entry not found in package: $relativePath"
+    if ($OldMetadata.Available) {
+        foreach ($relativePath in @($OldMetadata.ActivePaths.Keys | Sort-Object)) {
+            if ($NewMetadata.ActivePaths.ContainsKey($relativePath)) {
+                continue
             }
-            $script:ManifestDirectoryCount += 1
-            $prefix = "$relativePath/"
-            $expandedPaths = @($inventory | Where-Object { $_.StartsWith($prefix, [System.StringComparison]::Ordinal) })
-            if ($expandedPaths.Count -eq 0) {
-                throw "Manifest directory has no files in package inventory: $relativePath"
+            $target = Join-Path $TargetPath $relativePath
+            $targetState = Get-SafeTargetFileState $TargetPath $relativePath
+            if (-not $NewMetadata.RemovedPaths.Contains($relativePath)) {
+                Add-PlanRecord $records $seen $relativePath $null $target "CONFLICT" "old package-owned path is absent from the new manifest without an explicit remove entry"
+                continue
             }
-            foreach ($expanded in $expandedPaths) {
-                $sourceFile = Join-Path $PackagePath $expanded
-                if (-not (Test-Path -LiteralPath $sourceFile -PathType Leaf)) {
-                    throw "Inventory file entry not found in package: $expanded"
+            $action = "UNCHANGED"
+            $reason = $null
+            if (-not $SameRoot) {
+                if ($targetState.State -eq "CONFLICT") {
+                    $action = "CONFLICT"
+                    $reason = $targetState.Reason
+                } elseif ($targetState.State -eq "FILE") {
+                    $action = "REMOVE"
                 }
-                Add-PackagePlanRecord $records $seen $expanded $sourceFile (Join-Path $TargetPath $expanded) $SameRoot
             }
+            Add-PlanRecord $records $seen $relativePath $null $target $action $reason
+        }
+    }
+
+    foreach ($relativePath in @($NewMetadata.RemovedPaths | Sort-Object)) {
+        if ($seen.Contains($relativePath)) {
             continue
         }
-
-        if ($kind -eq "remove") {
-            Add-RemovalPlanRecord $records $seen $relativePath (Join-Path $TargetPath $relativePath) $SameRoot
-            continue
+        $target = Join-Path $TargetPath $relativePath
+        $targetState = Get-SafeTargetFileState $TargetPath $relativePath
+        $action = "UNCHANGED"
+        $reason = $null
+        if (-not $SameRoot) {
+            if ($targetState.State -eq "CONFLICT") {
+                $action = "CONFLICT"
+                $reason = $targetState.Reason
+            } elseif ($targetState.State -eq "FILE") {
+                if ($OldMetadata.Available -and $OldMetadata.RemovedPaths.Contains($relativePath)) {
+                    $action = "REMOVE"
+                } else {
+                    $action = "CONFLICT"
+                    $reason = "retired package path exists without prior active or retired package ownership"
+                }
+            }
         }
-
-        throw "Invalid manifest entry kind: $kind"
+        Add-PlanRecord $records $seen $relativePath $null $target $action $reason
     }
 
     return @($records | Sort-Object RelativePath)
 }
 
-function Get-GitBaseline {
-    param([string]$TargetPath)
-
-    if (-not (Test-Path -LiteralPath $TargetPath -PathType Container)) {
-        return $null
-    }
-    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-        return $null
-    }
-
-    $inside = & git -C $TargetPath rev-parse --is-inside-work-tree 2>$null
-    if ($LASTEXITCODE -ne 0 -or $inside -notcontains "true") {
-        return $null
-    }
-    & git -C $TargetPath rev-parse --verify HEAD 1>$null 2>$null
-    if ($LASTEXITCODE -ne 0) {
-        return $null
-    }
-
-    $gitRootOutput = @(& git -C $TargetPath rev-parse --show-toplevel 2>$null)
-    if ($LASTEXITCODE -ne 0 -or $gitRootOutput.Count -eq 0) {
-        return $null
-    }
-    $gitRoot = (Resolve-Path -LiteralPath $gitRootOutput[0]).Path
-    $headTracked = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
-    $indexTracked = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
-
-    foreach ($path in @(& git -c core.quotepath=false -C $gitRoot ls-tree -r --name-only HEAD 2>$null)) {
-        if ($path) {
-            $headTracked.Add($path.Replace("\", "/")) | Out-Null
-        }
-    }
-    if ($LASTEXITCODE -ne 0) {
-        throw "Unable to read paths from Git HEAD baseline: $gitRoot"
-    }
-
-    foreach ($path in @(& git -c core.quotepath=false -C $gitRoot ls-files 2>$null)) {
-        if ($path) {
-            $indexTracked.Add($path.Replace("\", "/")) | Out-Null
-        }
-    }
-    if ($LASTEXITCODE -ne 0) {
-        throw "Unable to read paths from Git index: $gitRoot"
-    }
-
-    return [pscustomobject]@{
-        Root = $gitRoot
-        HeadTracked = $headTracked
-        IndexTracked = $indexTracked
-    }
-}
-
-function Test-GitPathMatchesHead {
-    param(
-        $GitBaseline,
-        [string]$GitRelative,
-        [string]$WorkingPath
-    )
-
-    $headOutput = @(& git -C $GitBaseline.Root rev-parse --verify "HEAD:$GitRelative" 2>$null)
-    if ($LASTEXITCODE -ne 0 -or $headOutput.Count -ne 1) {
-        throw "Unable to read Git HEAD object for package path: $GitRelative"
-    }
-
-    $indexOutput = @(& git -C $GitBaseline.Root rev-parse --verify ":$GitRelative" 2>$null)
-    if ($LASTEXITCODE -ne 0 -or $indexOutput.Count -ne 1) {
-        return $false
-    }
-    if ($headOutput[0].Trim() -cne $indexOutput[0].Trim()) {
-        return $false
-    }
-
-    $workingOutput = @(
-        & git -C $GitBaseline.Root hash-object "--path=$GitRelative" -- $WorkingPath 2>$null
-    )
-    if ($LASTEXITCODE -ne 0 -or $workingOutput.Count -ne 1) {
-        throw "Unable to compare package path with Git HEAD: $GitRelative"
-    }
-    return $headOutput[0].Trim() -ceq $workingOutput[0].Trim()
-}
-
 function Get-PlanConflicts {
-    param(
-        [object[]]$Plan,
-        $GitBaseline
-    )
-
-    $conflicts = [System.Collections.Generic.List[string]]::new()
-    foreach ($record in $Plan) {
-        if ($record.Action -eq "UNCHANGED") {
-            continue
-        }
-        if ($record.Action -eq "CONFLICT") {
-            $conflicts.Add("$($record.RelativePath): $($record.Reason)") | Out-Null
-            continue
-        }
-
-        if ($null -eq $GitBaseline) {
-            if ($record.Action -eq "REPLACE") {
-                $conflicts.Add("$($record.RelativePath): existing file differs and no Git baseline is available") | Out-Null
-            } elseif ($record.Action -eq "REMOVE") {
-                $conflicts.Add("$($record.RelativePath): retired package file exists and no Git baseline is available") | Out-Null
-            }
-            continue
-        }
-
-        $gitRelative = [System.IO.Path]::GetRelativePath($GitBaseline.Root, $record.TargetPath).Replace("\", "/")
-        if ($gitRelative -eq ".." -or $gitRelative.StartsWith("../")) {
-            $conflicts.Add("$($record.RelativePath): target path is outside the Git baseline") | Out-Null
-            continue
-        }
-
-        if ($record.Action -eq "CREATE") {
-            if (
-                $GitBaseline.HeadTracked.Contains($gitRelative) -or
-                $GitBaseline.IndexTracked.Contains($gitRelative)
-            ) {
-                $conflicts.Add("$($record.RelativePath): tracked package file is deleted in the working tree") | Out-Null
-            }
-            continue
-        }
-
-        if (-not $GitBaseline.HeadTracked.Contains($gitRelative)) {
-            $message = if ($record.Action -eq "REMOVE") {
-                "retired package file exists and is not tracked by the Git baseline"
-            } else {
-                "existing file differs and is not tracked by the Git baseline"
-            }
-            $conflicts.Add("$($record.RelativePath): $message") | Out-Null
-        } elseif (
-            -not $GitBaseline.IndexTracked.Contains($gitRelative) -or
-            -not (Test-GitPathMatchesHead $GitBaseline $gitRelative $record.TargetPath)
-        ) {
-            $conflicts.Add("$($record.RelativePath): tracked package file has uncommitted changes") | Out-Null
-        }
-    }
-    return @($conflicts)
-}
-
-function Apply-PackagePlan {
     param([object[]]$Plan)
 
-    foreach ($record in $Plan) {
+    return @(
+        $Plan |
+            Where-Object Action -eq "CONFLICT" |
+            ForEach-Object { "$($_.RelativePath): $($_.Reason)" }
+    )
+}
+
+function Apply-PackagePlanContent {
+    param([object[]]$Plan)
+
+    foreach ($record in @($Plan | Where-Object MetadataOrder -eq 0)) {
         if ($record.Action -eq "REMOVE") {
             Remove-Item -LiteralPath $record.TargetPath -Force
             $script:RemovedFileCount += 1
@@ -516,6 +826,121 @@ function Apply-PackagePlan {
         Ensure-Directory (Split-Path -Parent $record.TargetPath) $false
         Copy-Item -LiteralPath $record.SourcePath -Destination $record.TargetPath -Force
         $script:FileCount += 1
+    }
+}
+
+function Write-PackageMetadataAtomically {
+    param(
+        [string]$SourcePath,
+        [string]$TargetPath
+    )
+
+    $targetDirectory = Split-Path -Parent $TargetPath
+    Ensure-Directory $targetDirectory $false
+    $targetName = Split-Path -Leaf $TargetPath
+    $temporaryPath = Join-Path $targetDirectory (".$targetName.upgrade-" + [Guid]::NewGuid().ToString("N") + ".tmp")
+    $backupPath = Join-Path $targetDirectory (".$targetName.upgrade-backup-" + [Guid]::NewGuid().ToString("N") + ".tmp")
+    try {
+        Copy-Item -LiteralPath $SourcePath -Destination $temporaryPath
+        if (Test-Path -LiteralPath $TargetPath -PathType Leaf) {
+            [System.IO.File]::Replace($temporaryPath, $TargetPath, $backupPath)
+        } else {
+            [System.IO.File]::Move($temporaryPath, $TargetPath)
+        }
+        $script:FileCount += 1
+    }
+    finally {
+        if (Test-Path -LiteralPath $temporaryPath) {
+            Remove-Item -LiteralPath $temporaryPath -Force
+        }
+        if (Test-Path -LiteralPath $backupPath) {
+            Remove-Item -LiteralPath $backupPath -Force
+        }
+    }
+}
+
+function Get-CompleteInventorySnapshotContent {
+    param(
+        [object]$Metadata,
+        [bool]$ClaimInventoryFile = $false
+    )
+
+    $entries = [System.Collections.Generic.List[string]]::new()
+    if ($ClaimInventoryFile) {
+        $entries.Add("active scripts/package-files.txt") | Out-Null
+    }
+    foreach ($relativePath in $Metadata.ActivePaths.Keys) {
+        $entries.Add("active $relativePath") | Out-Null
+    }
+    foreach ($relativePath in $Metadata.RemovedPaths) {
+        $entries.Add("remove $relativePath") | Out-Null
+    }
+    $sortedEntries = $entries.ToArray()
+    [System.Array]::Sort($sortedEntries, [System.StringComparer]::Ordinal)
+
+    $lines = [System.Collections.Generic.List[string]]::new()
+    $lines.Add("# Complete package-ownership activation inventory for upgrade-manifest.txt.") | Out-Null
+    $lines.Add($CompleteInventoryMarker) | Out-Null
+    $lines.Add("# Every active file and retired path is listed; the final inventory is committed last.") | Out-Null
+    $lines.Add("# Format: active <path> or remove <path>.") | Out-Null
+    foreach ($entry in $sortedEntries) {
+        $lines.Add($entry) | Out-Null
+    }
+    return [string]::Join("`n", $lines) + "`n"
+}
+
+function Write-PackageMetadataContentAtomically {
+    param(
+        [string]$Content,
+        [string]$TargetPath
+    )
+
+    $targetDirectory = Split-Path -Parent $TargetPath
+    Ensure-Directory $targetDirectory $false
+    $targetName = Split-Path -Leaf $TargetPath
+    $temporaryPath = Join-Path $targetDirectory (".$targetName.upgrade-" + [Guid]::NewGuid().ToString("N") + ".tmp")
+    $backupPath = Join-Path $targetDirectory (".$targetName.upgrade-backup-" + [Guid]::NewGuid().ToString("N") + ".tmp")
+    try {
+        [System.IO.File]::WriteAllText($temporaryPath, $Content, $Utf8NoBomStrict)
+        if (Test-Path -LiteralPath $TargetPath -PathType Leaf) {
+            [System.IO.File]::Replace($temporaryPath, $TargetPath, $backupPath)
+        } else {
+            [System.IO.File]::Move($temporaryPath, $TargetPath)
+        }
+        $script:FileCount += 1
+    }
+    finally {
+        if (Test-Path -LiteralPath $temporaryPath) {
+            Remove-Item -LiteralPath $temporaryPath -Force
+        }
+        if (Test-Path -LiteralPath $backupPath) {
+            Remove-Item -LiteralPath $backupPath -Force
+        }
+    }
+}
+
+function Apply-PackagePlanMetadata {
+    param(
+        [object[]]$Plan,
+        [object]$OldMetadata,
+        [string]$TargetPath
+    )
+
+    if ($OldMetadata.InventoryMode -in @("directories", "none")) {
+        $oldInventoryPath = Join-Path $TargetPath "scripts/package-files.txt"
+        $snapshotContent = Get-CompleteInventorySnapshotContent `
+            $OldMetadata `
+            ($OldMetadata.InventoryMode -eq "none")
+        Write-PackageMetadataContentAtomically $snapshotContent $oldInventoryPath
+    }
+
+    foreach ($metadataOrder in 1, 2) {
+        foreach ($record in @($Plan | Where-Object MetadataOrder -eq $metadataOrder)) {
+            if ($record.Action -notin @("CREATE", "REPLACE")) {
+                continue
+            }
+            Write-PackageMetadataAtomically $record.SourcePath $record.TargetPath
+        }
     }
 }
 
@@ -559,7 +984,8 @@ $RequiredLocalGitIgnoreLines = @(
     "tmp/",
     ".claude/",
     ".claudian/",
-    ".codex/"
+    ".codex/",
+    ".obsidian/"
 )
 
 function Test-GitIgnoreContainsLine {
@@ -586,33 +1012,16 @@ function Add-GitIgnoreLine {
     if (Test-GitIgnoreContainsLine $GitIgnorePath $Line) {
         return
     }
-    $content = Get-Content -LiteralPath $GitIgnorePath -Raw
-    if ($content.Length -gt 0 -and -not $content.EndsWith("`n")) {
-        Add-Content -LiteralPath $GitIgnorePath -Value "" -Encoding UTF8
+    $existingBytes = [System.IO.File]::ReadAllBytes($GitIgnorePath)
+    $separator = ""
+    if (
+        $existingBytes.Length -gt 0 -and
+        $existingBytes[$existingBytes.Length - 1] -ne [byte]0x0A -and
+        $existingBytes[$existingBytes.Length - 1] -ne [byte]0x0D
+    ) {
+        $separator = "`n"
     }
-    Add-Content -LiteralPath $GitIgnorePath -Value $Line -Encoding UTF8
-}
-
-function Test-TrackedWikiRuntime {
-    param([string]$TargetPath)
-
-    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-        return $false
-    }
-    $insideWorkTree = & git -C $TargetPath rev-parse --is-inside-work-tree 2>$null
-    if ($LASTEXITCODE -ne 0 -or $insideWorkTree -notcontains "true") {
-        return $false
-    }
-    $trackedPaths = @(& git -C $TargetPath ls-files -- wiki reviews logs questions artifacts intake/processed intake/logs raw inbox 2>$null)
-    if ($LASTEXITCODE -ne 0) {
-        return $false
-    }
-    foreach ($trackedPath in $trackedPaths) {
-        if ($trackedPath.Replace("\", "/") -notmatch "(^|/)inbox/\.gitkeep$") {
-            return $true
-        }
-    }
-    return $false
+    [System.IO.File]::AppendAllText($GitIgnorePath, "$separator$Line`n", $Utf8NoBomStrict)
 }
 
 function Ensure-GitIgnoreFile {
@@ -621,15 +1030,6 @@ function Ensure-GitIgnoreFile {
     $gitIgnorePath = Join-Path $TargetPath ".gitignore"
     $templatePath = Join-Path $PackagePath ".gitignore"
     if (-not (Test-Path -LiteralPath $gitIgnorePath)) {
-        if (Test-TrackedWikiRuntime $TargetPath) {
-            New-Item -ItemType File -Path $gitIgnorePath -Force | Out-Null
-            foreach ($line in $RequiredLocalGitIgnoreLines) {
-                Add-GitIgnoreLine $gitIgnorePath $line
-            }
-            $script:CreatedRuntimeCount += 1
-            Write-Host "Created baseline-only .gitignore because durable wiki runtime files are already tracked."
-            return
-        }
         if (-not (Test-Path -LiteralPath $templatePath -PathType Leaf)) {
             throw ".gitignore template not found in package: $templatePath"
         }
@@ -659,17 +1059,18 @@ function Ensure-RuntimeStructure {
 
 $TargetPath = [System.IO.Path]::GetFullPath($TargetRoot)
 Assert-TargetRootPath $TargetPath
+Assert-PackageSourcePathSafe $PackagePath "scripts/upgrade-manifest.txt" "file" "Upgrade manifest"
+Assert-PackageSourcePathSafe $PackagePath "scripts/package-files.txt" "file" "Package file inventory"
 foreach ($templateName in @("PROJECT.md", ".gitignore")) {
-    $templatePath = Join-Path $PackagePath $templateName
-    if (-not (Test-Path -LiteralPath $templatePath -PathType Leaf)) {
-        throw "Package template not found: $templatePath"
-    }
+    Assert-PackageSourcePathSafe $PackagePath $templateName "file" "Package template"
 }
-$sameRoot = [string]::Equals($PackagePath, $TargetPath, [System.StringComparison]::OrdinalIgnoreCase)
-$plan = Get-PackagePlan $TargetPath $sameRoot
-$gitBaseline = if ($sameRoot) { $null } else { Get-GitBaseline $TargetPath }
+$sameRoot = [string]::Equals($PackagePath, $TargetPath, $RootPathComparison)
+$newMetadata = Read-PackageOwnershipMetadata $PackagePath $ManifestPath $InventoryPath $true "New package"
+$script:ManifestDirectoryCount = $newMetadata.DirectoryCount
+$oldMetadata = Get-OldPackageOwnershipMetadata $TargetPath
+$plan = Get-PackagePlan $TargetPath $sameRoot $newMetadata $oldMetadata
 $conflicts = @(
-    Get-PlanConflicts $plan $gitBaseline
+    Get-PlanConflicts $plan
     Get-TargetStructureConflicts $TargetPath $plan
 )
 
@@ -692,17 +1093,23 @@ if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
 Test-PackageLock
 
 Ensure-Directory $TargetPath $false
-Apply-PackagePlan $plan
+Apply-PackagePlanContent $plan
 Ensure-ProjectFile $TargetPath
 Ensure-GitIgnoreFile $TargetPath
 Ensure-RuntimeStructure $TargetPath
 
 Push-Location $TargetPath
 try {
-    uv sync --locked --default-index https://pypi.org/simple
+    & uv sync --locked --default-index https://pypi.org/simple
+    if ($LASTEXITCODE -ne 0) {
+        throw "Package dependency sync failed; ownership metadata was not advanced."
+    }
 }
 finally {
     Pop-Location
+}
+if (-not $sameRoot) {
+    Apply-PackagePlanMetadata $plan $oldMetadata $TargetPath
 }
 
 Write-Host "Upgraded package files at: $TargetPath"

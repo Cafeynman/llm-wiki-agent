@@ -21,10 +21,19 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+runtime_os="$(uname -s 2>/dev/null || true)"
+case "$runtime_os" in
+  MINGW*|MSYS*|CYGWIN*)
+    echo "upgrade.sh supports macOS and Linux only; use scripts/upgrade.ps1 on Windows." >&2
+    exit 1
+    ;;
+esac
+
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 package_root="$(cd "$script_dir/.." && pwd -P)"
 manifest_path="$script_dir/upgrade-manifest.txt"
 inventory_path="$script_dir/package-files.txt"
+complete_inventory_marker="# inventory-format: complete"
 
 if [[ ! -f "$manifest_path" ]]; then
   echo "Upgrade manifest not found: $manifest_path" >&2
@@ -35,25 +44,25 @@ if [[ ! -f "$inventory_path" ]]; then
   exit 1
 fi
 
-inventory_paths=()
-while IFS= read -r inventory_line || [[ -n "$inventory_line" ]]; do
-  inventory_line="${inventory_line%$'\r'}"
-  [[ -z "${inventory_line//[[:space:]]/}" ]] && continue
-  [[ "$inventory_line" =~ ^[[:space:]]*# ]] && continue
-  inventory_paths+=("${inventory_line//\\//}")
-done < "$inventory_path"
 normalize_absolute_path() {
   local path="$1"
   local index
   local part
   local stack=()
+  case "$path" in
+    [[:alpha:]]:[\\/]* )
+      echo "Windows drive-style paths are not supported by upgrade.sh; use scripts/upgrade.ps1 on Windows." >&2
+      exit 1
+      ;;
+  esac
   if [[ "$path" != /* ]]; then
     path="$PWD/$path"
   fi
   local IFS='/'
   local parts=()
   read -r -a parts <<< "$path"
-  for part in "${parts[@]}"; do
+  for ((index = 0; index < ${#parts[@]}; index++)); do
+    part="${parts[$index]}"
     case "$part" in
       ""|.) ;;
       ..)
@@ -79,10 +88,12 @@ check_target_root_path() {
   local path="$1"
   local current=""
   local segment
+  local index
   local IFS='/'
   local segments=()
   read -r -a segments <<< "${path#/}"
-  for segment in "${segments[@]}"; do
+  for ((index = 0; index < ${#segments[@]}; index++)); do
+    segment="${segments[$index]}"
     [[ -z "$segment" ]] && continue
     current="$current/$segment"
     if [[ -L "$current" ]]; then
@@ -114,7 +125,8 @@ plan_source=()
 plan_target=()
 plan_action=()
 plan_reason=()
-manifest_directory_count=0
+plan_metadata_order=()
+plan_seen_keys=()
 runtime_directories=(
   inbox raw/digested raw/needs-review raw/ignored raw/unsupported
   intake/tmp intake/processed intake/logs reviews/source-review reviews/reflection
@@ -126,89 +138,783 @@ runtime_files=(
 structure_conflicts=()
 structure_issue_keys=()
 
-contains_value() {
-  local needle="$1"
-  shift
-  local value
-  for value in "$@"; do
-    if [[ "$value" == "$needle" ]]; then
+trim_text() {
+  local value="$1"
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
+  REPLY="$value"
+}
+
+normalize_package_path() {
+  local raw_path="$1"
+  local context="$2"
+  local relative_path="${raw_path//\\//}"
+  local segment
+  local index
+  trim_text "$relative_path"
+  relative_path="$REPLY"
+  case "$relative_path" in
+    ""|/*|*/|*//*|*:*)
+      echo "$context contains an invalid package path: $raw_path" >&2
+      exit 1
+      ;;
+  esac
+  local IFS='/'
+  local segments=()
+  read -r -a segments <<< "$relative_path"
+  for ((index = 0; index < ${#segments[@]}; index++)); do
+    segment="${segments[$index]}"
+    if [[ -z "$segment" || "$segment" == "." || "$segment" == ".." ]]; then
+      echo "$context contains an invalid package path: $raw_path" >&2
+      exit 1
+    fi
+  done
+  REPLY="$relative_path"
+}
+
+active_owners=()
+active_keys=()
+active_paths=()
+active_sources=()
+removed_owners=()
+removed_keys=()
+removed_paths=()
+new_directory_count=0
+old_directory_count=0
+new_inventory_mode="none"
+old_inventory_mode="none"
+
+lowercase_text() {
+  local value="$1"
+  value="${value//A/a}"
+  value="${value//B/b}"
+  value="${value//C/c}"
+  value="${value//D/d}"
+  value="${value//E/e}"
+  value="${value//F/f}"
+  value="${value//G/g}"
+  value="${value//H/h}"
+  value="${value//I/i}"
+  value="${value//J/j}"
+  value="${value//K/k}"
+  value="${value//L/l}"
+  value="${value//M/m}"
+  value="${value//N/n}"
+  value="${value//O/o}"
+  value="${value//P/p}"
+  value="${value//Q/q}"
+  value="${value//R/r}"
+  value="${value//S/s}"
+  value="${value//T/t}"
+  value="${value//U/u}"
+  value="${value//V/v}"
+  value="${value//W/w}"
+  value="${value//X/x}"
+  value="${value//Y/y}"
+  value="${value//Z/z}"
+  REPLY="$value"
+}
+
+find_active() {
+  local owner="$1"
+  local key="$2"
+  local index
+  FOUND_INDEX=-1
+  for ((index = 0; index < ${#active_keys[@]}; index++)); do
+    if [[ "${active_owners[$index]}" == "$owner" && "${active_keys[$index]}" == "$key" ]]; then
+      FOUND_INDEX="$index"
       return 0
     fi
   done
-  return 1
+  return 0
+}
+
+find_removed() {
+  local owner="$1"
+  local key="$2"
+  local index
+  FOUND_INDEX=-1
+  for ((index = 0; index < ${#removed_keys[@]}; index++)); do
+    if [[ "${removed_owners[$index]}" == "$owner" && "${removed_keys[$index]}" == "$key" ]]; then
+      FOUND_INDEX="$index"
+      return 0
+    fi
+  done
+  return 0
+}
+
+add_active() {
+  active_owners+=("$1")
+  active_keys+=("$2")
+  active_paths+=("$3")
+  active_sources+=("$4")
+}
+
+add_removed() {
+  removed_owners+=("$1")
+  removed_keys+=("$2")
+  removed_paths+=("$3")
+}
+
+list_active_keys() {
+  local owner="$1"
+  local index
+  for ((index = 0; index < ${#active_keys[@]}; index++)); do
+    if [[ "${active_owners[$index]}" == "$owner" ]]; then
+      printf '%s\n' "${active_keys[$index]}"
+    fi
+  done
+}
+
+list_removed_keys() {
+  local owner="$1"
+  local index
+  for ((index = 0; index < ${#removed_keys[@]}; index++)); do
+    if [[ "${removed_owners[$index]}" == "$owner" ]]; then
+      printf '%s\n' "${removed_keys[$index]}"
+    fi
+  done
+}
+
+assert_package_source_path_safe() {
+  local root_path="$1"
+  local relative_path="$2"
+  local expected_type="$3"
+  local context="$4"
+  local current="$root_path"
+  local index
+  local segments=()
+  local IFS='/'
+  read -r -a segments <<< "$relative_path"
+  for ((index = 0; index < ${#segments[@]}; index++)); do
+    current="$current/${segments[$index]}"
+    if [[ -L "$current" ]]; then
+      echo "$context contains a symbolic link: $relative_path" >&2
+      exit 1
+    fi
+    if [[ ! -e "$current" ]]; then
+      echo "$context not found: $relative_path" >&2
+      exit 1
+    fi
+    if [[ "$index" -lt $((${#segments[@]} - 1)) && ! -d "$current" ]]; then
+      echo "$context contains a non-directory ancestor: $relative_path" >&2
+      exit 1
+    fi
+    if [[ "$index" -eq $((${#segments[@]} - 1)) && "$expected_type" == "file" && ! -f "$current" ]]; then
+      echo "$context is not a regular file: $relative_path" >&2
+      exit 1
+    fi
+    if [[ "$index" -eq $((${#segments[@]} - 1)) && "$expected_type" == "directory" && ! -d "$current" ]]; then
+      echo "$context is not a directory: $relative_path" >&2
+      exit 1
+    fi
+  done
+}
+
+read_ownership_metadata() {
+  local root_path="$1"
+  local metadata_manifest="$2"
+  local metadata_inventory="$3"
+  local require_source_files="$4"
+  local owner="$5"
+  local label="$6"
+  local inventory_mode="directories"
+  local manifest_inventory_mode="directories"
+  local inventory_directive_seen=0
+  local ownership_entry_seen=0
+  local complete_inventory_marker_seen=0
+  local manifest_direct_keys=()
+  local manifest_direct_paths=()
+  local manifest_directory_keys=()
+  local manifest_directory_paths=()
+  local manifest_removed_keys=()
+  local manifest_removed_paths=()
+  local manifest_explicit_keys=()
+  local inventory_states=()
+  local inventory_keys=()
+  local inventory_paths=()
+  local consumed_inventory_keys=()
+  local line
+  local kind
+  local raw_relative
+  local relative_path
+  local key
+  local index
+  local manifest_index
+  local inventory_index
+  local active_index
+  local removed_index
+  local found
+  local declared_active
+  local declared_removed
+  local consumed_found
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%$'\r'}"
+    line="${line#$'\xEF\xBB\xBF'}"
+    trim_text "$line"
+    line="$REPLY"
+    if [[ "$line" == "$complete_inventory_marker" ]]; then
+      if [[ "$complete_inventory_marker_seen" -eq 1 ]]; then
+        echo "$label inventory contains a duplicate complete-format marker." >&2
+        exit 1
+      fi
+      complete_inventory_marker_seen=1
+    fi
+  done < "$metadata_inventory"
+
+  if [[ -n "$metadata_manifest" ]]; then
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      line="${line%$'\r'}"
+      line="${line#$'\xEF\xBB\xBF'}"
+      trim_text "$line"
+      line="$REPLY"
+      [[ -z "$line" || "$line" == \#* ]] && continue
+      if [[ "$line" != *[[:space:]]* ]]; then
+        echo "Invalid $label manifest line: $line" >&2
+        exit 1
+      fi
+      kind="${line%%[[:space:]]*}"
+      raw_relative="${line#"$kind"}"
+      trim_text "$raw_relative"
+      raw_relative="$REPLY"
+
+      if [[ "$kind" == "inventory" ]]; then
+        if [[ "$raw_relative" != "all" ]]; then
+          echo "Invalid $label inventory directive: $line" >&2
+          exit 1
+        fi
+        if [[ "$inventory_directive_seen" -eq 1 || "$ownership_entry_seen" -eq 1 ]]; then
+          echo "$label manifest must declare 'inventory all' exactly once before ownership entries." >&2
+          exit 1
+        fi
+        inventory_directive_seen=1
+        inventory_mode="all"
+        continue
+      fi
+
+      case "$kind" in
+        file|dir|remove) ;;
+        *)
+          echo "Invalid $label manifest entry kind: $kind" >&2
+          exit 1
+          ;;
+      esac
+
+      normalize_package_path "$raw_relative" "$label manifest"
+      relative_path="$REPLY"
+      lowercase_text "$relative_path"
+      key="$REPLY"
+      ownership_entry_seen=1
+
+      if [[ "$kind" == "file" || "$kind" == "remove" ]]; then
+        for ((index = 0; index < ${#manifest_explicit_keys[@]}; index++)); do
+          if [[ "${manifest_explicit_keys[$index]}" == "$key" ]]; then
+            echo "$label manifest contains a duplicate package path: $relative_path" >&2
+            exit 1
+          fi
+        done
+        manifest_explicit_keys+=("$key")
+      fi
+
+      case "$kind" in
+        file)
+          manifest_direct_keys+=("$key")
+          manifest_direct_paths+=("$relative_path")
+          ;;
+        dir)
+          for ((index = 0; index < ${#manifest_directory_keys[@]}; index++)); do
+            if [[ "${manifest_directory_keys[$index]}" == "$key" ]]; then
+              echo "$label manifest contains a duplicate directory entry: $relative_path" >&2
+              exit 1
+            fi
+          done
+          manifest_directory_keys+=("$key")
+          manifest_directory_paths+=("$relative_path")
+          ;;
+        remove)
+          if [[ "$key" == "scripts/upgrade-manifest.txt" || "$key" == "scripts/package-files.txt" ]]; then
+            echo "$label manifest cannot retire ownership metadata: $relative_path" >&2
+            exit 1
+          fi
+          manifest_removed_keys+=("$key")
+          manifest_removed_paths+=("$relative_path")
+          ;;
+      esac
+    done < "$metadata_manifest"
+  fi
+
+  manifest_inventory_mode="$inventory_mode"
+  if [[ "$require_source_files" -eq 1 && "$manifest_inventory_mode" != "all" ]]; then
+    echo "$label manifest must declare 'inventory all' before ownership entries." >&2
+    exit 1
+  fi
+  if [[ "$require_source_files" -eq 1 && "$complete_inventory_marker_seen" -eq 0 ]]; then
+    echo "$label inventory must declare '$complete_inventory_marker'." >&2
+    exit 1
+  fi
+  if [[ -z "$metadata_manifest" && "$complete_inventory_marker_seen" -eq 0 ]]; then
+    echo "$label ownership metadata is incomplete; a standalone inventory must declare '$complete_inventory_marker'." >&2
+    exit 1
+  fi
+  if [[ "$complete_inventory_marker_seen" -eq 1 ]]; then
+    inventory_mode="all"
+  elif [[ "$manifest_inventory_mode" == "all" ]]; then
+    echo "$label complete manifest is paired with an unmarked inventory; restore the matching ownership metadata pair and rerun." >&2
+    exit 1
+  fi
+
+  if [[ "$owner" == "new" ]]; then
+    new_directory_count="${#manifest_directory_paths[@]}"
+    new_inventory_mode="$inventory_mode"
+  else
+    old_directory_count="${#manifest_directory_paths[@]}"
+    old_inventory_mode="$inventory_mode"
+  fi
+
+  if [[ "$inventory_mode" == "directories" ]]; then
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      line="${line%$'\r'}"
+      line="${line#$'\xEF\xBB\xBF'}"
+      trim_text "$line"
+      line="$REPLY"
+      [[ -z "$line" || "$line" == \#* ]] && continue
+      normalize_package_path "$line" "$label inventory"
+      relative_path="$REPLY"
+      lowercase_text "$relative_path"
+      key="$REPLY"
+      for ((index = 0; index < ${#inventory_keys[@]}; index++)); do
+        if [[ "${inventory_keys[$index]}" == "$key" ]]; then
+          echo "$label inventory contains a duplicate package path: $relative_path" >&2
+          exit 1
+        fi
+      done
+      inventory_keys+=("$key")
+      inventory_paths+=("$relative_path")
+    done < "$metadata_inventory"
+
+    for ((manifest_index = 0; manifest_index < ${#manifest_direct_paths[@]}; manifest_index++)); do
+      relative_path="${manifest_direct_paths[$manifest_index]}"
+      key="${manifest_direct_keys[$manifest_index]}"
+      add_active "$owner" "$key" "$relative_path" "$root_path/$relative_path"
+    done
+
+    for ((manifest_index = 0; manifest_index < ${#manifest_directory_paths[@]}; manifest_index++)); do
+      local directory_path="${manifest_directory_paths[$manifest_index]}"
+      local expanded_count=0
+      for ((inventory_index = 0; inventory_index < ${#inventory_paths[@]}; inventory_index++)); do
+        relative_path="${inventory_paths[$inventory_index]}"
+        [[ "$relative_path" == "$directory_path/"* ]] || continue
+        key="${inventory_keys[$inventory_index]}"
+        find_active "$owner" "$key"
+        active_index="$FOUND_INDEX"
+        find_removed "$owner" "$key"
+        removed_index="$FOUND_INDEX"
+        if [[ "$active_index" -ge 0 || "$removed_index" -ge 0 ]]; then
+          echo "$label manifest contains a duplicate package path: $relative_path" >&2
+          exit 1
+        fi
+        add_active "$owner" "$key" "$relative_path" "$root_path/$relative_path"
+        consumed_inventory_keys+=("$key")
+        expanded_count=$((expanded_count + 1))
+      done
+      if [[ "$expanded_count" -eq 0 ]]; then
+        echo "$label manifest directory has no files in its inventory: $directory_path" >&2
+        exit 1
+      fi
+    done
+
+    for ((manifest_index = 0; manifest_index < ${#manifest_removed_paths[@]}; manifest_index++)); do
+      relative_path="${manifest_removed_paths[$manifest_index]}"
+      key="${manifest_removed_keys[$manifest_index]}"
+      find_active "$owner" "$key"
+      active_index="$FOUND_INDEX"
+      find_removed "$owner" "$key"
+      removed_index="$FOUND_INDEX"
+      if [[ "$active_index" -ge 0 || "$removed_index" -ge 0 ]]; then
+        echo "$label manifest contains a duplicate package path: $relative_path" >&2
+        exit 1
+      fi
+      add_removed "$owner" "$key" "$relative_path"
+    done
+
+    for ((inventory_index = 0; inventory_index < ${#inventory_paths[@]}; inventory_index++)); do
+      relative_path="${inventory_paths[$inventory_index]}"
+      key="${inventory_keys[$inventory_index]}"
+      consumed_found=0
+      for ((index = 0; index < ${#consumed_inventory_keys[@]}; index++)); do
+        if [[ "${consumed_inventory_keys[$index]}" == "$key" ]]; then
+          consumed_found=1
+          break
+        fi
+      done
+      if [[ "$consumed_found" -eq 0 ]]; then
+        echo "$label inventory path is not owned by a manifest directory: $relative_path" >&2
+        exit 1
+      fi
+    done
+    return
+  fi
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%$'\r'}"
+    line="${line#$'\xEF\xBB\xBF'}"
+    trim_text "$line"
+    line="$REPLY"
+    [[ -z "$line" || "$line" == \#* ]] && continue
+    if [[ "$line" != *[[:space:]]* ]]; then
+      echo "Invalid $label complete inventory line: $line" >&2
+      exit 1
+    fi
+    local inventory_state="${line%%[[:space:]]*}"
+    raw_relative="${line#"$inventory_state"}"
+    trim_text "$raw_relative"
+    raw_relative="$REPLY"
+    if [[ "$inventory_state" != "active" && "$inventory_state" != "remove" ]]; then
+      echo "Invalid $label complete inventory line: $line" >&2
+      exit 1
+    fi
+    normalize_package_path "$raw_relative" "$label inventory"
+    relative_path="$REPLY"
+    lowercase_text "$relative_path"
+    key="$REPLY"
+    for ((index = 0; index < ${#inventory_keys[@]}; index++)); do
+      if [[ "${inventory_keys[$index]}" == "$key" ]]; then
+        echo "$label inventory contains a duplicate package path: $relative_path" >&2
+        exit 1
+      fi
+    done
+    inventory_states+=("$inventory_state")
+    inventory_keys+=("$key")
+    inventory_paths+=("$relative_path")
+  done < "$metadata_inventory"
+
+  for ((inventory_index = 0; inventory_index < ${#inventory_paths[@]}; inventory_index++)); do
+    local inventory_state="${inventory_states[$inventory_index]}"
+    relative_path="${inventory_paths[$inventory_index]}"
+    key="${inventory_keys[$inventory_index]}"
+    declared_active=0
+    for ((index = 0; index < ${#manifest_direct_keys[@]}; index++)); do
+      if [[ "${manifest_direct_keys[$index]}" == "$key" ]]; then
+        declared_active=1
+        break
+      fi
+    done
+    if [[ "$declared_active" -eq 0 ]]; then
+      for ((index = 0; index < ${#manifest_directory_paths[@]}; index++)); do
+        if [[ "$relative_path" == "${manifest_directory_paths[$index]}/"* ]]; then
+          declared_active=1
+          break
+        fi
+      done
+    fi
+    declared_removed=0
+    for ((index = 0; index < ${#manifest_removed_keys[@]}; index++)); do
+      if [[ "${manifest_removed_keys[$index]}" == "$key" ]]; then
+        declared_removed=1
+        break
+      fi
+    done
+
+    if [[ "$require_source_files" -eq 1 ]]; then
+      if [[ "$declared_active" -eq 0 && "$declared_removed" -eq 0 ]]; then
+        echo "$label inventory path is not classified by the manifest: $relative_path" >&2
+        exit 1
+      fi
+      if [[ "$inventory_state" == "active" && ( "$declared_active" -eq 0 || "$declared_removed" -eq 1 ) ]]; then
+        echo "$label inventory classification does not match the manifest: active $relative_path" >&2
+        exit 1
+      fi
+      if [[ "$inventory_state" == "remove" && "$declared_removed" -eq 0 ]]; then
+        echo "$label inventory classification does not match the manifest: remove $relative_path" >&2
+        exit 1
+      fi
+    fi
+
+    if [[ "$inventory_state" == "active" ]]; then
+      if [[ "$require_source_files" -eq 1 ]]; then
+        assert_package_source_path_safe "$root_path" "$relative_path" file "$label active inventory entry"
+      fi
+      add_active "$owner" "$key" "$relative_path" "$root_path/$relative_path"
+    else
+      add_removed "$owner" "$key" "$relative_path"
+    fi
+  done
+
+  if [[ "$require_source_files" -eq 1 ]]; then
+    for ((manifest_index = 0; manifest_index < ${#manifest_direct_paths[@]}; manifest_index++)); do
+      relative_path="${manifest_direct_paths[$manifest_index]}"
+      key="${manifest_direct_keys[$manifest_index]}"
+      found=0
+      for ((inventory_index = 0; inventory_index < ${#inventory_keys[@]}; inventory_index++)); do
+        if [[ "${inventory_keys[$inventory_index]}" == "$key" && "${inventory_states[$inventory_index]}" == "active" ]]; then
+          found=1
+          break
+        fi
+      done
+      if [[ "$found" -eq 0 ]]; then
+        echo "$label inventory is missing active manifest path: $relative_path" >&2
+        exit 1
+      fi
+    done
+
+    for ((manifest_index = 0; manifest_index < ${#manifest_removed_paths[@]}; manifest_index++)); do
+      relative_path="${manifest_removed_paths[$manifest_index]}"
+      key="${manifest_removed_keys[$manifest_index]}"
+      found=0
+      for ((inventory_index = 0; inventory_index < ${#inventory_keys[@]}; inventory_index++)); do
+        if [[ "${inventory_keys[$inventory_index]}" == "$key" && "${inventory_states[$inventory_index]}" == "remove" ]]; then
+          found=1
+          break
+        fi
+      done
+      if [[ "$found" -eq 0 ]]; then
+        echo "$label inventory is missing retired manifest path: $relative_path" >&2
+        exit 1
+      fi
+    done
+
+    for ((manifest_index = 0; manifest_index < ${#manifest_directory_paths[@]}; manifest_index++)); do
+      local directory_path="${manifest_directory_paths[$manifest_index]}"
+      found=0
+      for ((inventory_index = 0; inventory_index < ${#inventory_paths[@]}; inventory_index++)); do
+        if [[ "${inventory_states[$inventory_index]}" == "active" && "${inventory_paths[$inventory_index]}" == "$directory_path/"* ]]; then
+          found=1
+          break
+        fi
+      done
+      if [[ "$found" -eq 0 ]]; then
+        echo "$label manifest directory has no active files in its inventory: $directory_path" >&2
+        exit 1
+      fi
+      assert_package_source_path_safe "$root_path" "$directory_path" directory "$label manifest directory entry"
+    done
+  fi
+}
+
+check_ownership_metadata_path_safe() {
+  local relative_path="$1"
+  local current="$target_path"
+  local segment
+  local index
+  local IFS='/'
+  local segments=()
+  read -r -a segments <<< "$relative_path"
+  for ((index = 0; index < ${#segments[@]}; index++)); do
+    segment="${segments[$index]}"
+    current="$current/$segment"
+    if [[ -L "$current" ]]; then
+      echo "Old package ownership metadata path is a symbolic link: $relative_path" >&2
+      exit 1
+    fi
+    [[ -e "$current" ]] || return 0
+    if [[ "$index" -lt $((${#segments[@]} - 1)) && ! -d "$current" ]]; then
+      echo "Old package ownership metadata parent is not a directory: $relative_path" >&2
+      exit 1
+    fi
+    if [[ "$index" -eq $((${#segments[@]} - 1)) && ! -f "$current" ]]; then
+      echo "Old package ownership metadata path is not a regular file: $relative_path" >&2
+      exit 1
+    fi
+  done
+}
+
+assert_package_source_path_safe "$package_root" "scripts/upgrade-manifest.txt" file "Upgrade manifest"
+assert_package_source_path_safe "$package_root" "scripts/package-files.txt" file "Package file inventory"
+read_ownership_metadata "$package_root" "$manifest_path" "$inventory_path" 1 new "New package"
+manifest_directory_count="$new_directory_count"
+
+old_manifest="$target_path/scripts/upgrade-manifest.txt"
+old_inventory="$target_path/scripts/package-files.txt"
+check_ownership_metadata_path_safe "scripts/upgrade-manifest.txt"
+check_ownership_metadata_path_safe "scripts/package-files.txt"
+old_available=0
+if [[ -f "$old_manifest" && -f "$old_inventory" ]]; then
+  old_available=1
+  read_ownership_metadata "$target_path" "$old_manifest" "$old_inventory" 0 old "Old package"
+elif [[ ! -e "$old_manifest" && -f "$old_inventory" ]]; then
+  old_available=1
+  read_ownership_metadata "$target_path" "" "$old_inventory" 0 old "Old package"
+elif [[ -e "$old_manifest" || -e "$old_inventory" ]]; then
+  echo "Old package ownership metadata is incomplete; both scripts/upgrade-manifest.txt and scripts/package-files.txt are required." >&2
+  exit 1
+fi
+
+safe_target_file_state() {
+  local relative_path="$1"
+  local current="$target_path"
+  local display_path=""
+  local segment
+  local index
+  local IFS='/'
+  local segments=()
+  read -r -a segments <<< "$relative_path"
+  TARGET_STATE="MISSING"
+  TARGET_REASON=""
+  for ((index = 0; index < ${#segments[@]}; index++)); do
+    segment="${segments[$index]}"
+    current="$current/$segment"
+    display_path="${display_path:+$display_path/}$segment"
+    if [[ -L "$current" ]]; then
+      TARGET_STATE="CONFLICT"
+      TARGET_REASON="$display_path is a symbolic link"
+      return
+    fi
+    [[ -e "$current" ]] || return 0
+    if [[ "$index" -lt $((${#segments[@]} - 1)) && ! -d "$current" ]]; then
+      TARGET_STATE="CONFLICT"
+      TARGET_REASON="$display_path is not a directory"
+      return
+    fi
+    if [[ "$index" -eq $((${#segments[@]} - 1)) ]]; then
+      if [[ -f "$current" ]]; then
+        TARGET_STATE="FILE"
+      elif [[ -d "$current" ]]; then
+        TARGET_STATE="CONFLICT"
+        TARGET_REASON="target path is a directory"
+      else
+        TARGET_STATE="CONFLICT"
+        TARGET_REASON="target path is not a regular file"
+      fi
+      return
+    fi
+  done
 }
 
 add_plan_record() {
-  local relative_path="${1//\\//}"
+  local relative_path="$1"
   local source_file="$2"
-  local target_file="$3"
-  local action="CREATE"
-  local reason=""
-
-  if contains_value "$relative_path" "${plan_rel[@]:-}"; then
-    echo "Duplicate package-managed path in manifest expansion: $relative_path" >&2
-    exit 1
-  fi
-
-  if [[ "$same_root" -eq 1 ]]; then
-    action="UNCHANGED"
-  elif [[ -d "$target_file" ]]; then
-    action="CONFLICT"
-    reason="target path is a directory"
-  elif [[ -f "$target_file" ]]; then
-    if cmp -s "$source_file" "$target_file"; then
-      action="UNCHANGED"
-    else
-      action="REPLACE"
+  local action="$3"
+  local reason="$4"
+  lowercase_text "$relative_path"
+  local key="$REPLY"
+  local index
+  for ((index = 0; index < ${#plan_seen_keys[@]}; index++)); do
+    if [[ "${plan_seen_keys[$index]}" == "$key" ]]; then
+      echo "Duplicate package path while building the ownership plan: $relative_path" >&2
+      exit 1
     fi
-  elif [[ -e "$target_file" ]]; then
-    action="CONFLICT"
-    reason="target path is not a regular file"
-  fi
-
+  done
+  plan_seen_keys+=("$key")
+  local metadata_order=0
+  [[ "$key" == "scripts/upgrade-manifest.txt" ]] && metadata_order=1
+  [[ "$key" == "scripts/package-files.txt" ]] && metadata_order=2
   plan_rel+=("$relative_path")
   plan_source+=("$source_file")
-  plan_target+=("$target_file")
+  plan_target+=("$target_path/$relative_path")
   plan_action+=("$action")
   plan_reason+=("$reason")
+  plan_metadata_order+=("$metadata_order")
 }
 
-add_removal_record() {
-  local relative_path="${1//\\//}"
-  local target_file="$2"
-  local action="UNCHANGED"
-  local reason=""
-
-  if contains_value "$relative_path" "${plan_rel[@]:-}"; then
-    echo "Duplicate package-managed path in manifest expansion: $relative_path" >&2
-    exit 1
-  fi
-
-  if [[ "$same_root" -eq 0 ]]; then
-    if [[ -d "$target_file" ]]; then
+while IFS= read -r key; do
+  [[ -z "$key" ]] && continue
+  find_active new "$key"
+  new_index="$FOUND_INDEX"
+  relative_path="${active_paths[$new_index]}"
+  source_file="${active_sources[$new_index]}"
+  target_file="$target_path/$relative_path"
+  action="CREATE"
+  reason=""
+  safe_target_file_state "$relative_path"
+  if [[ "$same_root" -eq 1 ]]; then
+    action="UNCHANGED"
+  elif [[ "$TARGET_STATE" == "CONFLICT" ]]; then
+    action="CONFLICT"
+    reason="$TARGET_REASON"
+  elif [[ "$TARGET_STATE" == "FILE" ]]; then
+    if cmp -s "$source_file" "$target_file"; then
+      action="UNCHANGED"
+    elif [[ "$old_available" -eq 1 ]]; then
+      find_active old "$key"
+      if [[ "$FOUND_INDEX" -ge 0 ]]; then
+        action="REPLACE"
+      else
+        action="CONFLICT"
+        reason="new package-owned path already exists with different content"
+      fi
+    else
       action="CONFLICT"
-      reason="retired package path is a directory"
-    elif [[ -f "$target_file" ]]; then
-      action="REMOVE"
-    elif [[ -e "$target_file" ]]; then
-      action="CONFLICT"
-      reason="retired package path is not a regular file"
+      reason="new package-owned path already exists with different content"
     fi
   fi
+  add_plan_record "$relative_path" "$source_file" "$action" "$reason"
+done < <(list_active_keys new | LC_ALL=C sort)
 
-  plan_rel+=("$relative_path")
-  plan_source+=("")
-  plan_target+=("$target_file")
-  plan_action+=("$action")
-  plan_reason+=("$reason")
-}
+if [[ "$old_available" -eq 1 ]]; then
+  while IFS= read -r key; do
+    [[ -z "$key" ]] && continue
+    find_active new "$key"
+    [[ "$FOUND_INDEX" -ge 0 ]] && continue
+    find_active old "$key"
+    old_index="$FOUND_INDEX"
+    relative_path="${active_paths[$old_index]}"
+    find_removed new "$key"
+    if [[ "$FOUND_INDEX" -lt 0 ]]; then
+      add_plan_record "$relative_path" "" "CONFLICT" "old package-owned path is absent from the new manifest without an explicit remove entry"
+      continue
+    fi
+    action="UNCHANGED"
+    reason=""
+    safe_target_file_state "$relative_path"
+    if [[ "$same_root" -eq 0 ]]; then
+      if [[ "$TARGET_STATE" == "CONFLICT" ]]; then
+        action="CONFLICT"
+        reason="$TARGET_REASON"
+      elif [[ "$TARGET_STATE" == "FILE" ]]; then
+        action="REMOVE"
+      fi
+    fi
+    add_plan_record "$relative_path" "" "$action" "$reason"
+  done < <(list_active_keys old | LC_ALL=C sort)
+fi
+
+while IFS= read -r key; do
+  [[ -z "$key" ]] && continue
+  seen_in_plan=0
+  for ((i = 0; i < ${#plan_seen_keys[@]}; i++)); do
+    if [[ "${plan_seen_keys[$i]}" == "$key" ]]; then
+      seen_in_plan=1
+      break
+    fi
+  done
+  [[ "$seen_in_plan" -eq 1 ]] && continue
+  find_removed new "$key"
+  removed_index="$FOUND_INDEX"
+  relative_path="${removed_paths[$removed_index]}"
+  action="UNCHANGED"
+  reason=""
+  safe_target_file_state "$relative_path"
+  if [[ "$same_root" -eq 0 ]]; then
+    if [[ "$TARGET_STATE" == "CONFLICT" ]]; then
+      action="CONFLICT"
+      reason="$TARGET_REASON"
+    elif [[ "$TARGET_STATE" == "FILE" ]]; then
+      if [[ "$old_available" -eq 1 ]]; then
+        find_removed old "$key"
+      else
+        FOUND_INDEX=-1
+      fi
+      if [[ "$FOUND_INDEX" -ge 0 ]]; then
+        action="REMOVE"
+      else
+        action="CONFLICT"
+        reason="retired package path exists without prior active or retired package ownership"
+      fi
+    fi
+  fi
+  add_plan_record "$relative_path" "" "$action" "$reason"
+done < <(list_removed_keys new | LC_ALL=C sort)
 
 add_structure_conflict() {
   local key="$1"
   local message="$2"
-  if contains_value "$key" "${structure_issue_keys[@]:-}"; then
-    return
-  fi
+  local index
+  for ((index = 0; index < ${#structure_issue_keys[@]}; index++)); do
+    if [[ "${structure_issue_keys[$index]}" == "$key" ]]; then
+      return
+    fi
+  done
   structure_issue_keys+=("$key")
   structure_conflicts+=("$message")
 }
@@ -266,106 +972,24 @@ check_target_path() {
   done
 }
 
-while IFS= read -r line || [[ -n "$line" ]]; do
-  line="${line%$'\r'}"
-  [[ -z "${line//[[:space:]]/}" ]] && continue
-  [[ "$line" =~ ^[[:space:]]*# ]] && continue
-
-  read -r kind relative_path <<< "$line"
-  if [[ -z "${kind:-}" || -z "${relative_path:-}" ]]; then
-    echo "Invalid manifest line: $line" >&2
-    exit 1
-  fi
-  relative_path="${relative_path//\\//}"
-  source_path="$package_root/$relative_path"
-
-  case "$kind" in
-    file)
-      if [[ ! -f "$source_path" ]]; then
-        echo "Manifest file entry not found in package: $relative_path" >&2
-        exit 1
-      fi
-      add_plan_record "$relative_path" "$source_path" "$target_path/$relative_path"
-      ;;
-    dir)
-      if [[ ! -d "$source_path" ]]; then
-        echo "Manifest directory entry not found in package: $relative_path" >&2
-        exit 1
-      fi
-      manifest_directory_count=$((manifest_directory_count + 1))
-      directory_file_count=0
-      for expanded in "${inventory_paths[@]:-}"; do
-        [[ "$expanded" == "$relative_path/"* ]] || continue
-        source_file="$package_root/$expanded"
-        if [[ ! -f "$source_file" ]]; then
-          echo "Inventory file entry not found in package: $expanded" >&2
-          exit 1
-        fi
-        add_plan_record "$expanded" "$source_file" "$target_path/$expanded"
-        directory_file_count=$((directory_file_count + 1))
-      done
-      if [[ "$directory_file_count" -eq 0 ]]; then
-        echo "Manifest directory has no files in package inventory: $relative_path" >&2
-        exit 1
-      fi
-      ;;
-    remove)
-      add_removal_record "$relative_path" "$target_path/$relative_path"
-      ;;
-    *)
-      echo "Invalid manifest entry kind: $kind" >&2
-      exit 1
-      ;;
-  esac
-done < "$manifest_path"
-
 for template_name in PROJECT.md .gitignore; do
-  if [[ ! -f "$package_root/$template_name" ]]; then
-    echo "Package template not found: $package_root/$template_name" >&2
-    exit 1
-  fi
+  assert_package_source_path_safe "$package_root" "$template_name" file "Package template"
 done
 
-for relative_path in "${plan_rel[@]}" PROJECT.md .gitignore "${runtime_files[@]}"; do
+for ((i = 0; i < ${#plan_rel[@]}; i++)); do
+  check_target_path "${plan_rel[$i]}" file
+done
+for relative_path in PROJECT.md .gitignore "${runtime_files[@]}"; do
   check_target_path "$relative_path" file
 done
 for relative_path in "${runtime_directories[@]}" .venv; do
   check_target_path "$relative_path" directory
 done
 
-git_baseline=0
-git_root=""
-head_paths=()
-tracked_paths=()
-if [[ "$same_root" -eq 0 && -d "$target_path" ]] && command -v git >/dev/null 2>&1; then
-  if git -C "$target_path" rev-parse --is-inside-work-tree >/dev/null 2>&1 &&
-     git -C "$target_path" rev-parse --verify HEAD >/dev/null 2>&1; then
-    git_baseline=1
-    git_root="$(git -C "$target_path" rev-parse --show-toplevel)"
-    while IFS= read -r head_path; do
-      [[ -n "$head_path" ]] && head_paths+=("$head_path")
-    done < <(git -c core.quotepath=false -C "$git_root" ls-tree -r --name-only HEAD)
-    while IFS= read -r tracked_path; do
-      [[ -n "$tracked_path" ]] && tracked_paths+=("$tracked_path")
-    done < <(git -c core.quotepath=false -C "$git_root" ls-files)
-  fi
-fi
-
-tracked_path_matches_head() {
-  local git_relative="$1"
-  local target_file="$2"
-  local head_object
-  local index_object
-  local working_object
-
-  head_object="$(git -C "$git_root" rev-parse --verify "HEAD:$git_relative" 2>/dev/null)" || return 1
-  index_object="$(git -C "$git_root" rev-parse --verify ":$git_relative" 2>/dev/null)" || return 1
-  [[ "$head_object" == "$index_object" ]] || return 1
-  working_object="$(git -C "$git_root" hash-object --path="$git_relative" -- "$target_file" 2>/dev/null)" || return 1
-  [[ "$head_object" == "$working_object" ]]
-}
-
-conflicts=("${structure_conflicts[@]}")
+conflicts=()
+for ((i = 0; i < ${#structure_conflicts[@]}; i++)); do
+  conflicts+=("${structure_conflicts[$i]}")
+done
 create_count=0
 replace_count=0
 remove_count=0
@@ -379,7 +1003,6 @@ for ((i = 0; i < ${#plan_rel[@]}; i++)); do
   case "$action" in
     UNCHANGED)
       unchanged_count=$((unchanged_count + 1))
-      continue
       ;;
     CREATE)
       create_count=$((create_count + 1))
@@ -392,43 +1015,8 @@ for ((i = 0; i < ${#plan_rel[@]}; i++)); do
       ;;
     CONFLICT)
       conflicts+=("$relative_path: ${plan_reason[$i]}")
-      continue
       ;;
   esac
-
-  if [[ "$git_baseline" -eq 0 ]]; then
-    if [[ "$action" == "REPLACE" ]]; then
-      conflicts+=("$relative_path: existing file differs and no Git baseline is available")
-    elif [[ "$action" == "REMOVE" ]]; then
-      conflicts+=("$relative_path: retired package file exists and no Git baseline is available")
-    fi
-    continue
-  fi
-
-  if [[ "$target_file" != "$git_root"/* ]]; then
-    conflicts+=("$relative_path: target path is outside the Git baseline")
-    continue
-  fi
-  git_relative="${target_file#"$git_root"/}"
-
-  if [[ "$action" == "CREATE" ]]; then
-    if contains_value "$git_relative" "${head_paths[@]:-}" ||
-       contains_value "$git_relative" "${tracked_paths[@]:-}"; then
-      conflicts+=("$relative_path: tracked package file is deleted in the working tree")
-    fi
-    continue
-  fi
-
-  if ! contains_value "$git_relative" "${head_paths[@]:-}"; then
-    if [[ "$action" == "REMOVE" ]]; then
-      conflicts+=("$relative_path: retired package file exists and is not tracked by the Git baseline")
-    else
-      conflicts+=("$relative_path: existing file differs and is not tracked by the Git baseline")
-    fi
-  elif ! contains_value "$git_relative" "${tracked_paths[@]:-}" ||
-       ! tracked_path_matches_head "$git_relative" "$target_file"; then
-    conflicts+=("$relative_path: tracked package file has uncommitted changes")
-  fi
 done
 
 echo "Package file plan: create $create_count, replace $replace_count, remove $remove_count, unchanged $unchanged_count."
@@ -472,9 +1060,10 @@ ensure_file() {
 
 mkdir -p "$target_path"
 for ((i = 0; i < ${#plan_rel[@]}; i++)); do
+  [[ "${plan_metadata_order[$i]}" -eq 0 ]] || continue
   action="${plan_action[$i]}"
   if [[ "$action" == "REMOVE" ]]; then
-    rm -f -- "${plan_target[$i]}"
+    rm -f "${plan_target[$i]}"
     removed_file_count=$((removed_file_count + 1))
     continue
   fi
@@ -509,6 +1098,7 @@ required_local_gitignore_lines=(
   ".claude/"
   ".claudian/"
   ".codex/"
+  ".obsidian/"
 )
 
 gitignore_contains_line() {
@@ -527,38 +1117,15 @@ ensure_gitignore_line() {
   printf "%s\n" "$line" >> "$target_file"
 }
 
-has_tracked_wiki_runtime() {
-  command -v git >/dev/null 2>&1 || return 1
-  git -C "$target_path" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 1
-  local tracked_path
-  while IFS= read -r tracked_path; do
-    [[ -z "$tracked_path" ]] && continue
-    case "$tracked_path" in
-      inbox/.gitkeep|*/inbox/.gitkeep) ;;
-      *) return 0 ;;
-    esac
-  done < <(git -C "$target_path" ls-files -- wiki reviews logs questions artifacts intake/processed intake/logs raw inbox 2>/dev/null)
-  return 1
-}
-
 gitignore_file="$target_path/.gitignore"
 if [[ ! -e "$gitignore_file" ]]; then
-  if has_tracked_wiki_runtime; then
-    : > "$gitignore_file"
-    for line in "${required_local_gitignore_lines[@]}"; do
-      ensure_gitignore_line "$gitignore_file" "$line"
-    done
-    created_runtime_count=$((created_runtime_count + 1))
-    echo "Created baseline-only .gitignore because durable wiki runtime files are already tracked."
-  else
-    if [[ ! -f "$package_root/.gitignore" ]]; then
-      echo ".gitignore template not found in package: $package_root/.gitignore" >&2
-      exit 1
-    fi
-    cp -f "$package_root/.gitignore" "$gitignore_file"
-    created_runtime_count=$((created_runtime_count + 1))
-    echo "Created the default private wiki runtime .gitignore policy."
+  if [[ ! -f "$package_root/.gitignore" ]]; then
+    echo ".gitignore template not found in package: $package_root/.gitignore" >&2
+    exit 1
   fi
+  cp -f "$package_root/.gitignore" "$gitignore_file"
+  created_runtime_count=$((created_runtime_count + 1))
+  echo "Created the default private wiki runtime .gitignore policy."
 else
   for line in "${required_local_gitignore_lines[@]}"; do
     ensure_gitignore_line "$gitignore_file" "$line"
@@ -576,10 +1143,105 @@ ensure_file "$target_path/wiki/home.md" "# Home"$'\n'
 ensure_file "$target_path/wiki/index.md" "# Index"$'\n'
 ensure_file "$target_path/wiki/overview.md" "# Overview"$'\n'
 
-(
+if ! (
   cd "$target_path"
   uv sync --locked --default-index https://pypi.org/simple
-)
+); then
+  echo "Package dependency sync failed; ownership metadata was not advanced." >&2
+  exit 1
+fi
+
+commit_metadata_file() {
+  local source_file="$1"
+  local target_file="$2"
+  local target_directory
+  local target_name
+  local temporary_file
+  target_directory="$(dirname "$target_file")"
+  target_name="$(basename "$target_file")"
+  mkdir -p "$target_directory"
+  temporary_file="$(mktemp "$target_directory/.$target_name.upgrade.XXXXXX")"
+  if ! cp -f "$source_file" "$temporary_file"; then
+    rm -f "$temporary_file"
+    echo "Failed to stage package ownership metadata: $source_file" >&2
+    return 1
+  fi
+  if ! chmod 644 "$temporary_file"; then
+    rm -f "$temporary_file"
+    echo "Failed to set package ownership metadata permissions: $temporary_file" >&2
+    return 1
+  fi
+  if ! mv -f "$temporary_file" "$target_file"; then
+    rm -f "$temporary_file"
+    echo "Failed to commit package ownership metadata: $target_file" >&2
+    return 1
+  fi
+  file_count=$((file_count + 1))
+}
+
+commit_inventory_checkpoint() {
+  local target_file="$old_inventory"
+  local target_directory
+  local target_name
+  local temporary_file
+  local index
+  target_directory="$(dirname "$target_file")"
+  target_name="$(basename "$target_file")"
+  mkdir -p "$target_directory"
+  temporary_file="$(mktemp "$target_directory/.$target_name.upgrade.XXXXXX")"
+  if ! {
+    printf '%s\n' \
+      '# Complete package-ownership activation inventory for upgrade-manifest.txt.' \
+      "$complete_inventory_marker" \
+      '# Every active file and retired path is listed; the final inventory is committed last.' \
+      '# Format: active <path> or remove <path>.'
+    if [[ "$old_inventory_mode" == "none" ]]; then
+      printf 'active %s\n' 'scripts/package-files.txt'
+    fi
+    for ((index = 0; index < ${#active_paths[@]}; index++)); do
+      if [[ "${active_owners[$index]}" == "old" ]]; then
+        printf 'active %s\n' "${active_paths[$index]}"
+      fi
+    done
+    for ((index = 0; index < ${#removed_paths[@]}; index++)); do
+      if [[ "${removed_owners[$index]}" == "old" ]]; then
+        printf 'remove %s\n' "${removed_paths[$index]}"
+      fi
+    done
+  } > "$temporary_file"; then
+    rm -f "$temporary_file"
+    echo "Failed to stage the ownership inventory checkpoint." >&2
+    return 1
+  fi
+  if ! chmod 644 "$temporary_file"; then
+    rm -f "$temporary_file"
+    echo "Failed to set package ownership metadata permissions: $temporary_file" >&2
+    return 1
+  fi
+  if ! mv -f "$temporary_file" "$target_file"; then
+    rm -f "$temporary_file"
+    echo "Failed to commit the ownership inventory checkpoint: $target_file" >&2
+    return 1
+  fi
+  file_count=$((file_count + 1))
+}
+
+if [[ "$same_root" -eq 0 ]]; then
+  if [[ "$old_inventory_mode" == "directories" || "$old_inventory_mode" == "none" ]]; then
+    commit_inventory_checkpoint
+  fi
+
+  for metadata_order in 1 2; do
+    for ((i = 0; i < ${#plan_rel[@]}; i++)); do
+      [[ "${plan_metadata_order[$i]}" -eq "$metadata_order" ]] || continue
+      action="${plan_action[$i]}"
+      if [[ "$action" != "CREATE" && "$action" != "REPLACE" ]]; then
+        continue
+      fi
+      commit_metadata_file "${plan_source[$i]}" "${plan_target[$i]}"
+    done
+  done
+fi
 
 echo "Upgraded package files at: $target_path"
 echo "Merged manifest directories: $manifest_directory_count"

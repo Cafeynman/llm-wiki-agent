@@ -5,14 +5,14 @@ wiki template only when this checkout is the user's own wiki project and the
 user intends to commit wiki content.
 
 In both templates, keep `.env`, `.venv/`, caches, and local tool state such as
-`.claude/`, `.claudian/`, and `.codex/` ignored. Only replace the
+`.claude/`, `.claudian/`, `.codex/`, and `.obsidian/` ignored. Only replace the
 `# Local wiki runtime content.` block in `.gitignore`.
 Init and upgrade scripts preserve an existing `.gitignore` domain policy and
 append only missing secret and technical-cache baseline lines. They do not infer
 or append a wiki runtime policy to an existing file. When `.gitignore` is
-missing, they seed the default private template only if no durable wiki runtime
-files are already tracked; otherwise they create baseline-only rules so current
-and future wiki records remain visible to Git.
+missing, they seed the default private template without consulting target Git
+state. Choose and save the versioned template before initialization when that is
+the intended target-owned policy.
 
 ## Private Local Runtime
 
@@ -33,6 +33,7 @@ tmp/
 .claude/
 .claudian/
 .codex/
+.obsidian/
 
 # Local wiki runtime content.
 /inbox/*
@@ -66,6 +67,7 @@ tmp/
 .claude/
 .claudian/
 .codex/
+.obsidian/
 
 # Local source intake and temporary extraction state.
 /inbox/*
