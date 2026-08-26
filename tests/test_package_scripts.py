@@ -164,6 +164,15 @@ class PackageScriptTest(unittest.TestCase):
             (target / "CLAUDE.md").read_text(encoding="utf-8"),
             USER_ADAPTER_CONTENT,
         )
+        for relative_path in (
+            ".agents/skills/wiki-maintenance-feedback/SKILL.md",
+            ".agents/skills/wiki-maintenance-feedback/references/report-template.md",
+        ):
+            self.assertEqual(
+                (target / relative_path).read_bytes(),
+                (ROOT / relative_path).read_bytes(),
+                relative_path,
+            )
         calls = call_log.read_text(encoding="utf-8").splitlines()
         self.assertTrue(calls)
         self.assertTrue(

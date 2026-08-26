@@ -87,6 +87,14 @@ a conflict instead of letting a skill override the package contract.
 
 When delegating any work in a knowledge workspace to subagents, AGY, external reviewers, or another runtime, do not assume repository context is inherited. Include the workspace root, the target vault root when different, and `AGENTS.md` as the canonical entrypoint. Require the delegated conversation to begin by reading the active root's complete `WIKI.md` and `PROJECT.md`, and include the relevant local `.agents/skills/` paths and source-language naming rule when they matter. Do not include secrets, private endpoints, tokens, or credentials in delegated prompts.
 
+## Foundation Defect Disclosure
+
+When an agent confirms a pre-existing wiki-foundation defect outside the user's original request that has material and reusable impact, it must not be handled silently, whether it was fixed, mitigated, or left unresolved. For secrets, security, irreversible data loss, or broad incorrect-write risk, disclose the confirmed risk immediately. For other confirmed defects, the final delivery states the finding, impact, net disposition, and verification.
+
+When evidence indicates a credible but unconfirmed secret or security exposure, immediately state the observation, its confidence, and any action paused to avoid expanding the risk; do not call it a confirmed defect. Use the `Maintain Wiki` route in `WIKI.md` when a maintainer-ready package is needed.
+
+This disclosure rule does not grant permission to investigate, diagnose, reproduce, fix, save, create or update a tracker, commit, push, or transmit anything externally. Each action keeps its existing authorization boundary.
+
 ## Replacement and Target-State Writing
 
 When the user explicitly gives a new direction that replaces a prior plan, apply it to the affected agent-owned current-state surfaces: operational docs, prompts, workflows, dashboards, queue pages, scenarios, skills, and requested deliverables. Update those surfaces so they describe the confirmed target state directly, and remove stale operational wording that would cause an agent or user to follow the replaced plan.

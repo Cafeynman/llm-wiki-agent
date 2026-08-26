@@ -60,6 +60,8 @@
 .agents/skills/source-extraction/tests/test_audit_chunks.py
 .agents/skills/source-extraction/tests/test_audit_intake_file.py
 .agents/skills/source-extraction/tests/test_record_chunk_exception.py
+.agents/skills/wiki-maintenance-feedback/SKILL.md
+.agents/skills/wiki-maintenance-feedback/references/report-template.md
 .agents/skills/wiki-contract-review/SKILL.md
 .agents/skills/wiki-quality-review/SKILL.md
 docs/acknowledgements.md

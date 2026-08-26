@@ -238,6 +238,8 @@ Run periodic maintenance by asking:
 - *"Clean up duplicates"*
 - *"Check claims without sources"*
 
+If the agent confirms a material, reusable foundation defect outside your original request, it reports the finding, impact, disposition, and verification instead of handling it silently, whether the defect was fixed, mitigated, or left unresolved. Ask for *"maintainer-ready feedback"* when a brief disclosure is not enough for another maintainer or agent. The detailed report is response only by default; saving it, updating a tracker, or sending it externally each requires its own authorization.
+
 ---
 
 ## ❓ 11. FAQ

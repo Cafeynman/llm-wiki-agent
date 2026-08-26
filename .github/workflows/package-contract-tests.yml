@@ -35,6 +35,7 @@ jobs:
           uv run --no-project python -m unittest -v
           tests.test_package_scripts
           tests.test_exam_wrong_question_audit
+          tests.test_maintenance_feedback_contract
           tests.test_wiki_quality_review_contract
           tests.test_source_contracts
           tests.test_skill_creator
