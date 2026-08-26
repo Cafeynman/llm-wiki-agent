@@ -32,6 +32,8 @@ class MaintenanceFeedbackContractTest(unittest.TestCase):
         self.assertIn("do not call it a confirmed defect", agents_text)
         self.assertIn("the `Maintain Wiki` route in `WIKI.md`", agents_text)
         self.assertIn("does not grant permission", agents_text)
+        self.assertNotIn("fixed-in-worktree", agents)
+        self.assertNotIn("fixed-in-commit", agents)
         for duplicated_negative_trigger in (
             "Ordinary typos",
             "isolated broken links",
@@ -69,6 +71,8 @@ class MaintenanceFeedbackContractTest(unittest.TestCase):
         self.assertIn("Do not investigate, reproduce, diagnose, or repair", skill_text)
         self.assertIn("This skill never executes a reproduction attempt", skill)
         self.assertIn("report-template.md", skill)
+        self.assertNotIn("use the smallest synthetic fixture", skill.lower())
+        self.assertNotIn("prefer a synthetic minimal fixture", skill.lower())
 
         skill_root = ROOT / ".agents/skills/wiki-maintenance-feedback"
         packaged_files = {
@@ -80,6 +84,26 @@ class MaintenanceFeedbackContractTest(unittest.TestCase):
             packaged_files,
             {"SKILL.md", "references/report-template.md"},
         )
+
+    def test_fixture_contract_reuses_only_existing_owning_workflow_evidence(self) -> None:
+        skill = self.read(".agents/skills/wiki-maintenance-feedback/SKILL.md")
+        template = self.read(
+            ".agents/skills/wiki-maintenance-feedback/references/report-template.md"
+        )
+        skill_text = " ".join(skill.split())
+
+        # No existing fixture: the report has a stable truthful value and the
+        # reporting skill performs no fixture lifecycle or execution work.
+        self.assertIn("When none exists, record `none`", skill)
+        self.assertIn("Existing owning-workflow fixture: <sanitized reference or none>", template)
+        self.assertIn("does not create, modify, execute, or re-execute a fixture", skill_text)
+
+        # Existing fixture: reuse is limited to evidence already produced by
+        # the owning workflow and does not mutate or transmit the source item.
+        self.assertIn("already created by the evidence-producing owning workflow", skill_text)
+        self.assertIn("sanitized reference or the minimum necessary excerpt", skill_text)
+        self.assertIn("does not authorize changing the original fixture", skill_text)
+        self.assertIn("does not authorize attaching or transmitting it", skill_text)
 
     def test_report_contract_separates_truthful_state_and_authorization(self) -> None:
         skill = self.read(".agents/skills/wiki-maintenance-feedback/SKILL.md")

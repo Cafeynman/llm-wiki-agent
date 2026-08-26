@@ -20,6 +20,7 @@ Render the report in the user's requested or source language. Translate headings
 - Original task and triggering operation:
 - Report-object version or commit, when known:
 - Relevant tool/runtime versions:
+- Existing owning-workflow fixture: <sanitized reference or none>
 - Discovery boundary:
 
 Do not copy the full conversation.
