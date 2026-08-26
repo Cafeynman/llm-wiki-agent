@@ -6,6 +6,7 @@ project-specific context.
 
 ## Context
 
+- Active scenario: exam-study
 - Theme: Professional qualification exam preparation knowledge base
 - Goal:
 - Audience:

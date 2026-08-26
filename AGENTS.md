@@ -20,16 +20,34 @@ Use yes/no questions or short choices only for bounded operational preferences s
 
 ## Scenario Packages
 
-Reusable scenario packages live under `scenarios/`. They are optional initialization guides for specialized workspaces, not active project configuration. Use a scenario package only when the user explicitly asks to initialize or adapt the workspace from a named scenario.
+Reusable scenario packages live under `scenarios/`. The root `PROJECT.md` field
+`Active scenario` is the only source of active-scenario selection; a blank value
+means no scenario is active. A scenario directory does not activate itself.
+
+After the conversation bootstrap has read `PROJECT.md`, read
+`scenarios/<name>/skills/<name>/SKILL.md` only when `Active scenario` exactly
+matches a distributed scenario name and the current request is relevant to that
+scenario. Do not read skills from inactive scenarios. The scenario skill is used
+in place; do not copy it into `.agents/skills/` or create a second activation
+registry.
+
+If `Active scenario` is nonblank but the corresponding distributed scenario or
+skill path is missing, report the missing name and path and stop
+scenario-specific work. Do not guess, silently ignore it, or substitute another
+scenario.
+
+Use a scenario package's initialization guide only when the user explicitly
+asks to initialize or adapt the workspace from that named scenario.
 
 When applying a scenario package:
 
 1. Read `scenarios/<name>/README.md` first.
 2. Use `scenarios/<name>/PROJECT.template.md` only to confirm and update project-specific fields in the root `PROJECT.md`.
-3. Use `scenarios/<name>/starter-pages.md` only to create the smallest useful initial pages for the confirmed project context.
-4. Do not modify `WIKI.md` or `AGENTS.md` as part of scenario initialization.
-5. Do not treat scenario files as active wiki knowledge or runtime state.
-6. If a scenario README defines additional files, follow that scenario's stated structure without generalizing it to other scenarios.
+3. Record the exact scenario name in the root `PROJECT.md` field `Active scenario`.
+4. Use `scenarios/<name>/starter-pages.md` only to create the smallest useful initial pages for the confirmed project context.
+5. Do not modify `WIKI.md` or `AGENTS.md` as part of scenario initialization.
+6. Do not treat scenario files as active wiki knowledge or runtime state.
+7. If a scenario README defines additional files, follow that scenario's stated structure without generalizing it to other scenarios.
 
 ## Runtime Requirement
 
@@ -73,7 +91,12 @@ When the user wants the wiki structure in a separate directory, including an exi
 
 ## Skill Source
 
-When using skills for this project, read the skill files from this repository's `.agents/skills/` directory first. Treat `.agents/skills/` as the project-local source of truth for package skills, and do not prefer global or external skill copies unless the user explicitly asks.
+When using universal package skills for this project, read the skill files from
+this repository's `.agents/skills/` directory first. Treat `.agents/skills/` as
+the project-local source of truth for universal package skills, and do not
+prefer global or external copies unless the user explicitly asks. Scenario-only
+behavior remains under `scenarios/<name>/skills/` and follows the activation gate
+above.
 
 An initialized workspace may contain target-only skills that are not supplied
 by this package. Do not trigger such a skill solely because its own description
@@ -85,7 +108,7 @@ a conflict instead of letting a skill override the package contract.
 
 ## Delegation Context
 
-When delegating any work in a knowledge workspace to subagents, AGY, external reviewers, or another runtime, do not assume repository context is inherited. Include the workspace root, the target vault root when different, and `AGENTS.md` as the canonical entrypoint. Require the delegated conversation to begin by reading the active root's complete `WIKI.md` and `PROJECT.md`, and include the relevant local `.agents/skills/` paths and source-language naming rule when they matter. Do not include secrets, private endpoints, tokens, or credentials in delegated prompts.
+When delegating any work in a knowledge workspace to subagents, AGY, external reviewers, or another runtime, do not assume repository context is inherited. Include the workspace root, the target vault root when different, and `AGENTS.md` as the canonical entrypoint. Require the delegated conversation to begin by reading the active root's complete `WIKI.md` and `PROJECT.md`, and include the relevant local `.agents/skills/` paths, the relevant active scenario skill path when the delegated task is scenario-specific, and the source-language naming rule when they matter. Do not include secrets, private endpoints, tokens, or credentials in delegated prompts.
 
 ## Foundation Defect Disclosure
 

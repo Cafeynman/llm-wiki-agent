@@ -6,6 +6,7 @@ Fields are optional unless required for the current task. Leave a field blank wh
 
 ## Context
 
+- Active scenario:
 - Theme:
 - Goal:
 - Audience:

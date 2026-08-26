@@ -68,7 +68,12 @@ Avoid:
 
 ## Runtime Portability
 
-Write for the current repository's agent contract first. In this repository, local package skills live under `.agents/skills/` and package commands should be executable from the package root.
+Write for the current repository's agent contract first. In this repository,
+universal package skills live under `.agents/skills/`, while scenario-specific
+skills under `scenarios/<name>/skills/` remain scoped to the active scenario.
+Choose the directory from the skill's actual activation boundary; do not copy a
+scenario skill into the universal directory. Package commands should be
+executable from the package root.
 
 When a step depends on a runtime capability, phrase it conditionally:
 
@@ -135,14 +140,14 @@ Use the narrowest validation that proves the changed skill is usable.
 Minimum checks:
 
 ```powershell
-uv run --no-project .agents/skills/skill-creator/scripts/quick_validate.py .agents/skills/<skill-name>
+uv run --no-project python .agents/skills/skill-creator/scripts/quick_validate.py <skill-directory>
 ```
 
 Also inspect:
 
 ```powershell
-rg -n "old-name|old-command|old-path|old-runtime|TODO|TBD" .agents/skills/<skill-name>
-git diff -- .agents/skills/<skill-name>
+rg -n "old-name|old-command|old-path|old-runtime|TODO|TBD" <skill-directory>
+git diff -- <skill-directory>
 ```
 
 Adjust the residue search terms to the actual old concept. A match is not automatically a bug; inspect context before changing it.
@@ -156,7 +161,7 @@ Package only after the skill validates and the diff is clean.
 If a packaging script exists in this skill directory, prefer it:
 
 ```powershell
-uv run --no-project .agents/skills/skill-creator/scripts/package_skill.py .agents/skills/<skill-name>
+uv run --no-project python .agents/skills/skill-creator/scripts/package_skill.py <skill-directory>
 ```
 
 If the skill is package-managed by this repository, commit the skill directory through Git rather than copying it into a user-level skills folder.

@@ -7,7 +7,13 @@ description: Use when reviewing this LLM Wiki package or an initialized vault fo
 
 Use this skill for Maintain Wiki or package-maintenance reviews where the risk is contract drift across scripts, entrypoint docs, local skills, human docs, and runtime wiki folders. It checks whether required knowledge surfaces and lifecycle records satisfy the contract; it does not judge the factual, interpretive, or epistemic quality of page content.
 
-When the user requests a full package contract review of this development package root, do not sample local skills. Enumerate and inspect every local skill under `.agents/skills/`, including untracked local review skills, then classify whether each one belongs in the package, is local-only, or needs cleanup. For scoped reviews, inspect only the surfaces needed to answer the confirmed scope and state what was not reviewed.
+When the user requests a full package contract review of this development
+package root, do not sample local skills. Enumerate and inspect every universal
+skill matching `.agents/skills/*/SKILL.md` and every scenario skill matching
+`scenarios/*/skills/*/SKILL.md`, including untracked local review skills, then
+classify whether each one belongs in the package, is local-only, or needs
+cleanup. For scoped reviews, inspect only the surfaces needed to answer the
+confirmed scope and state what was not reviewed.
 
 The goal is to find whether the current implementation matches the wiki contract, whether each process has a clear closed loop from input to recorded outcome, and whether runtime structure follows its declared ownership. Do not treat one file as authoritative until you have identified the current source of truth.
 
@@ -33,7 +39,14 @@ Begin after the working root's complete `WIKI.md` and `PROJECT.md` have been rea
 2. `WIKI.md` for the stable wiki directory contract and Add Knowledge, Use Knowledge, and Maintain Wiki workflows.
 3. `PROJECT.md` only for project-specific preferences; do not use it as a stable package contract.
 4. `scripts/upgrade-manifest.txt`, `scripts/init.ps1`, `scripts/init.sh`, `scripts/upgrade.ps1`, and `scripts/upgrade.sh` when reviewing migration, initialization, or upgrade behavior.
-5. For full package reviews or local skill consistency reviews, inspect every local skill under `.agents/skills/`, not global skill copies. For scoped package-root reviews, inspect only the skills directly connected to the confirmed scope. For initialized-vault reviews, inspect the target vault's `.agents/skills/` first, then compare with the package root only when migration or package-source drift is in scope.
+5. For full package reviews or local skill consistency reviews, inspect every
+   universal skill under `.agents/skills/` and every scenario skill under
+   `scenarios/*/skills/`, not global skill copies. For scoped package-root
+   reviews, inspect only the skills directly connected to the confirmed scope.
+   For initialized-vault reviews, inspect the target vault's universal skills
+   plus only the active scenario recorded in `PROJECT.md`; do not load inactive
+   scenario skills. Compare with the package root only when migration or
+   package-source drift is in scope.
 6. `README.md`, `README.zh-CN.md`, and `docs/` only when user-facing setup or usage wording may conflict with the entrypoint and wiki contracts.
 7. `.gitignore`, `git ls-files`, and `git status --ignored --short` when reviewing package boundaries, local residue, or migration risk.
 8. `pyproject.toml`, `.env.example`, and provider setup references when reviewing runtime, dependency, or environment-variable contracts.
@@ -51,7 +64,10 @@ Start every review by stating the target root, whether it is a package root or i
 
 1. **Flow and simplicity scan:** trace input, owner, decision gates, state transitions, outputs, logs, cleanup, and next action. Flag unclosed states, duplicate routes, hidden side paths, and branches that exist only as speculative safety or historical residue.
 2. **Contract scan:** inventory package source files, hidden files, old/new ownership metadata, scripts, entrypoint docs, and package-managed skills.
-3. **Full local skill scan:** enumerate all `.agents/skills/*/SKILL.md` files, validate each skill, inspect auxiliary files, and compare trigger/ownership boundaries across skills.
+3. **Full local skill scan:** enumerate all `.agents/skills/*/SKILL.md` and
+   `scenarios/*/skills/*/SKILL.md` files, validate each skill, inspect auxiliary
+   files, and compare trigger and ownership boundaries across universal and
+   scenario scopes.
 4. **Residue scan:** search for stale paths, conflicting wording, duplicated rules, obsolete workflow terms, local runtime artifacts, and generated files that should not be treated as package source.
 
 Do not stop after a single broad grep. Hidden directories are part of the review surface because `.agents/`, editor configuration, and tool workspaces can change how agents interpret the repository.
@@ -95,7 +111,12 @@ Check whether scripts and package-managed files match the current wiki structure
 
 ### 3. Full Local Skill Review
 
-When full package review or local skill consistency review is in scope, review every local skill under `.agents/skills/`. This is not optional within that scope and is not limited to the skills that broad searches happen to match.
+When full package review or local skill consistency review is in scope, review
+every universal skill under `.agents/skills/` and every scenario skill under
+`scenarios/*/skills/`. This is not optional within that scope and is not limited
+to the skills that broad searches happen to match. In an initialized vault,
+review only the active scenario recorded in `PROJECT.md` unless package-source
+drift across inactive scenarios is explicitly in scope.
 
 For each skill:
 
@@ -104,7 +125,7 @@ For each skill:
 3. Run structural validation:
 
    ```powershell
-   uv run --no-project .agents/skills/skill-creator/scripts/quick_validate.py .agents/skills/<skill-name>
+   uv run --no-project python .agents/skills/skill-creator/scripts/quick_validate.py <skill-directory>
    ```
 
 4. Check whether the trigger description overlaps another local skill or bypasses the owner of a workflow. Provider/helper skills must point back to their router; router skills must not hide provider-specific secrets or scenario-specific behavior.
@@ -124,9 +145,12 @@ Useful full-skill checks:
 ```powershell
 Get-ChildItem -LiteralPath .agents/skills -Directory | Sort-Object Name
 Get-ChildItem -LiteralPath .agents/skills -Recurse -Filter SKILL.md -File
+Get-ChildItem -LiteralPath scenarios -Recurse -Filter SKILL.md -File
 git ls-files .agents/skills
+git ls-files scenarios
 git status --short -- .agents/skills
-rg -n --hidden "skills/|python |pip |intake/tmp/[0-9]{4}|fallback|legacy|deprecated|TODO|TBD" .agents/skills
+git status --short -- scenarios
+rg -n --hidden "skills/|python |pip |intake/tmp/[0-9]{4}|fallback|legacy|deprecated|TODO|TBD" .agents/skills scenarios
 ```
 
 Treat broad-search output as a queue for inspection, not as findings by itself. Some terms are valid in examples, search commands, or compatibility notes; classify each match by active behavior and ownership.
@@ -140,7 +164,7 @@ rg --files --hidden -g "!**/.git/**" -g "!**/.venv/**" -g "!**/__pycache__/**" -
 rg --files --hidden --no-ignore -g "!**/.git/**" -g "!**/.venv/**" -g "!**/__pycache__/**" -g "!**/.pytest_cache/**" -g "!**/node_modules/**"
 git ls-files
 git status --ignored --short
-$reviewPaths = @("AGENTS.md","WIKI.md","PROJECT.md","README.md","README.zh-CN.md","pyproject.toml",".env.example","docs","scripts",".agents/skills") | Where-Object { Test-Path $_ }
+$reviewPaths = @("AGENTS.md","WIKI.md","PROJECT.md","README.md","README.zh-CN.md","pyproject.toml",".env.example","docs","scripts",".agents/skills","scenarios") | Where-Object { Test-Path $_ }
 rg -n --hidden "intake/tmp/[0-9]{4}|intake/processed/[0-9]{4}|skills/obsidian-wiki-lint|TODO|TBD|legacy|deprecated|fallback" $reviewPaths
 if (Test-Path wiki) { uv run --no-project .agents/skills/obsidian-wiki-lint/scripts/lint_wiki.py --vault . --scope wiki }
 ```
@@ -157,7 +181,8 @@ Classify every issue by ownership before proposing changes:
 | `WIKI.md` | Stable wiki operating contract, directory lifecycle, source traceability, workflow rules |
 | `AGENTS.md` / optional adapter entrypoints | Agent entrypoint behavior, runtime command rules, initialization rules, package workflow |
 | `PROJECT.md` | Vault-specific subject, structure preferences, provider choices, naming preferences, project-specific rules |
-| `.agents/skills/` | Reusable local procedures and deterministic tool guidance |
+| `.agents/skills/` | Universal reusable procedures and deterministic tool guidance |
+| `scenarios/<name>/skills/` | Scenario-only procedures loaded only for the active relevant scenario |
 | `scripts/` | Package installation, upgrade, and repeatable automation |
 | `README*` and `docs/` | Human-facing setup and usage explanation |
 | Runtime folders | Actual wiki knowledge, intake state, logs, questions, artifacts |

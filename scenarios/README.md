@@ -1,48 +1,46 @@
 # Scenario Packages
 
-Scenario packages are optional initialization guides for specialized wiki uses.
-They do not activate by themselves. Use one only when the user explicitly asks
-to initialize or adapt a workspace from a specific scenario.
+Scenario packages adapt an initialized wiki to a specialized workspace without
+changing the universal wiki contract. They do not activate during base
+initialization, and directory presence alone is not activation.
 
-## How to Use
+## How to Initialize One
 
-After running the normal package initialization, ask the agent to apply a
-scenario package, for example:
+After normal package initialization, explicitly ask the agent to apply a named
+scenario, for example:
 
 ```text
 Initialize this workspace according to scenarios/exam-study/.
-Read the scenario README first, then ask only for missing PROJECT.md fields
-needed by the requested starter pages.
+Read the scenario README first, then ask only for PROJECT.md fields needed by
+the requested starter pages.
 ```
 
-The agent should then:
+The agent then:
 
-1. Read `scenarios/<name>/README.md`.
-2. Use `PROJECT.template.md` only as a source for project-specific context.
-3. Use `starter-pages.md` only to create the smallest useful initial pages.
-4. Leave `WIKI.md` and `AGENTS.md` unchanged.
-5. Preserve the core source lifecycle: `inbox/` -> `raw/` -> `intake/` -> `wiki/`.
+1. Reads `scenarios/<name>/README.md`.
+2. Uses `PROJECT.template.md` only to confirm project-specific context.
+3. Writes the exact name to the root `PROJECT.md` field `Active scenario`.
+4. Uses `starter-pages.md` only to create the smallest useful initial pages.
+5. Leaves `WIKI.md` and `AGENTS.md` unchanged and preserves the core source
+   lifecycle.
 
-## Scenario Directory Contract
+The root `PROJECT.md` is the sole activation state. Initialization and upgrade
+commands have no scenario parameter.
 
-Each scenario should start with these files:
+## Directory Contract
 
 ```text
 scenarios/<name>/
-  README.md
-  PROJECT.template.md
-  starter-pages.md
+├── README.md
+├── PROJECT.template.md
+├── starter-pages.md
+└── skills/<name>/          optional durable scenario workflow
+    ├── SKILL.md
+    ├── references/         optional detailed contracts
+    └── scripts/            optional deterministic helpers
 ```
 
-`README.md` is the scenario entrypoint. It explains when to use the scenario,
-what to confirm, and which extra structure, if any, is allowed.
-
-`PROJECT.template.md` contains fields that can be copied or merged into the
-workspace root `PROJECT.md`. It should contain project preferences, naming
-rules, scope, and open questions, not reusable workflow rules.
-
-`starter-pages.md` contains page and record skeletons that the agent may use
-during scenario initialization. It is not a complete knowledge base.
-
-If a scenario becomes complex, its own `README.md` may define additional files
-or folders. Do not add extra structure speculatively.
+A scenario-local skill stays in this directory. `AGENTS.md` may load it only
+when the root `PROJECT.md` activates the exact scenario and the current request
+is relevant. It is not copied into the universal `.agents/skills/` directory,
+and inactive scenario skills are not read.

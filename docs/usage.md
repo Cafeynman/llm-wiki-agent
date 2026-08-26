@@ -89,7 +89,7 @@ For this optional Claudian path, this package recommends OpenCode as the default
 
 ### Optional Scenario Packages
 
-Scenario packages under `scenarios/` provide optional initialization guidance for specialized workspaces. They do not activate during base initialization. After the normal init script finishes, ask the agent to apply a scenario explicitly, for example:
+Scenario packages under `scenarios/` provide optional initialization guidance and, when needed, a scenario-local skill for specialized workspaces. They do not activate during base initialization. After the normal init script finishes, ask the agent to apply a scenario explicitly, for example:
 
 ```text
 Initialize this workspace according to scenarios/exam-study/.
@@ -97,7 +97,17 @@ Read the scenario README first, ask only for PROJECT.md fields needed by the
 requested starter pages, then create the smallest useful set.
 ```
 
-Scenario initialization should update `PROJECT.md` only with confirmed project-specific values, create only the smallest useful starter pages, and leave `WIKI.md` and `AGENTS.md` unchanged.
+Scenario initialization writes the exact scenario name to the root `PROJECT.md`
+field `Active scenario`, records only confirmed project-specific values, creates
+only the smallest useful starter pages, and leaves `WIKI.md` and `AGENTS.md`
+unchanged. `PROJECT.md` is the sole activation state; the init and upgrade
+commands have no scenario parameter.
+
+After startup reads `PROJECT.md`, the agent reads
+`scenarios/<name>/skills/<name>/SKILL.md` only when the exact scenario is active
+and the current request is relevant. Scenario skills remain in their scenario
+directories; they are not copied into the universal `.agents/skills/` directory,
+and inactive scenario skills are not loaded.
 
 ### Upgrade Package Files
 

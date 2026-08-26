@@ -92,7 +92,9 @@ active docs/通用底座改进计划.md
 active scenarios/README.md
 active scenarios/exam-study/PROJECT.template.md
 active scenarios/exam-study/README.md
-active scenarios/exam-study/scripts/audit_wrong_questions.py
+active scenarios/exam-study/skills/exam-study/SKILL.md
+active scenarios/exam-study/skills/exam-study/references/workflow-contract.md
+active scenarios/exam-study/skills/exam-study/scripts/audit_wrong_questions.py
 active scenarios/exam-study/starter-pages.md
 active scripts/init.ps1
 active scripts/init.sh
@@ -102,6 +104,7 @@ active scripts/upgrade.ps1
 active scripts/upgrade.sh
 
 # Retired package paths remain activated tombstones.
+remove scenarios/exam-study/scripts/audit_wrong_questions.py
 remove .agents/skills/markitdown-skill/README.md
 remove .agents/skills/markitdown-skill/POST_INSTALL.md
 remove .agents/skills/markitdown-skill/USAGE-GUIDE.md

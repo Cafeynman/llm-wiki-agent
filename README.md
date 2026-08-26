@@ -48,7 +48,7 @@ For service-backed providers and OCR backends, copy `.env.example` to `.env` in 
 For package upgrades, use the manifest-driven scripts documented in [Usage Guide](docs/usage.md#upgrade-package-files). The manifest declares candidate ownership, and its complete typed inventory is committed last as the activation gate for direct files, directory files, and retired paths.
 The default `.gitignore` keeps local wiki runtime content private; refer to [Git Ignore Templates](docs/gitignore-templates.md) when this checkout is a versioned wiki project.
 
-Optional scenario packages under `scenarios/` can adapt an initialized workspace for specialized uses such as exam study; see [Optional Scenario Packages](docs/usage.md#optional-scenario-packages).
+Optional scenario packages under `scenarios/` can adapt an initialized workspace for specialized uses such as exam study. The root `PROJECT.md` selects one active scenario, and its local skill is read only for relevant work; see [Optional Scenario Packages](docs/usage.md#optional-scenario-packages).
 
 **Your Minimal First Run:**
 1. Drop source files into `inbox/`, or give the agent a live URL as source material.

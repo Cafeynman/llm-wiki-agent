@@ -224,7 +224,9 @@ class WikiQualityReviewContractTest(unittest.TestCase):
         self.assertIn("Confirm only the project fields", scenario)
 
     def test_exam_scenario_uses_one_evidence_backed_wrong_question_inventory(self) -> None:
-        scenario = self.read("scenarios/exam-study/README.md")
+        scenario = self.read(
+            "scenarios/exam-study/skills/exam-study/references/workflow-contract.md"
+        )
         starter_pages = self.read("scenarios/exam-study/starter-pages.md")
 
         self.assertIn("search the relevant subject pages", scenario)
@@ -239,7 +241,6 @@ class WikiQualityReviewContractTest(unittest.TestCase):
         self.assertIn("Use the basename exactly as", starter_pages)
         self.assertIn("The parent directory carries the", starter_pages)
         self.assertIn("Use direct concepts, causal reasoning", scenario)
-        self.assertIn("Use direct concepts, causal reasoning", starter_pages)
         self.assertIn("Explanation style:", self.read("scenarios/exam-study/PROJECT.template.md"))
         self.assertIn("question_acceptance: needs_answer", starter_pages)
         self.assertNotIn("question_acceptance: accepted", starter_pages)

@@ -48,7 +48,7 @@ cd llm-wiki-agent
 后续升级包文件时，请使用 [使用指南](docs/usage.zh-CN.md#升级包文件) 中的 manifest 驱动升级脚本。manifest 声明候选所有权，带类型的完整 inventory 最后提交，统一激活顶层文件、目录文件和退役路径。
 默认 `.gitignore` 会让本地 wiki 运行内容保持私有；如果这个 checkout 本身是需要版本化的 wiki 项目，请参考 [Git Ignore 模板](docs/gitignore-templates.zh-CN.md)。
 
-`scenarios/` 下的可选场景包可将初始化后的工作区适配为考试备考等专门用途；见 [可选场景包](docs/usage.zh-CN.md#可选场景包)。
+`scenarios/` 下的可选场景包可将初始化后的工作区适配为考试备考等专门用途。根 `PROJECT.md` 选择唯一活动场景，相关工作才读取该场景内的 skill；见 [可选场景包](docs/usage.zh-CN.md#可选场景包)。
 
 **你的最小化首次运行：**
 1. 将源文件放入 `inbox/`，或者把一个实时 URL 作为来源交给智能体。

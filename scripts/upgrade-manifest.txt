@@ -15,6 +15,7 @@ dir scripts
 dir .agents/skills
 
 # Known package files retired from earlier releases. Other target-only files are preserved.
+remove scenarios/exam-study/scripts/audit_wrong_questions.py
 remove .agents/skills/markitdown-skill/README.md
 remove .agents/skills/markitdown-skill/POST_INSTALL.md
 remove .agents/skills/markitdown-skill/USAGE-GUIDE.md

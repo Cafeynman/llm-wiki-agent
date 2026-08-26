@@ -10,7 +10,10 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "scenarios/exam-study/scripts/audit_wrong_questions.py"
+SCRIPT = (
+    ROOT
+    / "scenarios/exam-study/skills/exam-study/scripts/audit_wrong_questions.py"
+)
 
 
 class ExamWrongQuestionAuditTest(unittest.TestCase):

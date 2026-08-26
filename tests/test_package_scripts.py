@@ -312,6 +312,9 @@ class PackageScriptTest(unittest.TestCase):
         for relative_path in (
             ".agents/skills/wiki-maintenance-feedback/SKILL.md",
             ".agents/skills/wiki-maintenance-feedback/references/report-template.md",
+            "scenarios/exam-study/skills/exam-study/SKILL.md",
+            "scenarios/exam-study/skills/exam-study/references/workflow-contract.md",
+            "scenarios/exam-study/skills/exam-study/scripts/audit_wrong_questions.py",
         ):
             self.assertEqual(
                 (target / relative_path).read_bytes(),

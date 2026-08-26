@@ -8,8 +8,8 @@ import re
 import sys
 
 
-REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
-LINT_SCRIPTS = REPOSITORY_ROOT / ".agents/skills/obsidian-wiki-lint/scripts"
+WORKSPACE_ROOT = Path(__file__).resolve().parents[5]
+LINT_SCRIPTS = WORKSPACE_ROOT / ".agents/skills/obsidian-wiki-lint/scripts"
 sys.path.insert(0, str(LINT_SCRIPTS))
 
 from lint_wiki import (  # noqa: E402
