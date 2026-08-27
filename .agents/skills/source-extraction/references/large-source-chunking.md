@@ -43,9 +43,9 @@ Use `--min-threshold` and `--threshold` to override the minimum and maximum for 
 
 Each error or warning has `code`, `path`, and `message`. Diagnostics sort by path and code; accepted exceptions sort by path and kind. Exit code `0` means no hard errors were found, even if warnings exist. Exit code `1` means deterministic hard errors were found. Exit code `2` means parameters, paths, or UTF-8 inputs could not be read. JSON mode always emits valid JSON for these states.
 
-Primary hard errors include a missing or no-longer-reviewable canonical `source.md`, a missing chunk directory or root index, a zero-leaf tree, an empty or image-only leaf without reviewable text, a non-canonical index, missing or outside targets, unlisted leaves or nested indexes, invalid numeric paths or non-lowercase `.md` suffixes, missing descriptive headings, an exception registry outside the root index, malformed/duplicate/orphan exception metadata, an oversized leaf without a current acceptance, and final metadata written while hard failures remain. When the root structure is absent, the audit suppresses dependent per-leaf cascades.
+Primary hard errors include a missing or no-longer-reviewable canonical `source.md`, a missing chunk directory or root index, a zero-leaf tree, an empty or image-only leaf without reviewable text, a non-canonical index, missing or outside targets, unlisted leaves or nested indexes, invalid numeric paths or non-lowercase `.md` suffixes, missing descriptive headings, an invalid accepted-size row, an oversized leaf without a current acceptance, and final metadata written while hard failures remain. When the root structure is absent, the audit suppresses dependent per-leaf cascades.
 
-Warnings include every undersized leaf without a current acceptance, exact index-size drift, obsolete exceptions, unresolved local images, possible table-of-contents-like repeated headings, and possible missing numbered parents such as `4.1` without an observed `4` parent. Source Review Gate judges warnings; the script never infers semantic mergeability.
+Warnings include every undersized leaf without a current acceptance, exact index-size drift on ordinary rows, unresolved local images, possible table-of-contents-like repeated headings, and possible missing numbered parents such as `4.1` without an observed `4` parent. Source Review Gate judges warnings; the script never infers semantic mergeability.
 
 ## Directory Shape
 
@@ -114,43 +114,11 @@ The `规模与尺寸裁决` grammar is exact:
 
 The first exact ` — ` separates an accepted token from its reason. Audit recomputes the integer exactly and reports any mismatch. `— · group` is only for a row that links to the `index.md` of one direct child directory; self-links and skipped hierarchy levels are invalid. `内容评审` is `pending` or `reviewed`; whole-source `digested` and ingest status belong to the lifecycle and manifest.
 
-### Accepted size exceptions
+### Accepted size decisions
 
-The visible accepted token and reason live only in the nearest index row. The root `chunks/index.md` contains at most one machine registry in this exact HTML-comment container:
+The nearest index row is the only persistent record for a size decision. Use `accepted-under — <reason>` or `accepted-over — <reason>` in that row and set `内容评审` to `reviewed`. A health scan accepts the decision only when all four facts are current: the audit-recomputed integer equals the visible integer, the recomputed size category matches the accepted token, the visible reason is non-empty, and the row is `reviewed`. A valid row enters JSON `accepted_exceptions` with its path, kind, content units, and reason, and suppresses the corresponding threshold diagnostic.
 
-```html
-<!-- chunk-size-exceptions
-{
-  "schema": 1,
-  "policy": {
-    "min": 2000,
-    "max": 10000,
-    "units_algo": "utf8-normalized-ceil-div3-v1"
-  },
-  "items": [
-    {
-      "path": "02.md",
-      "kind": "under",
-      "content_sha256": "<64 lowercase hex>",
-      "reason_sha256": "<64 lowercase hex>",
-      "review_ref": "reviews/source-review/YYYY-MM-DD.md#decision"
-    }
-  ]
-}
--->
-```
-
-The registry is machine identity inside the same canonical index surface, not a second table or file. Policy is stored once at the root; items do not copy units or reason text. Paths are POSIX paths relative to `chunks/`. Content hash covers the entire decoded leaf, including frontmatter and headings, after removing one leading BOM and changing only CRLF/CR to LF; trailing Markdown whitespace and final newlines remain significant. Reason hash uses the visible, trimmed reason with the same BOM/EOL normalization. `review_ref` is a required vault-root-relative POSIX path under `reviews/`, optionally followed by a non-empty heading or block fragment. The audit checks this stable syntax but does not invent the decision or require the referenced review file to exist while the source is still staged.
-
-After the reviewer changes a row to `accepted-under` or `accepted-over`, marks it `reviewed`, and records the decision, use the sanctioned writer:
-
-```powershell
-uv run --no-project .agents/skills/source-extraction/scripts/record_chunk_exception.py <intake-folder> --chunk 02.md --review-ref "reviews/source-review/YYYY-MM-DD.md#decision"
-```
-
-The writer validates the current size, row token, exact integer, reason, and review status, then updates the root comment through a same-directory temporary file and atomic replace. It preserves a leading BOM and the root index's current line-ending style, normalizes trailing whitespace at the end of the root index to one final newline, and is idempotent. Use `--remove` to delete an obsolete or deleted chunk's entry. The audit remains read-only.
-
-Diagnostic precedence is: malformed, duplicate, or orphan registry; empty leaf; currently normal with registry becomes `obsolete_chunk_exception`; a current violation with a complete match becomes accepted; every other current violation is missing or stale at its base severity. A registered item whose nearest row is not the matching visible acceptance is a hard `registry_table_status_mismatch`. Content, path, kind, reason, min, max, or algorithm changes make acceptance invalid and cause the original undersized warning or oversized hard severity to return. An empty chunk is never accepted. A legitimately deleted chunk leaves an orphan hard error until its registry item is explicitly removed.
+There is no parallel registry, hash, review reference, or writer command. If an edit changes the measured units or moves the chunk into another category, update the row and review the decision again. If content or reason changes while the measured units, category, non-empty reason, and `reviewed` state remain valid, the visible decision remains accepted; this is the deliberate lightweight contract. Empty chunks can never be accepted.
 
 Old list indexes and free-text `oversized: ...` reasons are migration candidates. They do not count as accepted and receive `legacy_chunk_index_format`; rewrite the five-column table and re-review each exception rather than preserving a permanent legacy branch.
 

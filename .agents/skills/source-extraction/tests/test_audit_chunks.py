@@ -1,5 +1,4 @@
 import io
-import hashlib
 import json
 import re
 import sys
@@ -13,7 +12,6 @@ scripts_dir = Path(__file__).parent.parent / "scripts"
 sys.path.insert(0, str(scripts_dir))
 
 import audit_chunks
-from chunk_contract import parse_registry_text
 
 
 INDEX_HEADER = "| 块 | 标题与覆盖范围 | 内容说明 | 规模与尺寸裁决 | 内容评审 |"
@@ -72,49 +70,6 @@ class TestAuditChunks(unittest.TestCase):
                 rows.append((target, label, "—", decision, "pending"))
             if rows:
                 self.write_index(str(index_path.relative_to(self.root)), rows)
-
-    def append_registry(
-        self,
-        *,
-        path: str,
-        kind: str,
-        reason: str,
-        review_ref: str = "reviews/source-review/2026-08-25.md#chunk-size",
-        minimum: int,
-        maximum: int,
-        content_override: str | None = None,
-        reason_override: str | None = None,
-    ) -> None:
-        leaf = self.root / "chunks" / path
-        content = leaf.read_text(encoding="utf-8") if content_override is None else content_override
-        normalize = audit_chunks.normalize_markdown_text
-        item = {
-            "path": path,
-            "kind": kind,
-            "content_sha256": hashlib.sha256(normalize(content).encode("utf-8")).hexdigest(),
-            "reason_sha256": hashlib.sha256(normalize(reason_override or reason).encode("utf-8")).hexdigest(),
-            "review_ref": review_ref,
-        }
-        registry = {
-            "schema": 1,
-            "policy": {
-                "min": minimum,
-                "max": maximum,
-                "units_algo": audit_chunks.UNITS_ALGO,
-            },
-            "items": [item],
-        }
-        self.set_registry(registry)
-
-    def set_registry(self, registry: object) -> None:
-        root_index = self.root / "chunks/index.md"
-        root_index.write_text(
-            root_index.read_text(encoding="utf-8").rstrip()
-            + "\n\n<!-- chunk-size-exceptions\n"
-            + json.dumps(registry, ensure_ascii=False, indent=2)
-            + "\n-->\n",
-            encoding="utf-8",
-        )
 
     def run_json(self, *args: str) -> tuple[int, dict]:
         minimum = 1
@@ -200,44 +155,6 @@ class TestAuditChunks(unittest.TestCase):
         self.assertEqual(result, 1)
         self.assertIn("missing_index_target", [item["code"] for item in stats["errors"]])
 
-    def test_registry_is_rejected_outside_root_index_but_ignored_in_fenced_example(self):
-        self.write("source.md", "# Source\n\nCanonical source text remains here.\n")
-        self.write("chunks/01/01.md", "# Leaf\n\nBody.\n")
-        units = audit_chunks.content_units((self.root / "chunks/01/01.md").read_text(encoding="utf-8"))
-        self.write_index(
-            "chunks/index.md",
-            [("01/index.md", "Part", "—", "— · group", "pending")],
-        )
-        self.write_index(
-            "chunks/01/index.md",
-            [("01.md", "Leaf", "—", f"{units} · normal", "pending")],
-        )
-        nested_index = self.root / "chunks/01/index.md"
-        nested_index.write_text(
-            nested_index.read_text(encoding="utf-8")
-            + "\n<!-- chunk-size-exceptions\n{\"schema\": 1}\n-->\n",
-            encoding="utf-8",
-        )
-
-        result, stats = self.run_json()
-
-        self.assertEqual(result, 1)
-        self.assertIn("stray_chunk_exception_registry", [item["code"] for item in stats["errors"]])
-
-        nested_index.write_text(
-            re.sub(
-                r"<!-- chunk-size-exceptions.*?-->",
-                "````html\n```\n<!-- chunk-size-exceptions\n{\\\"schema\\\": 1}\n-->\n````",
-                nested_index.read_text(encoding="utf-8"),
-                flags=re.DOTALL,
-            ),
-            encoding="utf-8",
-        )
-        result, stats = self.run_json()
-
-        self.assertEqual(result, 0, stats)
-        self.assertNotIn("stray_chunk_exception_registry", [item["code"] for item in stats["errors"]])
-
     def test_leaf_chunk_must_be_listed_in_nearest_index(self):
         self.write("source.md", "# Source\n\nSee [chunks](chunks/index.md).\n")
         self.write("chunks/index.md", "# Chunks\n\nNo entries yet.\n")
@@ -269,7 +186,7 @@ class TestAuditChunks(unittest.TestCase):
         self.assertEqual(result, 1)
         self.assertIn("oversized_chunk_without_exception", [item["code"] for item in stats["errors"]])
 
-    def test_visible_accepted_reason_without_registry_is_not_accepted(self):
+    def test_visible_reviewed_over_acceptance_is_persistent(self):
         text = "# Large\n\n" + ("content\n" * 20)
         units = audit_chunks.content_units(text)
         self.write("source.md", "# Source\n\nSee [chunks](chunks/index.md).\n")
@@ -289,8 +206,19 @@ class TestAuditChunks(unittest.TestCase):
 
         result, stats = self.run_json("--threshold", "10")
 
-        self.assertEqual(result, 1)
-        self.assertIn("acceptance_without_registry", [item["code"] for item in stats["errors"]])
+        self.assertEqual(result, 0, stats)
+        self.assertEqual(stats["status"], "pass")
+        self.assertEqual(
+            stats["accepted_exceptions"],
+            [
+                {
+                    "path": "01.md",
+                    "kind": "over",
+                    "content_units": units,
+                    "reason": "table cannot be split safely",
+                }
+            ],
+        )
 
     def test_unresolved_relative_image_is_warning_only(self):
         self.write("source.md", "# Source\n\nSee [chunks](chunks/index.md).\n")
@@ -588,6 +516,25 @@ class TestAuditChunks(unittest.TestCase):
                 self.assertEqual(result, 1)
                 self.assertIn("invalid_chunk_size_decision", [item["code"] for item in stats["errors"]])
 
+    def test_accepted_size_without_reason_reports_only_its_primary_error(self):
+        text = "# Shared table\n\n" + ("content\n" * 20)
+        units = audit_chunks.content_units(text)
+        self.write("source.md", "# Source\n\nCanonical source text remains here.\n")
+        self.write("chunks/01.md", text)
+        self.write_index(
+            "chunks/index.md",
+            [("01.md", "Shared table", "—", f"{units} · accepted-over", "reviewed")],
+        )
+
+        result, stats = self.run_json("--min-threshold", "1", "--threshold", "10")
+
+        self.assertEqual(result, 1)
+        self.assertEqual(
+            [item["code"] for item in stats["errors"]],
+            ["invalid_chunk_size_decision"],
+        )
+        self.assertEqual(stats["warnings"], [])
+
     def test_default_threshold_boundaries_are_exact(self):
         def text_with_units(units: int, title: str) -> str:
             prefix = f"# {title}\n\n"
@@ -636,7 +583,6 @@ class TestAuditChunks(unittest.TestCase):
             "chunks/index.md",
             [("01.md", "Empty", "—", f"0 · accepted-under — {reason}", "reviewed")],
         )
-        self.append_registry(path="01.md", kind="under", reason=reason, minimum=100, maximum=1000)
 
         result, stats = self.run_json("--min-threshold", "100", "--threshold", "1000")
 
@@ -704,16 +650,18 @@ class TestAuditChunks(unittest.TestCase):
             "chunks/index.md",
             [("01.md", "Terminology", "—", f"{units} · accepted-under — {reason}", "reviewed")],
         )
-        self.append_registry(path="01.md", kind="under", reason=reason, minimum=100, maximum=1000)
 
         result, stats = self.run_json("--min-threshold", "100", "--threshold", "1000")
 
         self.assertEqual(result, 0)
         self.assertEqual(stats["status"], "pass")
+        self.assertEqual(stats["errors"], [])
+        self.assertEqual(stats["warnings"], [])
         self.assertEqual(len(stats["accepted_exceptions"]), 1)
         self.assertEqual(stats["accepted_exceptions"][0]["path"], "01.md")
+        self.assertEqual(stats["accepted_exceptions"][0]["reason"], reason)
 
-    def test_registered_exception_stops_being_valid_if_review_status_is_reopened(self):
+    def test_under_acceptance_requires_reviewed_status(self):
         reason = "本章虽短但语义独立。"
         text = "# Terminology\n\nShort text.\n"
         units = audit_chunks.content_units(text)
@@ -723,15 +671,18 @@ class TestAuditChunks(unittest.TestCase):
             "chunks/index.md",
             [("01.md", "Terminology", "—", f"{units} · accepted-under — {reason}", "pending")],
         )
-        self.append_registry(path="01.md", kind="under", reason=reason, minimum=100, maximum=1000)
 
         result, stats = self.run_json("--min-threshold", "100", "--threshold", "1000")
 
         self.assertEqual(result, 1)
-        self.assertIn("registry_table_status_mismatch", [item["code"] for item in stats["errors"]])
+        self.assertEqual(
+            [item["code"] for item in stats["errors"]],
+            ["accepted_size_requires_review"],
+        )
+        self.assertEqual(stats["warnings"], [])
         self.assertEqual(stats["accepted_exceptions"], [])
 
-    def test_registered_over_exception_is_invalid_if_review_status_is_reopened(self):
+    def test_over_acceptance_requires_reviewed_status(self):
         reason = "连续表格不可拆。"
         text = "# Shared table\n\n" + ("content\n" * 20)
         units = audit_chunks.content_units(text)
@@ -741,38 +692,36 @@ class TestAuditChunks(unittest.TestCase):
             "chunks/index.md",
             [("01.md", "Shared table", "—", f"{units} · accepted-over — {reason}", "pending")],
         )
-        self.append_registry(path="01.md", kind="over", reason=reason, minimum=1, maximum=10)
 
         result, stats = self.run_json("--min-threshold", "1", "--threshold", "10")
 
         self.assertEqual(result, 1)
-        self.assertIn("registry_table_status_mismatch", [item["code"] for item in stats["errors"]])
+        self.assertEqual(
+            [item["code"] for item in stats["errors"]],
+            ["accepted_size_requires_review"],
+        )
+        self.assertEqual(stats["warnings"], [])
         self.assertEqual(stats["accepted_exceptions"], [])
 
-    def test_reason_change_makes_under_exception_stale_and_warns_again(self):
-        old_reason = "旧的不合并理由。"
-        current_reason = "新的不合并理由。"
+    def test_accepted_status_must_match_recomputed_size_category(self):
+        reason = "错误类别不应被接受。"
         text = "# Terminology\n\nShort text.\n"
         units = audit_chunks.content_units(text)
         self.write("source.md", "# Source\n\nCanonical source text remains here.\n")
         self.write("chunks/01.md", text)
         self.write_index(
             "chunks/index.md",
-            [("01.md", "Terminology", "—", f"{units} · accepted-under — {current_reason}", "reviewed")],
-        )
-        self.append_registry(
-            path="01.md",
-            kind="under",
-            reason=current_reason,
-            reason_override=old_reason,
-            minimum=100,
-            maximum=1000,
+            [("01.md", "Terminology", "—", f"{units} · accepted-over — {reason}", "reviewed")],
         )
 
         result, stats = self.run_json("--min-threshold", "100", "--threshold", "1000")
 
-        self.assertEqual(result, 0)
-        self.assertIn("stale_chunk_exception", [item["code"] for item in stats["warnings"]])
+        self.assertEqual(result, 1)
+        self.assertEqual(
+            [item["code"] for item in stats["errors"]],
+            ["accepted_size_category_mismatch"],
+        )
+        self.assertEqual(stats["warnings"], [])
         self.assertEqual(stats["accepted_exceptions"], [])
 
     def test_valid_over_exception_suppresses_hard_error(self):
@@ -785,142 +734,36 @@ class TestAuditChunks(unittest.TestCase):
             "chunks/index.md",
             [("01.md", "Shared table", "—", f"{units} · accepted-over — {reason}", "reviewed")],
         )
-        self.append_registry(path="01.md", kind="over", reason=reason, minimum=1, maximum=10)
 
         result, stats = self.run_json("--min-threshold", "1", "--threshold", "10")
 
         self.assertEqual(result, 0)
         self.assertEqual(stats["status"], "pass")
+        self.assertEqual(stats["errors"], [])
+        self.assertEqual(stats["warnings"], [])
         self.assertEqual(len(stats["accepted_exceptions"]), 1)
+        self.assertEqual(stats["accepted_exceptions"][0]["reason"], reason)
 
-    def test_content_change_makes_over_exception_stale_and_hard_fails(self):
+    def test_accepted_decision_requires_current_recomputed_units(self):
         reason = "连续表格不可拆。"
-        old_text = "# Shared table\n\n" + ("content\n" * 20)
-        new_text = old_text + "changed\n"
-        units = audit_chunks.content_units(new_text)
+        text = "# Shared table\n\n" + ("content\n" * 20)
+        units = audit_chunks.content_units(text)
         self.write("source.md", "# Source\n\nCanonical source text remains here.\n")
-        self.write("chunks/01.md", new_text)
+        self.write("chunks/01.md", text)
         self.write_index(
             "chunks/index.md",
-            [("01.md", "Shared table", "—", f"{units} · accepted-over — {reason}", "reviewed")],
-        )
-        self.append_registry(
-            path="01.md",
-            kind="over",
-            reason=reason,
-            minimum=1,
-            maximum=10,
-            content_override=old_text,
+            [("01.md", "Shared table", "—", f"{units - 1} · accepted-over — {reason}", "reviewed")],
         )
 
         result, stats = self.run_json("--min-threshold", "1", "--threshold", "10")
 
         self.assertEqual(result, 1)
-        self.assertIn("stale_chunk_exception", [item["code"] for item in stats["errors"]])
-
-    def test_registry_for_now_normal_chunk_is_obsolete_warning(self):
-        reason = "Previously accepted."
-        text = "# Scope\n\nBody with enough content.\n"
-        units = audit_chunks.content_units(text)
-        self.write("source.md", "# Source\n\nCanonical source text remains here.\n")
-        self.write("chunks/01.md", text)
-        self.write_index(
-            "chunks/index.md",
-            [("01.md", "Scope", "—", f"{units} · normal", "reviewed")],
+        self.assertEqual(
+            [item["code"] for item in stats["errors"]],
+            ["accepted_size_measurement_mismatch"],
         )
-        self.append_registry(path="01.md", kind="under", reason=reason, minimum=1, maximum=1000)
-
-        result, stats = self.run_json("--min-threshold", "1", "--threshold", "1000")
-
-        self.assertEqual(result, 0)
-        self.assertIn("obsolete_chunk_exception", [item["code"] for item in stats["warnings"]])
-
-    def test_malformed_registry_is_hard_failure(self):
-        text = "# Scope\n\nBody.\n"
-        units = audit_chunks.content_units(text)
-        self.write("source.md", "# Source\n\nCanonical source text remains here.\n")
-        self.write("chunks/01.md", text)
-        self.write_index(
-            "chunks/index.md",
-            [("01.md", "Scope", "—", f"{units} · normal", "pending")],
-        )
-        root_index = self.root / "chunks/index.md"
-        root_index.write_text(
-            root_index.read_text(encoding="utf-8")
-            + "\n<!-- chunk-size-exceptions\n{not-json}\n-->\n",
-            encoding="utf-8",
-        )
-
-        result, stats = self.run_json()
-
-        self.assertEqual(result, 1)
-        self.assertIn("malformed_chunk_exception", [item["code"] for item in stats["errors"]])
-
-    def test_duplicate_registry_entry_is_hard_failure(self):
-        reason = "独立短章。"
-        text = "# Scope\n\nShort.\n"
-        units = audit_chunks.content_units(text)
-        self.write("source.md", "# Source\n\nCanonical source text remains here.\n")
-        self.write("chunks/01.md", text)
-        self.write_index(
-            "chunks/index.md",
-            [("01.md", "Scope", "—", f"{units} · accepted-under — {reason}", "reviewed")],
-        )
-        self.append_registry(path="01.md", kind="under", reason=reason, minimum=100, maximum=1000)
-        registry, problems = parse_registry_text(
-            (self.root / "chunks/index.md").read_text(encoding="utf-8")
-        )
-        self.assertEqual(problems, [])
-        assert registry is not None
-        registry["items"].append(dict(registry["items"][0]))
-        index_text = (self.root / "chunks/index.md").read_text(encoding="utf-8")
-        index_text = re.sub(
-            r"<!-- chunk-size-exceptions\n.*?\n-->",
-            "<!-- chunk-size-exceptions\n"
-            + json.dumps(registry, ensure_ascii=False, indent=2)
-            + "\n-->",
-            index_text,
-            flags=re.DOTALL,
-        )
-        (self.root / "chunks/index.md").write_text(index_text, encoding="utf-8")
-
-        result, stats = self.run_json("--min-threshold", "100", "--threshold", "1000")
-
-        self.assertEqual(result, 1)
-        self.assertIn("duplicate_chunk_exception", [item["code"] for item in stats["errors"]])
-
-    def test_orphan_registry_entry_is_hard_failure(self):
-        reason = "独立短章。"
-        text = "# Scope\n\nShort.\n"
-        units = audit_chunks.content_units(text)
-        self.write("source.md", "# Source\n\nCanonical source text remains here.\n")
-        self.write("chunks/01.md", text)
-        self.write_index(
-            "chunks/index.md",
-            [("01.md", "Scope", "—", f"{units} · accepted-under — {reason}", "reviewed")],
-        )
-        self.append_registry(path="01.md", kind="under", reason=reason, minimum=100, maximum=1000)
-        registry, problems = parse_registry_text(
-            (self.root / "chunks/index.md").read_text(encoding="utf-8")
-        )
-        self.assertEqual(problems, [])
-        assert registry is not None
-        registry["items"][0]["path"] = "02.md"
-        index_text = (self.root / "chunks/index.md").read_text(encoding="utf-8")
-        index_text = re.sub(
-            r"<!-- chunk-size-exceptions\n.*?\n-->",
-            "<!-- chunk-size-exceptions\n"
-            + json.dumps(registry, ensure_ascii=False, indent=2)
-            + "\n-->",
-            index_text,
-            flags=re.DOTALL,
-        )
-        (self.root / "chunks/index.md").write_text(index_text, encoding="utf-8")
-
-        result, stats = self.run_json("--min-threshold", "100", "--threshold", "1000")
-
-        self.assertEqual(result, 1)
-        self.assertIn("orphan_chunk_exception", [item["code"] for item in stats["errors"]])
+        self.assertEqual(stats["warnings"], [])
+        self.assertEqual(stats["accepted_exceptions"], [])
 
     def test_legacy_free_text_reason_is_migration_candidate_not_acceptance(self):
         text = "# Large table\n\n" + ("content\n" * 20)

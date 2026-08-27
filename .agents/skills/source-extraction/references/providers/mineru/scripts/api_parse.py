@@ -17,6 +17,7 @@ from api_common import (
     api_headers,
     api_url,
     env_value,
+    has_nonempty_markdown,
     parse_env_file,
     request_bytes,
     request_json,
@@ -403,6 +404,8 @@ def extract_full_markdown(*, zip_path: Path, output_dir: Path, keep_all_extracte
             extract_all_members(archive, output_dir)
 
     markdown_text = full_md_bytes.decode("utf-8", errors="replace")
+    if not has_nonempty_markdown(markdown_text):
+        raise RuntimeError("full.md is empty or whitespace-only")
     source_path = output_dir / "source.md"
     source_path.write_text(markdown_text, encoding="utf-8")
     preserved_outputs = ["source.md", "full.md"]

@@ -95,7 +95,7 @@ class ScenarioContractTest(unittest.TestCase):
         self.assertNotIn("## Pending Decisions", starter_pages)
         self.assertNotIn("Use direct concepts, causal reasoning", starter_pages)
 
-    def test_scenario_skill_and_script_are_package_owned_and_old_path_is_retired(self) -> None:
+    def test_scenario_skill_and_script_are_package_owned(self) -> None:
         new_paths = (
             "scenarios/exam-study/skills/exam-study/SKILL.md",
             "scenarios/exam-study/skills/exam-study/references/workflow-contract.md",
@@ -103,13 +103,10 @@ class ScenarioContractTest(unittest.TestCase):
         )
         old_path = "scenarios/exam-study/" + "scripts/audit_wrong_questions.py"
         inventory_lines = self.read("scripts/package-files.txt").splitlines()
-        manifest_lines = self.read("scripts/upgrade-manifest.txt").splitlines()
 
         for path in new_paths:
             self.assertTrue((ROOT / path).is_file(), path)
             self.assertIn(f"active {path}", inventory_lines)
-        self.assertIn(f"remove {old_path}", inventory_lines)
-        self.assertIn(f"remove {old_path}", manifest_lines)
         self.assertFalse((ROOT / old_path).exists())
 
     def test_contract_review_and_skill_creator_cover_scenario_skills(self) -> None:

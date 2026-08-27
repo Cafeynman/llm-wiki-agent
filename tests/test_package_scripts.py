@@ -53,8 +53,18 @@ PRIVATE_RUNTIME_LINES = (
     "/wiki/",
 )
 OTHER_RUNTIME_LINES = ("/intake/tmp/",)
-RETIRED_PACKAGE_FILE = ".agents/skills/markitdown-skill/README.md"
 MANAGED_DIRECTORIES = ("docs", "scenarios", "scripts", ".agents/skills")
+ROOT_PACKAGE_FILES = {
+    "AGENTS.md",
+    "WIKI.md",
+    "README.md",
+    "README.zh-CN.md",
+    "LICENSE",
+    "pyproject.toml",
+    "uv.lock",
+    ".gitattributes",
+    ".env.example",
+}
 
 
 class PackageScriptTest(unittest.TestCase):
@@ -217,9 +227,6 @@ class PackageScriptTest(unittest.TestCase):
     def make_package_copy(self, root: Path) -> Path:
         package = root / "package"
         package.mkdir()
-        manifest_lines = (ROOT / "scripts/upgrade-manifest.txt").read_text(
-            encoding="utf-8"
-        ).splitlines()
         inventory_entries = {
             tuple(line.strip().split(maxsplit=1))
             for line in (ROOT / "scripts/package-files.txt").read_text(
@@ -230,19 +237,10 @@ class PackageScriptTest(unittest.TestCase):
         package_files = {
             relative for state, relative in inventory_entries if state == "active"
         }
-        for line in manifest_lines:
-            stripped = line.strip()
-            if not stripped or stripped.startswith("#"):
-                continue
-            kind, relative = stripped.split(maxsplit=1)
-            if kind == "file":
-                package_files.add(relative)
         package_files.update(
             {
                 "PROJECT.md",
                 ".gitignore",
-                "scripts/upgrade-manifest.txt",
-                "scripts/package-files.txt",
             }
         )
         for relative in sorted(package_files):
@@ -262,40 +260,6 @@ class PackageScriptTest(unittest.TestCase):
             sentinel.parent.mkdir(parents=True)
             sentinel.write_text("keep me\n", encoding="utf-8")
         return target
-
-    def convert_target_metadata_to_legacy(self, target: Path) -> None:
-        manifest = target / "scripts/upgrade-manifest.txt"
-        manifest_lines = manifest.read_text(encoding="utf-8").splitlines()
-        manifest.write_text(
-            "\n".join(line for line in manifest_lines if line != "inventory all")
-            + "\n",
-            encoding="utf-8",
-        )
-        non_directory_paths = {
-            relative
-            for kind, relative in (
-                line.split(maxsplit=1)
-                for line in manifest_lines
-                if line and not line.startswith("#") and line != "inventory all"
-            )
-            if kind in {"file", "remove"}
-        }
-        inventory = target / "scripts/package-files.txt"
-        typed_inventory = [
-            line.split(maxsplit=1)
-            for line in inventory.read_text(encoding="utf-8").splitlines()
-            if line and not line.startswith("#")
-        ]
-        inventory.write_text(
-            "# Legacy directory-only ownership inventory.\n"
-            + "\n".join(
-                relative
-                for state, relative in typed_inventory
-                if state == "active" and relative not in non_directory_paths
-            )
-            + "\n",
-            encoding="utf-8",
-        )
 
     def assert_target(self, target: Path, call_log: Path, *, with_sentinel: bool) -> None:
         gitignore = (target / ".gitignore").read_text(encoding="utf-8")
@@ -407,121 +371,6 @@ class PackageScriptTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
             self.assert_target(target, call_log, with_sentinel=with_sentinel)
-
-    def assert_owned_retired_package_file_cleanup(self, shell_kind: str) -> None:
-        for state in ("owned_file", "owned_missing", "owned_directory"):
-            with self.subTest(state=state), tempfile.TemporaryDirectory() as temp_dir:
-                temp = Path(temp_dir)
-                target = self.make_target(temp, with_sentinel=True)
-                env, call_log = self.make_fake_uv(temp)
-                command = self.script_command(
-                    shell_kind,
-                    "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
-                    "-TargetRoot",
-                    target,
-                )
-                first = subprocess.run(
-                    command,
-                    cwd=ROOT,
-                    env=env,
-                    capture_output=True,
-                    text=True,
-                )
-                self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
-
-                retired = target / RETIRED_PACKAGE_FILE
-                target_only = target / ".agents/skills/self-improving-agent/user-owned.txt"
-                retired.parent.mkdir(parents=True, exist_ok=True)
-                if state == "owned_directory":
-                    retired.mkdir()
-                elif state == "owned_file":
-                    retired.write_text("old package documentation\n", encoding="utf-8")
-
-                old_manifest = target / "scripts/upgrade-manifest.txt"
-                old_manifest.write_text(
-                    "\n".join(
-                        line
-                        for line in old_manifest.read_text(encoding="utf-8").splitlines()
-                        if line != f"remove {RETIRED_PACKAGE_FILE}"
-                    )
-                    + "\n",
-                    encoding="utf-8",
-                )
-                old_inventory = target / "scripts/package-files.txt"
-                old_inventory.write_text(
-                    old_inventory.read_text(encoding="utf-8").replace(
-                        f"remove {RETIRED_PACKAGE_FILE}\n",
-                        f"active {RETIRED_PACKAGE_FILE}\n",
-                    ),
-                    encoding="utf-8",
-                )
-
-                before = self.snapshot_working_tree(target)
-                call_log.unlink()
-                result = subprocess.run(
-                    command,
-                    cwd=ROOT,
-                    env=env,
-                    capture_output=True,
-                    text=True,
-                )
-
-                if state == "owned_directory":
-                    self.assertNotEqual(result.returncode, 0)
-                    self.assertIn(f"Conflict: {RETIRED_PACKAGE_FILE}", result.stdout + result.stderr)
-                    self.assertIn("directory", result.stdout + result.stderr)
-                    self.assertEqual(self.snapshot_working_tree(target), before)
-                    self.assertFalse(call_log.exists())
-                else:
-                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                    self.assertFalse(retired.exists())
-                    self.assertEqual(target_only.read_text(encoding="utf-8"), "keep me\n")
-                    self.assertTrue(call_log.exists())
-                    after = self.snapshot_working_tree(target)
-                    second = subprocess.run(
-                        command,
-                        cwd=ROOT,
-                        env=env,
-                        capture_output=True,
-                        text=True,
-                    )
-                    self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
-                    self.assertEqual(self.snapshot_working_tree(target), after)
-
-    def assert_continued_tombstone_cleanup(self, shell_kind: str) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp = Path(temp_dir)
-            target = self.make_target(temp, with_sentinel=False)
-            env, call_log = self.make_fake_uv(temp)
-            command = self.script_command(
-                shell_kind,
-                "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
-                "-TargetRoot",
-                target,
-            )
-            first = subprocess.run(
-                command,
-                cwd=ROOT,
-                env=env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
-
-            retired = target / RETIRED_PACKAGE_FILE
-            retired.parent.mkdir(parents=True, exist_ok=True)
-            retired.write_text("unexpected retired package file\n", encoding="utf-8")
-            call_log.unlink()
-            second = subprocess.run(
-                command,
-                cwd=ROOT,
-                env=env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
-            self.assertFalse(retired.exists())
-            self.assertTrue(call_log.exists())
 
     def seed_existing_runtime(self, target: Path) -> None:
         (target / "wiki").mkdir(parents=True, exist_ok=True)
@@ -688,15 +537,57 @@ class PackageScriptTest(unittest.TestCase):
     def test_upgrade_bash_preserves_or_seeds_gitignore_policy(self) -> None:
         self.run_bash_gitignore_matrix("upgrade.sh", "-TargetRoot")
 
-    def test_manifest_leaves_runtime_adapters_user_owned(self) -> None:
-        manifest = (ROOT / "scripts/upgrade-manifest.txt").read_text(encoding="utf-8")
+    def test_bash_large_gitignore_remains_idempotent(self) -> None:
+        if os.name == "nt":
+            self.skipTest("Supported Bash upgrade coverage runs on Linux and macOS")
+        shell = self.bash_executable()
+        if shell is None:
+            self.skipTest("Bash is not available")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            target = temp / "target"
+            target.mkdir()
+            (target / ".gitignore").write_bytes(
+                b".env\r\n" + (b"# padding for pipe buffer coverage\r\n" * 20000)
+            )
+            env, _ = self.make_fake_uv(temp)
+            command = self.script_command("bash", "upgrade.sh", "-TargetRoot", target)
+
+            for _ in range(2):
+                result = subprocess.run(
+                    command,
+                    cwd=ROOT,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+            lines = (target / ".gitignore").read_text(encoding="utf-8").splitlines()
+            for line in REQUIRED_GITIGNORE_LINES:
+                self.assertEqual(lines.count(line), 1, line)
+
+    def test_inventory_is_the_single_1_0_ownership_contract(self) -> None:
         inventory = (ROOT / "scripts/package-files.txt").read_text(encoding="utf-8")
-        self.assertEqual(manifest.splitlines().count("inventory all"), 1)
+        records = {
+            tuple(line.strip().split(maxsplit=1))
+            for line in inventory.splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        }
         self.assertEqual(
-            inventory.splitlines().count("# inventory-format: complete"), 1
+            inventory.splitlines().count("# inventory-schema: 1"), 1
         )
-        self.assertNotIn("file CLAUDE.md", manifest.splitlines())
-        self.assertIn(f"remove {RETIRED_PACKAGE_FILE}", manifest.splitlines())
+        self.assertFalse((ROOT / "scripts/upgrade-manifest.txt").exists())
+        self.assertNotIn(("active", "CLAUDE.md"), records)
+        for pre_1_path in (
+            "scripts/upgrade-manifest.txt",
+            "docs/通用底座改进计划.md",
+            ".agents/skills/source-extraction/scripts/record_chunk_exception.py",
+            ".agents/skills/source-extraction/tests/test_record_chunk_exception.py",
+        ):
+            self.assertNotIn(("active", pre_1_path), records)
+            self.assertNotIn(("remove", pre_1_path), records)
 
     def test_package_inventory_matches_tracked_managed_files(self) -> None:
         git = shutil.which("git")
@@ -709,47 +600,56 @@ class PackageScriptTest(unittest.TestCase):
             if line.strip() and not line.lstrip().startswith("#")
         }
         result = subprocess.run(
-            [git, "-c", "core.quotepath=false", "ls-files", *MANAGED_DIRECTORIES],
+            [git, "-c", "core.quotepath=false", "ls-files"],
             cwd=ROOT,
             check=True,
             capture_output=True,
             text=True,
             encoding="utf-8",
         )
-        tracked = set(result.stdout.splitlines())
-        manifest_entries = [
-            line.strip().split(maxsplit=1)
-            for line in (ROOT / "scripts/upgrade-manifest.txt")
-            .read_text(encoding="utf-8")
-            .splitlines()
-            if line.strip() and not line.lstrip().startswith("#")
-        ]
-        tracked.update(relative for kind, relative in manifest_entries if kind == "file")
-        retired = {relative for kind, relative in manifest_entries if kind == "remove"}
-        expected_inventory = {("active", relative) for relative in tracked}
-        expected_inventory.update(("remove", relative) for relative in retired)
-        self.assertEqual(inventory, expected_inventory)
+        tracked = {
+            relative
+            for relative in result.stdout.splitlines()
+            if (ROOT / relative).is_file()
+            and (
+                relative in ROOT_PACKAGE_FILES
+                or any(
+                    relative.startswith(f"{directory}/")
+                    for directory in MANAGED_DIRECTORIES
+                )
+            )
+        }
+        self.assertTrue({kind for kind, _path in inventory} <= {"active", "remove"})
+        active = {path for kind, path in inventory if kind == "active"}
+        removed = {path for kind, path in inventory if kind == "remove"}
+        self.assertEqual(active, tracked)
+        self.assertTrue(removed.isdisjoint(tracked))
 
     def test_upgrade_ignores_untracked_files_inside_managed_directories(self) -> None:
-        source_only = ROOT / "docs/untracked-upgrade-sentinel.txt"
-        self.assertFalse(source_only.exists())
-        source_only.write_text("must not be copied\n", encoding="utf-8")
-        try:
-            with tempfile.TemporaryDirectory() as temp_dir:
-                temp = Path(temp_dir)
-                target = self.make_target(temp, with_sentinel=False)
-                env, _ = self.make_fake_uv(temp)
-                result = subprocess.run(
-                    self.script_command("powershell", "upgrade.ps1", "-TargetRoot", target),
-                    cwd=ROOT,
-                    env=env,
-                    capture_output=True,
-                    text=True,
-                )
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertFalse((target / "docs/untracked-upgrade-sentinel.txt").exists())
-        finally:
-            source_only.unlink(missing_ok=True)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            package = self.make_package_copy(temp)
+            source_only = package / "docs/untracked-upgrade-sentinel.txt"
+            source_only.write_text("must not be copied\n", encoding="utf-8")
+            target = self.make_target(temp, with_sentinel=False)
+            run_root = temp / "run"
+            run_root.mkdir()
+            env, _ = self.make_fake_uv(run_root)
+            result = subprocess.run(
+                self.script_command(
+                    "powershell",
+                    "upgrade.ps1",
+                    "-TargetRoot",
+                    target,
+                    package_root=package,
+                ),
+                cwd=package,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertFalse((target / "docs/untracked-upgrade-sentinel.txt").exists())
 
     def test_init_scripts_are_thin_upgrade_wrappers(self) -> None:
         powershell = (ROOT / "scripts/init.ps1").read_text(encoding="utf-8")
@@ -797,8 +697,9 @@ class PackageScriptTest(unittest.TestCase):
             self.assertNotIn(bash_four_only, bash)
         for non_portable_operand_separator in ("cp -f --", "mv -f --", "rm -f --"):
             self.assertNotIn(non_portable_operand_separator, bash)
-        self.assertIn("manifest.txt\" ]] && metadata_order=1", bash)
-        self.assertIn("package-files.txt\" ]] && metadata_order=2", bash)
+        self.assertNotIn("upgrade-manifest", powershell + bash)
+        self.assertIn("package-files.txt\" ]] && metadata_order=1", bash)
+        self.assertNotIn("metadata_order=2", bash)
 
     def test_bash_rejects_windows_runtime_before_writes(self) -> None:
         if os.name != "nt":
@@ -874,122 +775,10 @@ class PackageScriptTest(unittest.TestCase):
             )
             self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
             self.assertEqual((target / relative).read_text(encoding="utf-8"), "第二版\n")
-
-            self.convert_target_metadata_to_legacy(target)
-            source.write_text("第三版\n", encoding="utf-8")
-            third = subprocess.run(
-                command,
-                cwd=package,
-                env=env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertEqual(third.returncode, 0, third.stdout + third.stderr)
-            self.assertEqual((target / relative).read_text(encoding="utf-8"), "第三版\n")
             self.assertIn(
-                "# inventory-format: complete",
+                "# inventory-schema: 1",
                 (target / "scripts/package-files.txt").read_text(encoding="utf-8"),
             )
-
-            (target / "scripts/upgrade-manifest.txt").unlink()
-            source.write_text("第四版\n", encoding="utf-8")
-            fourth = subprocess.run(
-                command,
-                cwd=package,
-                env=env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertEqual(fourth.returncode, 0, fourth.stdout + fourth.stderr)
-            self.assertEqual((target / relative).read_text(encoding="utf-8"), "第四版\n")
-
-    def test_windows_powershell_51_resumes_initial_inventory_checkpoint(self) -> None:
-        if os.name != "nt":
-            self.skipTest("Windows PowerShell 5.1 coverage")
-        shell = shutil.which("powershell")
-        if shell is None:
-            self.skipTest("Windows PowerShell is not available")
-
-        for missing_metadata in ("manifest", "inventory"):
-            with self.subTest(missing_metadata=missing_metadata), tempfile.TemporaryDirectory() as temp_dir:
-                temp = Path(temp_dir)
-                package = self.make_package_copy(temp)
-                relative = "docs/首次检查点恢复.md"
-                (package / relative).write_text("包内容\n", encoding="utf-8")
-                manifest = package / "scripts/upgrade-manifest.txt"
-                inventory = package / "scripts/package-files.txt"
-                inventory.write_text(
-                    inventory.read_text(encoding="utf-8")
-                    + f"active {relative}\n",
-                    encoding="utf-8",
-                )
-                manifest_bytes = manifest.read_bytes()
-                inventory_bytes = inventory.read_bytes()
-                removed_source = (
-                    manifest if missing_metadata == "manifest" else inventory
-                )
-                target = self.make_target(temp, with_sentinel=False)
-                failure_root = temp / "failure"
-                failure_root.mkdir()
-                failure_env, _ = self.make_fake_uv(
-                    failure_root, remove_on_sync=removed_source
-                )
-                command = [
-                    shell,
-                    "-NoLogo",
-                    "-NoProfile",
-                    "-ExecutionPolicy",
-                    "Bypass",
-                    "-File",
-                    str(package / "scripts/upgrade.ps1"),
-                    "-TargetRoot",
-                    str(target),
-                ]
-                interrupted = subprocess.run(
-                    command,
-                    cwd=package,
-                    env=failure_env,
-                    capture_output=True,
-                    text=True,
-                )
-                self.assertNotEqual(interrupted.returncode, 0)
-                checkpoint = (target / "scripts/package-files.txt").read_text(
-                    encoding="utf-8"
-                )
-                self.assertEqual(
-                    [
-                        line
-                        for line in checkpoint.splitlines()
-                        if line and not line.startswith("#")
-                    ],
-                    ["active scripts/package-files.txt"],
-                )
-
-                manifest.write_bytes(manifest_bytes)
-                inventory.write_bytes(inventory_bytes)
-                rerun_root = temp / "rerun"
-                rerun_root.mkdir()
-                rerun_env, call_log = self.make_fake_uv(rerun_root)
-                rerun = subprocess.run(
-                    command,
-                    cwd=package,
-                    env=rerun_env,
-                    capture_output=True,
-                    text=True,
-                )
-                self.assertEqual(rerun.returncode, 0, rerun.stdout + rerun.stderr)
-                self.assertTrue(call_log.exists())
-                self.assertEqual(
-                    (target / relative).read_text(encoding="utf-8"), "包内容\n"
-                )
-                self.assertEqual(
-                    (target / "scripts/upgrade-manifest.txt").read_bytes(),
-                    manifest_bytes,
-                )
-                self.assertEqual(
-                    (target / "scripts/package-files.txt").read_bytes(),
-                    inventory_bytes,
-                )
 
     def test_powershell_replaces_an_owned_file_without_repository_state(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1020,86 +809,15 @@ class PackageScriptTest(unittest.TestCase):
             self.assertEqual((target / "WIKI.md").read_bytes(), (ROOT / "WIKI.md").read_bytes())
             self.assertTrue(call_log.exists())
 
-    def test_powershell_retires_a_path_owned_by_the_old_inventory(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp = Path(temp_dir)
-            target = self.make_target(temp, with_sentinel=False)
-            env, call_log = self.make_fake_uv(temp)
-            command = self.script_command("powershell", "upgrade.ps1", "-TargetRoot", target)
-            first = subprocess.run(
-                command,
-                cwd=ROOT,
-                env=env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
-
-            retired = target / RETIRED_PACKAGE_FILE
-            retired.parent.mkdir(parents=True, exist_ok=True)
-            retired.write_text("old package documentation\n", encoding="utf-8")
-            old_manifest = target / "scripts/upgrade-manifest.txt"
-            old_manifest.write_text(
-                "\n".join(
-                    line
-                    for line in old_manifest.read_text(encoding="utf-8").splitlines()
-                    if line != f"remove {RETIRED_PACKAGE_FILE}"
-                )
-                + "\n",
-                encoding="utf-8",
-            )
-            old_inventory = target / "scripts/package-files.txt"
-            old_inventory.write_text(
-                old_inventory.read_text(encoding="utf-8").replace(
-                    f"remove {RETIRED_PACKAGE_FILE}\n",
-                    f"active {RETIRED_PACKAGE_FILE}\n",
-                ),
-                encoding="utf-8",
-            )
-            call_log.unlink()
-            second = subprocess.run(
-                command,
-                cwd=ROOT,
-                env=env,
-                capture_output=True,
-                text=True,
-            )
-
-            self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
-            self.assertFalse(retired.exists())
-
-    def test_powershell_rejects_partial_old_ownership_metadata_before_writes(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp = Path(temp_dir)
-            target = self.make_target(temp, with_sentinel=False)
-            (target / "scripts").mkdir(parents=True)
-            (target / "scripts/upgrade-manifest.txt").write_text(
-                "file WIKI.md\n",
-                encoding="utf-8",
-            )
-            before = self.snapshot_working_tree(target)
-            env, call_log = self.make_fake_uv(temp)
-            result = subprocess.run(
-                self.script_command("powershell", "upgrade.ps1", "-TargetRoot", target),
-                cwd=ROOT,
-                env=env,
-                capture_output=True,
-                text=True,
-            )
-
-            self.assertNotEqual(result.returncode, 0)
-            self.assertIn("ownership metadata", (result.stdout + result.stderr).lower())
-            self.assertEqual(self.snapshot_working_tree(target), before)
-            self.assertFalse(call_log.exists())
-
     def test_powershell_rejects_invalid_utf8_old_metadata_before_writes(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp = Path(temp_dir)
             target = self.make_target(temp, with_sentinel=False)
             scripts = target / "scripts"
             scripts.mkdir(parents=True)
-            (scripts / "upgrade-manifest.txt").write_bytes(b"file WIKI.md\n")
-            (scripts / "package-files.txt").write_bytes(b"WIKI.md\n\xff\n")
+            (scripts / "package-files.txt").write_bytes(
+                b"# inventory-schema: 1\nactive scripts/package-files.txt\n\xff\n"
+            )
             before = self.snapshot_working_tree(target)
             env, call_log = self.make_fake_uv(temp)
             result = subprocess.run(
@@ -1117,24 +835,26 @@ class PackageScriptTest(unittest.TestCase):
     def test_usage_documents_describe_the_overwrite_guard(self) -> None:
         usage = (ROOT / "docs/usage.md").read_text(encoding="utf-8")
         usage_zh = (ROOT / "docs/usage.zh-CN.md").read_text(encoding="utf-8")
-        self.assertIn("old `scripts/upgrade-manifest.txt`", usage)
+        self.assertIn("only package ownership source", usage)
         self.assertIn("target Git history is not consulted", usage)
         self.assertIn("blocks the upgrade before target writes", usage)
         self.assertIn("links or reparse points", usage)
-        self.assertIn("declares `inventory all`", usage)
-        self.assertIn("declares `# inventory-format: complete`", usage)
+        self.assertIn("declares `# inventory-schema: 1`", usage)
         self.assertIn("`active <path>` and `remove <path>`", usage)
-        self.assertIn("legacy inventory is first replaced atomically", usage)
+        self.assertIn("Versions before 1.0 are not supported", usage)
+        self.assertIn("retained until the path explicitly returns as `active`", usage)
+        self.assertIn("new inventory is committed last", usage)
         self.assertIn("rejects Windows runtimes", usage)
         self.assertNotIn("tracked and clean", usage)
-        self.assertIn("旧 `scripts/upgrade-manifest.txt`", usage_zh)
+        self.assertIn("唯一包所有权来源", usage_zh)
         self.assertIn("不读取目标 Git 历史", usage_zh)
         self.assertIn("在写入目标前停止", usage_zh)
         self.assertIn("目录联接", usage_zh)
-        self.assertIn("声明 `inventory all`", usage_zh)
-        self.assertIn("声明 `# inventory-format: complete`", usage_zh)
+        self.assertIn("`# inventory-schema: 1`", usage_zh)
         self.assertIn("`active <path>` 与 `remove <path>`", usage_zh)
-        self.assertIn("先把旧 inventory 原子替换", usage_zh)
+        self.assertIn("1.0 之前的版本不作为升级来源支持", usage_zh)
+        self.assertIn("保留到该路径明确重新成为 `active`", usage_zh)
+        self.assertIn("新 inventory 最后", usage_zh)
         self.assertIn("拒绝 Windows 运行时", usage_zh)
         self.assertNotIn("相对 `HEAD` 干净", usage_zh)
 
@@ -1154,1089 +874,16 @@ class PackageScriptTest(unittest.TestCase):
         self.assertIn("uv run --no-project python -m unittest", workflow)
         self.assertNotIn("uv sync", workflow)
 
+
     def assert_ownership_guard(self, shell_kind: str) -> None:
-        for script_name, parameter in (
-            ("init.ps1" if shell_kind == "powershell" else "init.sh", "-VaultRoot"),
-            ("upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh", "-TargetRoot"),
-        ):
-            with self.subTest(script=script_name, case="legacy_conflict"), tempfile.TemporaryDirectory() as temp_dir:
-                temp = Path(temp_dir)
-                target = temp / "target"
-                target.mkdir()
-                local_wiki = b"# Local contract\n"
-                (target / "WIKI.md").write_bytes(local_wiki)
-                env, call_log = self.make_fake_uv(temp)
-                result = subprocess.run(
-                    self.script_command(shell_kind, script_name, parameter, target),
-                    cwd=ROOT,
-                    env=env,
-                    capture_output=True,
-                    text=True,
-                )
-                self.assertNotEqual(result.returncode, 0)
-                self.assertEqual((target / "WIKI.md").read_bytes(), local_wiki)
-                self.assertFalse((target / "AGENTS.md").exists())
-                self.assertFalse(call_log.exists())
-
-            with self.subTest(script=script_name, case="legacy_identical_adoption"), tempfile.TemporaryDirectory() as temp_dir:
-                temp = Path(temp_dir)
-                target = temp / "target"
-                target.mkdir()
-                (target / "WIKI.md").write_bytes((ROOT / "WIKI.md").read_bytes())
-                env, call_log = self.make_fake_uv(temp)
-                result = subprocess.run(
-                    self.script_command(shell_kind, script_name, parameter, target),
-                    cwd=ROOT,
-                    env=env,
-                    capture_output=True,
-                    text=True,
-                )
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertEqual(
-                    (target / "WIKI.md").read_bytes(),
-                    (ROOT / "WIKI.md").read_bytes(),
-                )
-                self.assertTrue((target / "scripts/upgrade-manifest.txt").is_file())
-                self.assertTrue(call_log.exists())
-
-            with self.subTest(script=script_name, case="owned_reconciliation"), tempfile.TemporaryDirectory() as temp_dir:
-                temp = Path(temp_dir)
-                target = self.make_target(temp, with_sentinel=True)
-                env, call_log = self.make_fake_uv(temp)
-                command = self.script_command(shell_kind, script_name, parameter, target)
-                first = subprocess.run(
-                    command,
-                    cwd=ROOT,
-                    env=env,
-                    capture_output=True,
-                    text=True,
-                )
-                self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
-
-                (target / "WIKI.md").write_text("# Previous package contract\n", encoding="utf-8")
-                (target / "AGENTS.md").unlink()
-                (target / "PROJECT.md").write_text("# Project\n\nkeep project choices\n", encoding="utf-8")
-                (target / ".env").write_text("PRIVATE_SETTING=preserve\n", encoding="utf-8")
-                runtime_page = target / "wiki/home.md"
-                runtime_page.write_text("# User runtime change\n", encoding="utf-8")
-                call_log.unlink()
-                second = subprocess.run(
-                    command,
-                    cwd=ROOT,
-                    env=env,
-                    capture_output=True,
-                    text=True,
-                )
-                self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
-                self.assertEqual((target / "WIKI.md").read_bytes(), (ROOT / "WIKI.md").read_bytes())
-                self.assertEqual((target / "AGENTS.md").read_bytes(), (ROOT / "AGENTS.md").read_bytes())
-                self.assertEqual((target / "PROJECT.md").read_text(encoding="utf-8"), "# Project\n\nkeep project choices\n")
-                self.assertEqual((target / ".env").read_text(encoding="utf-8"), "PRIVATE_SETTING=preserve\n")
-                self.assertEqual(runtime_page.read_text(encoding="utf-8"), "# User runtime change\n")
-                self.assertEqual(
-                    (target / ".agents/skills/self-improving-agent/user-owned.txt").read_text(encoding="utf-8"),
-                    "keep me\n",
-                )
-                self.assertEqual(len(call_log.read_text(encoding="utf-8").splitlines()), 2)
-                after = self.snapshot_working_tree(target)
-                third = subprocess.run(
-                    command,
-                    cwd=ROOT,
-                    env=env,
-                    capture_output=True,
-                    text=True,
-                )
-                self.assertEqual(third.returncode, 0, third.stdout + third.stderr)
-                self.assertEqual(self.snapshot_working_tree(target), after)
-
-            for conflict_case in (
-                "new_claim",
-                "missing_retirement",
-                "partial_metadata",
-                "unmarked_inventory_only",
-                "malformed_metadata",
-                "duplicate_metadata",
-                "legacy_tombstone",
-            ):
-                with self.subTest(script=script_name, case=conflict_case), tempfile.TemporaryDirectory() as temp_dir:
-                    temp = Path(temp_dir)
-                    target = temp / "target"
-                    target.mkdir()
-
-                    if conflict_case in ("new_claim", "missing_retirement"):
-                        setup_root = temp / "setup"
-                        setup_root.mkdir()
-                        setup_target = self.make_target(setup_root, with_sentinel=False)
-                        setup_env, _ = self.make_fake_uv(setup_root)
-                        setup_command = self.script_command(shell_kind, script_name, parameter, setup_target)
-                        setup = subprocess.run(
-                            setup_command,
-                            cwd=ROOT,
-                            env=setup_env,
-                            capture_output=True,
-                            text=True,
-                        )
-                        self.assertEqual(setup.returncode, 0, setup.stdout + setup.stderr)
-                        target = setup_target
-                        old_manifest = target / "scripts/upgrade-manifest.txt"
-                        if conflict_case == "new_claim":
-                            old_manifest.write_text(
-                                "\n".join(
-                                    line
-                                    for line in old_manifest.read_text(encoding="utf-8").splitlines()
-                                    if line != "file WIKI.md"
-                                )
-                                + "\n",
-                                encoding="utf-8",
-                            )
-                            old_inventory = target / "scripts/package-files.txt"
-                            old_inventory.write_text(
-                                "\n".join(
-                                    line
-                                    for line in old_inventory.read_text(
-                                        encoding="utf-8"
-                                    ).splitlines()
-                                    if line != "active WIKI.md"
-                                )
-                                + "\n",
-                                encoding="utf-8",
-                            )
-                            (target / "WIKI.md").write_text("# Target-owned contract\n", encoding="utf-8")
-                        else:
-                            old_manifest.write_text(
-                                old_manifest.read_text(encoding="utf-8") + "file legacy-owned.md\n",
-                                encoding="utf-8",
-                            )
-                            old_inventory = target / "scripts/package-files.txt"
-                            old_inventory.write_text(
-                                old_inventory.read_text(encoding="utf-8")
-                                + "active legacy-owned.md\n",
-                                encoding="utf-8",
-                            )
-                            (target / "legacy-owned.md").write_text("old package file\n", encoding="utf-8")
-                    elif conflict_case == "partial_metadata":
-                        (target / "scripts").mkdir()
-                        (target / "scripts/upgrade-manifest.txt").write_text("file WIKI.md\n", encoding="utf-8")
-                    elif conflict_case == "unmarked_inventory_only":
-                        (target / "scripts").mkdir()
-                        (target / "scripts/package-files.txt").write_text(
-                            "WIKI.md\n", encoding="utf-8"
-                        )
-                    elif conflict_case == "malformed_metadata":
-                        (target / "scripts").mkdir()
-                        (target / "scripts/upgrade-manifest.txt").write_text("dir scripts\n", encoding="utf-8")
-                        (target / "scripts/package-files.txt").write_text("../escape.md\n", encoding="utf-8")
-                    elif conflict_case == "duplicate_metadata":
-                        (target / "scripts").mkdir()
-                        (target / "scripts/upgrade-manifest.txt").write_text(
-                            "dir docs\n",
-                            encoding="utf-8",
-                        )
-                        (target / "scripts/package-files.txt").write_text(
-                            "docs/example.md\nDOCS/EXAMPLE.md\n",
-                            encoding="utf-8",
-                        )
-                    else:
-                        retired = target / RETIRED_PACKAGE_FILE
-                        retired.parent.mkdir(parents=True)
-                        retired.write_text("target-owned legacy file\n", encoding="utf-8")
-
-                    before = self.snapshot_working_tree(target)
-                    run_root = temp / "run"
-                    run_root.mkdir()
-                    env, call_log = self.make_fake_uv(run_root)
-                    result = subprocess.run(
-                        self.script_command(shell_kind, script_name, parameter, target),
-                        cwd=ROOT,
-                        env=env,
-                        capture_output=True,
-                        text=True,
-                    )
-                    self.assertNotEqual(result.returncode, 0)
-                    output = result.stdout + result.stderr
-                    expected = {
-                        "new_claim": "Conflict: WIKI.md",
-                        "missing_retirement": "legacy-owned.md",
-                        "partial_metadata": "ownership metadata",
-                        "unmarked_inventory_only": "standalone inventory",
-                        "malformed_metadata": "invalid package path",
-                        "duplicate_metadata": "duplicate package path",
-                        "legacy_tombstone": RETIRED_PACKAGE_FILE,
-                    }[conflict_case]
-                    self.assertIn(expected, output)
-                    self.assertEqual(self.snapshot_working_tree(target), before)
-                    self.assertFalse(call_log.exists())
-
-    def assert_metadata_is_committed_last(self, shell_kind: str) -> None:
+        script_name = "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh"
         with tempfile.TemporaryDirectory() as temp_dir:
             temp = Path(temp_dir)
-            target = self.make_target(temp, with_sentinel=False)
-            setup_root = temp / "setup"
-            setup_root.mkdir()
-            setup_env, _ = self.make_fake_uv(setup_root)
-            command = self.script_command(
-                shell_kind,
-                "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
-                "-TargetRoot",
-                target,
-            )
-            setup = subprocess.run(
-                command,
-                cwd=ROOT,
-                env=setup_env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertEqual(setup.returncode, 0, setup.stdout + setup.stderr)
-
-            old_manifest = target / "scripts/upgrade-manifest.txt"
-            old_manifest.write_text(
-                "# prior ownership metadata\n" + old_manifest.read_text(encoding="utf-8"),
-                encoding="utf-8",
-            )
-            old_inventory = target / "scripts/package-files.txt"
-            old_inventory.write_text(
-                "# prior ownership inventory\n"
-                + old_inventory.read_text(encoding="utf-8"),
-                encoding="utf-8",
-            )
-            prior_metadata = {
-                "manifest": old_manifest.read_bytes(),
-                "inventory": old_inventory.read_bytes(),
-            }
-            (target / "WIKI.md").write_text("# Previous package contract\n", encoding="utf-8")
-            failure_root = temp / "failure"
-            failure_root.mkdir()
-            failure_env, _ = self.make_fake_uv(failure_root, fail_sync=True)
-            result = subprocess.run(
-                command,
-                cwd=ROOT,
-                env=failure_env,
-                capture_output=True,
-                text=True,
-            )
-
-            self.assertNotEqual(result.returncode, 0)
-            self.assertEqual(old_manifest.read_bytes(), prior_metadata["manifest"])
-            self.assertEqual(old_inventory.read_bytes(), prior_metadata["inventory"])
-
-    def assert_same_root_metadata_is_never_rewritten(self, shell_kind: str) -> None:
-        if shell_kind == "bash" and os.name == "nt":
-            self.skipTest("Supported Bash same-root coverage runs on Linux and macOS")
-
-        script_name = "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh"
-        for metadata_mode in ("complete", "legacy", "missing"):
-            with self.subTest(metadata_mode=metadata_mode), tempfile.TemporaryDirectory() as temp_dir:
-                temp = Path(temp_dir)
-                package = self.make_package_copy(temp)
-                manifest = package / "scripts/upgrade-manifest.txt"
-                inventory = package / "scripts/package-files.txt"
-                if metadata_mode == "legacy":
-                    self.convert_target_metadata_to_legacy(package)
-                elif metadata_mode == "missing":
-                    manifest.unlink()
-                    inventory.unlink()
-
-                before = self.snapshot_working_tree(package)
-                metadata_before = {
-                    "manifest": manifest.read_bytes() if manifest.exists() else None,
-                    "inventory": inventory.read_bytes() if inventory.exists() else None,
-                }
-                run_root = temp / "run"
-                run_root.mkdir()
-                env, call_log = self.make_fake_uv(run_root)
-                result = subprocess.run(
-                    self.script_command(
-                        shell_kind,
-                        script_name,
-                        "-TargetRoot",
-                        package,
-                        package_root=package,
-                    ),
-                    cwd=package,
-                    env=env,
-                    capture_output=True,
-                    text=True,
-                )
-
-                if metadata_mode == "complete":
-                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                    self.assertEqual(
-                        call_log.read_text(encoding="utf-8").splitlines(),
-                        [
-                            "lock --check --default-index https://pypi.org/simple",
-                            "sync --locked --default-index https://pypi.org/simple",
-                        ],
-                    )
-                    self.assertTrue((package / "wiki/home.md").is_file())
-                    self.assertEqual(manifest.read_bytes(), metadata_before["manifest"])
-                    self.assertEqual(inventory.read_bytes(), metadata_before["inventory"])
-                else:
-                    self.assertNotEqual(result.returncode, 0)
-                    self.assertEqual(self.snapshot_working_tree(package), before)
-                    self.assertFalse(call_log.exists())
-
-    def assert_interrupted_metadata_activation_is_conservative(
-        self, shell_kind: str
-    ) -> None:
-        temp_parent = ROOT / "tmp" if shell_kind == "bash" and os.name == "nt" else None
-        if temp_parent is not None:
-            temp_parent.mkdir(exist_ok=True)
-        with tempfile.TemporaryDirectory(dir=temp_parent) as temp_dir:
-            temp = Path(temp_dir)
-            target = self.make_target(temp, with_sentinel=False)
-            setup_root = temp / "setup"
-            setup_root.mkdir()
-            setup_env, _ = self.make_fake_uv(setup_root)
-            setup_command = self.script_command(
-                shell_kind,
-                "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
-                "-TargetRoot",
-                target,
-            )
-            setup = subprocess.run(
-                setup_command,
-                cwd=ROOT,
-                env=setup_env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertEqual(setup.returncode, 0, setup.stdout + setup.stderr)
-
             package = self.make_package_copy(temp)
-            new_relative = "docs/interrupted-owned.md"
-            new_source = package / new_relative
-            new_source.write_text("new package content\n", encoding="utf-8")
-            package_manifest = package / "scripts/upgrade-manifest.txt"
-            package_manifest.write_text(
-                "# interrupted metadata generation\n"
-                + package_manifest.read_text(encoding="utf-8"),
-                encoding="utf-8",
-            )
-            package_inventory = package / "scripts/package-files.txt"
-            package_inventory.write_text(
-                package_inventory.read_text(encoding="utf-8")
-                + f"active {new_relative}\n",
-                encoding="utf-8",
-            )
-            inventory_bytes = package_inventory.read_bytes()
-            old_inventory_bytes = (target / "scripts/package-files.txt").read_bytes()
-
-            failure_root = temp / "failure"
-            failure_root.mkdir()
-            failure_env, _ = self.make_fake_uv(
-                failure_root,
-                remove_on_sync=package_inventory,
-            )
-            command = self.script_command(
-                shell_kind,
-                "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
-                "-TargetRoot",
-                target,
-                package_root=package,
-            )
-            interrupted = subprocess.run(
-                command,
-                cwd=package,
-                env=failure_env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertNotEqual(interrupted.returncode, 0)
-            self.assertTrue((target / new_relative).is_file())
-            self.assertIn(
-                "interrupted metadata generation",
-                (target / "scripts/upgrade-manifest.txt").read_text(encoding="utf-8"),
-                interrupted.stdout + interrupted.stderr,
-            )
-            self.assertEqual(
-                (target / "scripts/package-files.txt").read_bytes(),
-                old_inventory_bytes,
-            )
-
-            package_inventory.write_bytes(inventory_bytes)
-            (target / new_relative).write_text(
-                "user edit after interrupted upgrade\n",
-                encoding="utf-8",
-            )
-            rerun_root = temp / "rerun"
-            rerun_root.mkdir()
-            rerun_env, call_log = self.make_fake_uv(rerun_root)
-            rerun = subprocess.run(
-                command,
-                cwd=package,
-                env=rerun_env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertNotEqual(rerun.returncode, 0)
-            self.assertIn(new_relative, rerun.stdout + rerun.stderr)
-            self.assertIn("different content", rerun.stdout + rerun.stderr)
-            self.assertEqual(
-                (target / new_relative).read_text(encoding="utf-8"),
-                "user edit after interrupted upgrade\n",
-            )
-            self.assertFalse(call_log.exists())
-            self.assertEqual(
-                [path.name for path in (target / "scripts").iterdir() if ".upgrade" in path.name],
-                [],
-            )
-
-    def assert_interrupted_legacy_metadata_activation_is_conservative(
-        self, shell_kind: str
-    ) -> None:
-        for missing_metadata in ("manifest", "inventory"):
-            with self.subTest(missing_metadata=missing_metadata), tempfile.TemporaryDirectory() as temp_dir:
-                temp = Path(temp_dir)
-                target = self.make_target(temp, with_sentinel=False)
-                setup_root = temp / "setup"
-                setup_root.mkdir()
-                setup_env, _ = self.make_fake_uv(setup_root)
-                setup_command = self.script_command(
-                    shell_kind,
-                    "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
-                    "-TargetRoot",
-                    target,
-                )
-                setup = subprocess.run(
-                    setup_command,
-                    cwd=ROOT,
-                    env=setup_env,
-                    capture_output=True,
-                    text=True,
-                )
-                self.assertEqual(setup.returncode, 0, setup.stdout + setup.stderr)
-                self.convert_target_metadata_to_legacy(target)
-                legacy_manifest_lines = [
-                    line
-                    for line in (
-                        target / "scripts/upgrade-manifest.txt"
-                    ).read_text(encoding="utf-8").splitlines()
-                    if line and not line.startswith("#")
-                ]
-                expected_checkpoint_records = {
-                    f"active {line}"
-                    for line in (
-                        target / "scripts/package-files.txt"
-                    ).read_text(encoding="utf-8").splitlines()
-                    if line and not line.startswith("#")
-                }
-                for line in legacy_manifest_lines:
-                    kind, relative = line.split(maxsplit=1)
-                    if kind == "file":
-                        expected_checkpoint_records.add(f"active {relative}")
-                    elif kind == "remove":
-                        expected_checkpoint_records.add(f"remove {relative}")
-
-                package = self.make_package_copy(temp)
-                new_relative = "docs/legacy-transition-owned.md"
-                (package / new_relative).write_text(
-                    "new package content\n", encoding="utf-8"
-                )
-                package_manifest = package / "scripts/upgrade-manifest.txt"
-                package_manifest.write_text(
-                    "# legacy transition generation\n"
-                    + package_manifest.read_text(encoding="utf-8"),
-                    encoding="utf-8",
-                )
-                package_inventory = package / "scripts/package-files.txt"
-                package_inventory.write_text(
-                    package_inventory.read_text(encoding="utf-8")
-                    + f"active {new_relative}\n",
-                    encoding="utf-8",
-                )
-                manifest_bytes = package_manifest.read_bytes()
-                inventory_bytes = package_inventory.read_bytes()
-                removed_source = (
-                    package_manifest
-                    if missing_metadata == "manifest"
-                    else package_inventory
-                )
-
-                failure_root = temp / "failure"
-                failure_root.mkdir()
-                failure_env, _ = self.make_fake_uv(
-                    failure_root,
-                    remove_on_sync=removed_source,
-                )
-                command = self.script_command(
-                    shell_kind,
-                    "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
-                    "-TargetRoot",
-                    target,
-                    package_root=package,
-                )
-                interrupted = subprocess.run(
-                    command,
-                    cwd=package,
-                    env=failure_env,
-                    capture_output=True,
-                    text=True,
-                )
-                self.assertNotEqual(interrupted.returncode, 0)
-                self.assertTrue((target / new_relative).is_file())
-                target_inventory = (target / "scripts/package-files.txt").read_text(
-                    encoding="utf-8"
-                )
-                self.assertIn("# inventory-format: complete", target_inventory)
-                self.assertNotIn(new_relative, target_inventory)
-                self.assertEqual(
-                    {
-                        line
-                        for line in target_inventory.splitlines()
-                        if line and not line.startswith("#")
-                    },
-                    expected_checkpoint_records,
-                )
-                target_manifest = (target / "scripts/upgrade-manifest.txt").read_text(
-                    encoding="utf-8"
-                )
-                if missing_metadata == "manifest":
-                    self.assertNotIn("inventory all", target_manifest)
-                else:
-                    self.assertIn("legacy transition generation", target_manifest)
-
-                package_manifest.write_bytes(manifest_bytes)
-                package_inventory.write_bytes(inventory_bytes)
-                edited_target = temp / "edited-target"
-                shutil.copytree(target, edited_target)
-
-                clean_root = temp / "clean-rerun"
-                clean_root.mkdir()
-                clean_env, clean_call_log = self.make_fake_uv(clean_root)
-                clean_rerun = subprocess.run(
-                    command,
-                    cwd=package,
-                    env=clean_env,
-                    capture_output=True,
-                    text=True,
-                )
-                self.assertEqual(
-                    clean_rerun.returncode,
-                    0,
-                    clean_rerun.stdout + clean_rerun.stderr,
-                )
-                self.assertTrue(clean_call_log.exists())
-                self.assertEqual(
-                    (target / new_relative).read_text(encoding="utf-8"),
-                    "new package content\n",
-                )
-                self.assertEqual(
-                    (target / "scripts/upgrade-manifest.txt").read_bytes(),
-                    manifest_bytes,
-                )
-                self.assertEqual(
-                    (target / "scripts/package-files.txt").read_bytes(),
-                    inventory_bytes,
-                )
-
-                (edited_target / new_relative).write_text(
-                    "user edit after interrupted legacy transition\n",
-                    encoding="utf-8",
-                )
-                rerun_root = temp / "rerun"
-                rerun_root.mkdir()
-                rerun_env, call_log = self.make_fake_uv(rerun_root)
-                edited_command = self.script_command(
-                    shell_kind,
-                    "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
-                    "-TargetRoot",
-                    edited_target,
-                    package_root=package,
-                )
-                rerun = subprocess.run(
-                    edited_command,
-                    cwd=package,
-                    env=rerun_env,
-                    capture_output=True,
-                    text=True,
-                )
-                self.assertNotEqual(rerun.returncode, 0)
-                rerun_output = rerun.stdout + rerun.stderr
-                self.assertIn(new_relative, rerun_output)
-                self.assertIn("different content", rerun_output)
-                self.assertNotIn(
-                    "scripts/package-files.txt: new package-owned path", rerun_output
-                )
-                self.assertEqual(
-                    (edited_target / new_relative).read_text(encoding="utf-8"),
-                    "user edit after interrupted legacy transition\n",
-                )
-                self.assertFalse(call_log.exists())
-
-    def assert_interrupted_initial_metadata_activation_is_conservative(
-        self, shell_kind: str
-    ) -> None:
-        for missing_metadata in ("manifest", "inventory"):
-            with self.subTest(missing_metadata=missing_metadata), tempfile.TemporaryDirectory() as temp_dir:
-                temp = Path(temp_dir)
-                target = self.make_target(temp, with_sentinel=False)
-                package = self.make_package_copy(temp)
-                new_relative = "docs/initial-transition-owned.md"
-                (package / new_relative).write_text(
-                    "new package content\n", encoding="utf-8"
-                )
-                package_manifest = package / "scripts/upgrade-manifest.txt"
-                package_manifest.write_text(
-                    "# initial transition generation\n"
-                    + package_manifest.read_text(encoding="utf-8"),
-                    encoding="utf-8",
-                )
-                package_inventory = package / "scripts/package-files.txt"
-                package_inventory.write_text(
-                    package_inventory.read_text(encoding="utf-8")
-                    + f"active {new_relative}\n",
-                    encoding="utf-8",
-                )
-                manifest_bytes = package_manifest.read_bytes()
-                inventory_bytes = package_inventory.read_bytes()
-                removed_source = (
-                    package_manifest
-                    if missing_metadata == "manifest"
-                    else package_inventory
-                )
-
-                failure_root = temp / "failure"
-                failure_root.mkdir()
-                failure_env, _ = self.make_fake_uv(
-                    failure_root,
-                    remove_on_sync=removed_source,
-                )
-                command = self.script_command(
-                    shell_kind,
-                    "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
-                    "-TargetRoot",
-                    target,
-                    package_root=package,
-                )
-                interrupted = subprocess.run(
-                    command,
-                    cwd=package,
-                    env=failure_env,
-                    capture_output=True,
-                    text=True,
-                )
-                self.assertNotEqual(interrupted.returncode, 0)
-                self.assertTrue((target / new_relative).is_file())
-                target_inventory = (target / "scripts/package-files.txt").read_text(
-                    encoding="utf-8"
-                )
-                self.assertIn("# inventory-format: complete", target_inventory)
-                self.assertEqual(
-                    [
-                        line
-                        for line in target_inventory.splitlines()
-                        if line and not line.startswith("#")
-                    ],
-                    ["active scripts/package-files.txt"],
-                )
-                if missing_metadata == "manifest":
-                    self.assertFalse(
-                        (target / "scripts/upgrade-manifest.txt").exists()
-                    )
-                else:
-                    self.assertIn(
-                        "initial transition generation",
-                        (target / "scripts/upgrade-manifest.txt").read_text(
-                            encoding="utf-8"
-                        ),
-                    )
-
-                package_manifest.write_bytes(manifest_bytes)
-                package_inventory.write_bytes(inventory_bytes)
-                edited_target = temp / "edited-target"
-                shutil.copytree(target, edited_target)
-
-                clean_root = temp / "clean-rerun"
-                clean_root.mkdir()
-                clean_env, clean_call_log = self.make_fake_uv(clean_root)
-                clean_rerun = subprocess.run(
-                    command,
-                    cwd=package,
-                    env=clean_env,
-                    capture_output=True,
-                    text=True,
-                )
-                self.assertEqual(
-                    clean_rerun.returncode,
-                    0,
-                    clean_rerun.stdout + clean_rerun.stderr,
-                )
-                self.assertTrue(clean_call_log.exists())
-                self.assertEqual(
-                    (target / new_relative).read_text(encoding="utf-8"),
-                    "new package content\n",
-                )
-                self.assertEqual(
-                    (target / "scripts/upgrade-manifest.txt").read_bytes(),
-                    manifest_bytes,
-                )
-                self.assertEqual(
-                    (target / "scripts/package-files.txt").read_bytes(),
-                    inventory_bytes,
-                )
-
-                (edited_target / new_relative).write_text(
-                    "user edit after interrupted initial activation\n",
-                    encoding="utf-8",
-                )
-                rerun_root = temp / "rerun"
-                rerun_root.mkdir()
-                rerun_env, call_log = self.make_fake_uv(rerun_root)
-                edited_command = self.script_command(
-                    shell_kind,
-                    "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
-                    "-TargetRoot",
-                    edited_target,
-                    package_root=package,
-                )
-                rerun = subprocess.run(
-                    edited_command,
-                    cwd=package,
-                    env=rerun_env,
-                    capture_output=True,
-                    text=True,
-                )
-                self.assertNotEqual(rerun.returncode, 0)
-                rerun_output = rerun.stdout + rerun.stderr
-                self.assertIn(new_relative, rerun_output)
-                self.assertIn("different content", rerun_output)
-                self.assertNotIn(
-                    "scripts/package-files.txt: new package-owned path", rerun_output
-                )
-                self.assertEqual(
-                    (edited_target / new_relative).read_text(encoding="utf-8"),
-                    "user edit after interrupted initial activation\n",
-                )
-                self.assertFalse(call_log.exists())
-
-    def assert_interrupted_direct_file_activation_is_conservative(
-        self, shell_kind: str
-    ) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp = Path(temp_dir)
-            target = self.make_target(temp, with_sentinel=False)
+            target = self.make_target(temp, with_sentinel=True)
             setup_root = temp / "setup"
             setup_root.mkdir()
             setup_env, _ = self.make_fake_uv(setup_root)
-            setup_command = self.script_command(
-                shell_kind,
-                "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
-                "-TargetRoot",
-                target,
-            )
-            setup = subprocess.run(
-                setup_command,
-                cwd=ROOT,
-                env=setup_env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertEqual(setup.returncode, 0, setup.stdout + setup.stderr)
-
-            package_root = temp / "direct-file-package"
-            package_root.mkdir()
-            package = self.make_package_copy(package_root)
-            new_relative = "NEW-PACKAGE-ENTRY.md"
-            (package / new_relative).write_text("new package content\n", encoding="utf-8")
-            package_manifest = package / "scripts/upgrade-manifest.txt"
-            package_manifest.write_text(
-                package_manifest.read_text(encoding="utf-8")
-                + f"file {new_relative}\n",
-                encoding="utf-8",
-            )
-            package_inventory = package / "scripts/package-files.txt"
-            package_inventory.write_text(
-                package_inventory.read_text(encoding="utf-8")
-                + f"active {new_relative}\n",
-                encoding="utf-8",
-            )
-            inventory_bytes = package_inventory.read_bytes()
-            old_inventory_bytes = (target / "scripts/package-files.txt").read_bytes()
-
-            failure_root = temp / "direct-file-failure"
-            failure_root.mkdir()
-            failure_env, _ = self.make_fake_uv(
-                failure_root,
-                remove_on_sync=package_inventory,
-            )
-            command = self.script_command(
-                shell_kind,
-                "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
-                "-TargetRoot",
-                target,
-                package_root=package,
-            )
-            interrupted = subprocess.run(
-                command,
-                cwd=package,
-                env=failure_env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertNotEqual(interrupted.returncode, 0)
-            self.assertEqual(
-                (target / "scripts/package-files.txt").read_bytes(),
-                old_inventory_bytes,
-            )
-            self.assertTrue((target / new_relative).is_file())
-
-            package_inventory.write_bytes(inventory_bytes)
-            (target / new_relative).write_text(
-                "user edit after interrupted upgrade\n",
-                encoding="utf-8",
-            )
-            rerun_root = temp / "direct-file-rerun"
-            rerun_root.mkdir()
-            rerun_env, call_log = self.make_fake_uv(rerun_root)
-            rerun = subprocess.run(
-                command,
-                cwd=package,
-                env=rerun_env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertNotEqual(rerun.returncode, 0)
-            self.assertIn(new_relative, rerun.stdout + rerun.stderr)
-            self.assertEqual(
-                (target / new_relative).read_text(encoding="utf-8"),
-                "user edit after interrupted upgrade\n",
-            )
-            self.assertFalse(call_log.exists())
-
-    def assert_interrupted_retired_to_active_transition_is_conservative(
-        self, shell_kind: str
-    ) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp = Path(temp_dir)
-            target = self.make_target(temp, with_sentinel=False)
-            setup_root = temp / "setup"
-            setup_root.mkdir()
-            setup_env, _ = self.make_fake_uv(setup_root)
-            setup_command = self.script_command(
-                shell_kind,
-                "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
-                "-TargetRoot",
-                target,
-            )
-            setup = subprocess.run(
-                setup_command,
-                cwd=ROOT,
-                env=setup_env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertEqual(setup.returncode, 0, setup.stdout + setup.stderr)
-
-            package_root = temp / "reactivation-package"
-            package_root.mkdir()
-            package = self.make_package_copy(package_root)
-            source = package / RETIRED_PACKAGE_FILE
-            source.parent.mkdir(parents=True, exist_ok=True)
-            source.write_text("reactivated package content\n", encoding="utf-8")
-            manifest = package / "scripts/upgrade-manifest.txt"
-            manifest.write_text(
-                "\n".join(
-                    line
-                    for line in manifest.read_text(encoding="utf-8").splitlines()
-                    if line != f"remove {RETIRED_PACKAGE_FILE}"
-                )
-                + "\n",
-                encoding="utf-8",
-            )
-            inventory = package / "scripts/package-files.txt"
-            inventory.write_text(
-                inventory.read_text(encoding="utf-8").replace(
-                    f"remove {RETIRED_PACKAGE_FILE}\n",
-                    f"active {RETIRED_PACKAGE_FILE}\n",
-                ),
-                encoding="utf-8",
-            )
-            inventory_bytes = inventory.read_bytes()
-            old_inventory_bytes = (target / "scripts/package-files.txt").read_bytes()
-
-            failure_root = temp / "reactivation-failure"
-            failure_root.mkdir()
-            failure_env, _ = self.make_fake_uv(
-                failure_root,
-                remove_on_sync=inventory,
-            )
-            command = self.script_command(
-                shell_kind,
-                "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
-                "-TargetRoot",
-                target,
-                package_root=package,
-            )
-            interrupted = subprocess.run(
-                command,
-                cwd=package,
-                env=failure_env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertNotEqual(interrupted.returncode, 0)
-            self.assertTrue((target / RETIRED_PACKAGE_FILE).is_file())
-            self.assertEqual(
-                (target / "scripts/package-files.txt").read_bytes(),
-                old_inventory_bytes,
-            )
-
-            inventory.write_bytes(inventory_bytes)
-            (target / RETIRED_PACKAGE_FILE).write_text(
-                "user edit after interrupted reactivation\n",
-                encoding="utf-8",
-            )
-            rerun_root = temp / "reactivation-rerun"
-            rerun_root.mkdir()
-            rerun_env, call_log = self.make_fake_uv(rerun_root)
-            rerun = subprocess.run(
-                command,
-                cwd=package,
-                env=rerun_env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertNotEqual(rerun.returncode, 0)
-            self.assertIn(RETIRED_PACKAGE_FILE, rerun.stdout + rerun.stderr)
-            self.assertEqual(
-                (target / RETIRED_PACKAGE_FILE).read_text(encoding="utf-8"),
-                "user edit after interrupted reactivation\n",
-            )
-            self.assertFalse(call_log.exists())
-
-    def assert_interrupted_tombstone_drop_is_resumable(self, shell_kind: str) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp = Path(temp_dir)
-            target = self.make_target(temp, with_sentinel=False)
-            setup_root = temp / "setup"
-            setup_root.mkdir()
-            setup_env, _ = self.make_fake_uv(setup_root)
-            setup = subprocess.run(
-                self.script_command(
-                    shell_kind,
-                    "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
-                    "-TargetRoot",
-                    target,
-                ),
-                cwd=ROOT,
-                env=setup_env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertEqual(setup.returncode, 0, setup.stdout + setup.stderr)
-
-            package_root = temp / "dropped-tombstone-package"
-            package_root.mkdir()
-            package = self.make_package_copy(package_root)
-            manifest = package / "scripts/upgrade-manifest.txt"
-            manifest.write_text(
-                "\n".join(
-                    line
-                    for line in manifest.read_text(encoding="utf-8").splitlines()
-                    if line != f"remove {RETIRED_PACKAGE_FILE}"
-                )
-                + "\n",
-                encoding="utf-8",
-            )
-            inventory = package / "scripts/package-files.txt"
-            inventory.write_text(
-                "\n".join(
-                    line
-                    for line in inventory.read_text(encoding="utf-8").splitlines()
-                    if line != f"remove {RETIRED_PACKAGE_FILE}"
-                )
-                + "\n",
-                encoding="utf-8",
-            )
-            inventory_bytes = inventory.read_bytes()
-
-            failure_root = temp / "dropped-tombstone-failure"
-            failure_root.mkdir()
-            failure_env, _ = self.make_fake_uv(
-                failure_root,
-                remove_on_sync=inventory,
-            )
-            command = self.script_command(
-                shell_kind,
-                "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
-                "-TargetRoot",
-                target,
-                package_root=package,
-            )
-            interrupted = subprocess.run(
-                command,
-                cwd=package,
-                env=failure_env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertNotEqual(interrupted.returncode, 0)
-            self.assertNotIn(
-                f"remove {RETIRED_PACKAGE_FILE}",
-                (target / "scripts/upgrade-manifest.txt").read_text(encoding="utf-8"),
-            )
-            self.assertIn(
-                f"remove {RETIRED_PACKAGE_FILE}",
-                (target / "scripts/package-files.txt").read_text(encoding="utf-8"),
-            )
-
-            inventory.write_bytes(inventory_bytes)
-            released_path = target / RETIRED_PACKAGE_FILE
-            released_path.parent.mkdir(parents=True, exist_ok=True)
-            released_path.write_text("target-owned after tombstone release\n", encoding="utf-8")
-            rerun_root = temp / "dropped-tombstone-rerun"
-            rerun_root.mkdir()
-            rerun_env, call_log = self.make_fake_uv(rerun_root)
-            rerun = subprocess.run(
-                command,
-                cwd=package,
-                env=rerun_env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertEqual(rerun.returncode, 0, rerun.stdout + rerun.stderr)
-            self.assertEqual(
-                released_path.read_text(encoding="utf-8"),
-                "target-owned after tombstone release\n",
-            )
-            self.assertTrue(call_log.exists())
-
-    def add_fresh_tombstone(self, package: Path, relative: str) -> tuple[Path, bytes]:
-        manifest = package / "scripts/upgrade-manifest.txt"
-        manifest.write_text(
-            manifest.read_text(encoding="utf-8") + f"remove {relative}\n",
-            encoding="utf-8",
-        )
-        inventory = package / "scripts/package-files.txt"
-        inventory.write_text(
-            inventory.read_text(encoding="utf-8") + f"remove {relative}\n",
-            encoding="utf-8",
-        )
-        return inventory, inventory.read_bytes()
-
-    def assert_fresh_tombstone_activation_is_conservative(self, shell_kind: str) -> None:
-        script_name = "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh"
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp = Path(temp_dir)
-            target = self.make_target(temp, with_sentinel=False)
-            setup_root = temp / "setup"
-            setup_root.mkdir()
-            setup_env, _ = self.make_fake_uv(setup_root)
-            setup = subprocess.run(
-                self.script_command(shell_kind, script_name, "-TargetRoot", target),
-                cwd=ROOT,
-                env=setup_env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertEqual(setup.returncode, 0, setup.stdout + setup.stderr)
-
-            package_root = temp / "tombstone-package"
-            package_root.mkdir()
-            package = self.make_package_copy(package_root)
-            relative = "target-only-retired-name.md"
-            self.add_fresh_tombstone(package, relative)
             command = self.script_command(
                 shell_kind,
                 script_name,
@@ -2244,13 +891,192 @@ class PackageScriptTest(unittest.TestCase):
                 target,
                 package_root=package,
             )
+            setup = subprocess.run(
+                command,
+                cwd=package,
+                env=setup_env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(setup.returncode, 0, setup.stdout + setup.stderr)
 
-            target_file = target / relative
-            target_file.write_text("target-owned content\n", encoding="utf-8")
+            project_content = "# Project\n\nkeep project choices\n"
+            env_content = "PRIVATE_SETTING=preserve\n"
+            runtime_content = "# User runtime change\n"
+            (target / "PROJECT.md").write_text(project_content, encoding="utf-8")
+            (target / ".env").write_text(env_content, encoding="utf-8")
+            (target / "wiki/home.md").write_text(runtime_content, encoding="utf-8")
+            (target / "WIKI.md").write_text("# target edit\n", encoding="utf-8")
+            replace_root = temp / "replace"
+            replace_root.mkdir()
+            replace_env, _ = self.make_fake_uv(replace_root)
+            replaced = subprocess.run(
+                command,
+                cwd=package,
+                env=replace_env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(replaced.returncode, 0, replaced.stdout + replaced.stderr)
+            self.assertEqual(
+                (target / "WIKI.md").read_bytes(),
+                (package / "WIKI.md").read_bytes(),
+            )
+            self.assertEqual((target / "PROJECT.md").read_text(encoding="utf-8"), project_content)
+            self.assertEqual((target / ".env").read_text(encoding="utf-8"), env_content)
+            self.assertEqual((target / "wiki/home.md").read_text(encoding="utf-8"), runtime_content)
+
+            relative = "docs/newly-owned.md"
+            (package / relative).write_text("package content\n", encoding="utf-8")
+            inventory = package / "scripts/package-files.txt"
+            inventory.write_text(
+                inventory.read_text(encoding="utf-8") + f"active {relative}\n",
+                encoding="utf-8",
+            )
+            (target / relative).write_text("target content\n", encoding="utf-8")
             before = self.snapshot_working_tree(target)
-            conflict_root = temp / "tombstone-conflict"
+            conflict_root = temp / "conflict"
             conflict_root.mkdir()
-            conflict_env, call_log = self.make_fake_uv(conflict_root)
+            conflict_env, conflict_log = self.make_fake_uv(conflict_root)
+            conflict = subprocess.run(
+                command,
+                cwd=package,
+                env=conflict_env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(conflict.returncode, 0)
+            self.assertIn(f"Conflict: {relative}", conflict.stdout + conflict.stderr)
+            self.assertEqual(self.snapshot_working_tree(target), before)
+            self.assertFalse(conflict_log.exists())
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            package = self.make_package_copy(temp)
+            target = self.make_target(temp, with_sentinel=False)
+            setup_root = temp / "setup"
+            setup_root.mkdir()
+            setup_env, _ = self.make_fake_uv(setup_root)
+            command = self.script_command(
+                shell_kind,
+                script_name,
+                "-TargetRoot",
+                target,
+                package_root=package,
+            )
+            setup = subprocess.run(
+                command,
+                cwd=package,
+                env=setup_env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(setup.returncode, 0, setup.stdout + setup.stderr)
+
+            relative = "target-only-retired-name.md"
+            inventory = package / "scripts/package-files.txt"
+            inventory.write_text(
+                inventory.read_text(encoding="utf-8") + f"remove {relative}\n",
+                encoding="utf-8",
+            )
+            target_path = target / relative
+            target_path.write_text("target-owned content\n", encoding="utf-8")
+            before = self.snapshot_working_tree(target)
+            file_root = temp / "file-conflict"
+            file_root.mkdir()
+            file_env, file_log = self.make_fake_uv(file_root)
+            file_conflict = subprocess.run(
+                command,
+                cwd=package,
+                env=file_env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(file_conflict.returncode, 0)
+            self.assertIn(relative, file_conflict.stdout + file_conflict.stderr)
+            self.assertEqual(self.snapshot_working_tree(target), before)
+            self.assertFalse(file_log.exists())
+
+            target_path.unlink()
+            target_path.mkdir()
+            directory_root = temp / "directory-conflict"
+            directory_root.mkdir()
+            directory_env, directory_log = self.make_fake_uv(directory_root)
+            directory_conflict = subprocess.run(
+                command,
+                cwd=package,
+                env=directory_env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(directory_conflict.returncode, 0)
+            self.assertIn(relative, directory_conflict.stdout + directory_conflict.stderr)
+            self.assertTrue(target_path.is_dir())
+            self.assertFalse(directory_log.exists())
+
+            target_path.rmdir()
+            activation_root = temp / "activation"
+            activation_root.mkdir()
+            activation_env, _ = self.make_fake_uv(activation_root)
+            activation = subprocess.run(
+                command,
+                cwd=package,
+                env=activation_env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(activation.returncode, 0, activation.stdout + activation.stderr)
+            self.assertIn(
+                f"remove {relative}",
+                (target / "scripts/package-files.txt").read_text(encoding="utf-8"),
+            )
+
+            target_path.write_text("reappeared retired package file\n", encoding="utf-8")
+            repeated = subprocess.run(
+                command,
+                cwd=package,
+                env=activation_env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(repeated.returncode, 0, repeated.stdout + repeated.stderr)
+            self.assertFalse(target_path.exists())
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            package = self.make_package_copy(temp)
+            target = self.make_target(temp, with_sentinel=False)
+            setup_root = temp / "setup"
+            setup_root.mkdir()
+            setup_env, _ = self.make_fake_uv(setup_root)
+            command = self.script_command(
+                shell_kind,
+                script_name,
+                "-TargetRoot",
+                target,
+                package_root=package,
+            )
+            setup = subprocess.run(
+                command,
+                cwd=package,
+                env=setup_env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(setup.returncode, 0, setup.stdout + setup.stderr)
+
+            relative = "docs/acknowledgements.md"
+            inventory = package / "scripts/package-files.txt"
+            inventory.write_text(
+                inventory.read_text(encoding="utf-8").replace(
+                    f"active {relative}\n", ""
+                ),
+                encoding="utf-8",
+            )
+            before = self.snapshot_working_tree(target)
+            conflict_root = temp / "conflict"
+            conflict_root.mkdir()
+            conflict_env, conflict_log = self.make_fake_uv(conflict_root)
             conflict = subprocess.run(
                 command,
                 cwd=package,
@@ -2260,81 +1086,16 @@ class PackageScriptTest(unittest.TestCase):
             )
             self.assertNotEqual(conflict.returncode, 0)
             self.assertIn(relative, conflict.stdout + conflict.stderr)
+            self.assertIn("explicit remove", conflict.stdout + conflict.stderr)
             self.assertEqual(self.snapshot_working_tree(target), before)
-            self.assertFalse(call_log.exists())
+            self.assertFalse(conflict_log.exists())
 
-            target_file.unlink()
-            target_file.mkdir()
-            directory_before = self.snapshot_working_tree(target)
-            directory_conflict_root = temp / "tombstone-directory-conflict"
-            directory_conflict_root.mkdir()
-            directory_conflict_env, directory_call_log = self.make_fake_uv(
-                directory_conflict_root
-            )
-            directory_conflict = subprocess.run(
-                command,
-                cwd=package,
-                env=directory_conflict_env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertNotEqual(directory_conflict.returncode, 0)
-            self.assertIn(
-                relative, directory_conflict.stdout + directory_conflict.stderr
-            )
-            self.assertEqual(self.snapshot_working_tree(target), directory_before)
-            self.assertFalse(directory_call_log.exists())
-
-            target_file.rmdir()
-            activation_root = temp / "tombstone-activation"
-            activation_root.mkdir()
-            activation_env, activation_log = self.make_fake_uv(activation_root)
-            activation = subprocess.run(
-                command,
-                cwd=package,
-                env=activation_env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertEqual(activation.returncode, 0, activation.stdout + activation.stderr)
-            target_file.write_text("reappeared retired package file\n", encoding="utf-8")
-            repeated = subprocess.run(
-                command,
-                cwd=package,
-                env=activation_env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertEqual(repeated.returncode, 0, repeated.stdout + repeated.stderr)
-            self.assertFalse(target_file.exists())
-            self.assertTrue(activation_log.exists())
-
+    def assert_metadata_is_committed_last(self, shell_kind: str) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp = Path(temp_dir)
+            package = self.make_package_copy(temp)
             target = self.make_target(temp, with_sentinel=False)
-            setup_root = temp / "setup"
-            setup_root.mkdir()
-            setup_env, _ = self.make_fake_uv(setup_root)
-            setup = subprocess.run(
-                self.script_command(shell_kind, script_name, "-TargetRoot", target),
-                cwd=ROOT,
-                env=setup_env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertEqual(setup.returncode, 0, setup.stdout + setup.stderr)
-
-            package_root = temp / "interrupted-tombstone-package"
-            package_root.mkdir()
-            package = self.make_package_copy(package_root)
-            relative = "interrupted-retired-name.md"
-            inventory, inventory_bytes = self.add_fresh_tombstone(package, relative)
-            failure_root = temp / "interrupted-tombstone-failure"
-            failure_root.mkdir()
-            failure_env, _ = self.make_fake_uv(
-                failure_root,
-                remove_on_sync=inventory,
-            )
+            script_name = "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh"
             command = self.script_command(
                 shell_kind,
                 script_name,
@@ -2342,6 +1103,120 @@ class PackageScriptTest(unittest.TestCase):
                 target,
                 package_root=package,
             )
+
+            setup_root = temp / "setup"
+            setup_root.mkdir()
+            setup_env, _ = self.make_fake_uv(setup_root)
+            setup = subprocess.run(
+                command,
+                cwd=package,
+                env=setup_env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(setup.returncode, 0, setup.stdout + setup.stderr)
+
+            target_inventory = target / "scripts/package-files.txt"
+            old_inventory = target_inventory.read_bytes()
+            (package / "WIKI.md").write_text("# next package contract\n", encoding="utf-8")
+            package_inventory = package / "scripts/package-files.txt"
+            package_inventory.write_text(
+                package_inventory.read_text(encoding="utf-8")
+                + "# next inventory generation\n",
+                encoding="utf-8",
+            )
+
+            failure_root = temp / "failure"
+            failure_root.mkdir()
+            failure_env, _ = self.make_fake_uv(failure_root, fail_sync=True)
+            failed = subprocess.run(
+                command,
+                cwd=package,
+                env=failure_env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(failed.returncode, 0)
+            self.assertEqual(
+                (target / "WIKI.md").read_text(encoding="utf-8"),
+                "# next package contract\n",
+            )
+            self.assertEqual(target_inventory.read_bytes(), old_inventory)
+            self.assertEqual(
+                [path.name for path in target_inventory.parent.iterdir() if ".upgrade" in path.name],
+                [],
+            )
+
+            rerun_root = temp / "rerun"
+            rerun_root.mkdir()
+            rerun_env, _ = self.make_fake_uv(rerun_root)
+            rerun = subprocess.run(
+                command,
+                cwd=package,
+                env=rerun_env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(rerun.returncode, 0, rerun.stdout + rerun.stderr)
+            self.assertEqual(target_inventory.read_bytes(), package_inventory.read_bytes())
+
+    def assert_same_root_metadata_is_never_rewritten(self, shell_kind: str) -> None:
+        if shell_kind == "bash" and os.name == "nt":
+            self.skipTest("Supported Bash same-root coverage runs on Linux and macOS")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            package = self.make_package_copy(temp)
+            inventory = package / "scripts/package-files.txt"
+            inventory_before = inventory.read_bytes()
+            env, call_log = self.make_fake_uv(temp)
+            result = subprocess.run(
+                self.script_command(
+                    shell_kind,
+                    "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
+                    "-TargetRoot",
+                    package,
+                    package_root=package,
+                ),
+                cwd=package,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(inventory.read_bytes(), inventory_before)
+            self.assertEqual(
+                call_log.read_text(encoding="utf-8").splitlines(),
+                [
+                    "lock --check --default-index https://pypi.org/simple",
+                    "sync --locked --default-index https://pypi.org/simple",
+                ],
+            )
+
+    def assert_interrupted_initial_metadata_activation_is_conservative(
+        self, shell_kind: str
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            package = self.make_package_copy(temp)
+            relative = "docs/interrupted-first-adoption.md"
+            (package / relative).write_text("package content\n", encoding="utf-8")
+            inventory = package / "scripts/package-files.txt"
+            inventory.write_text(
+                inventory.read_text(encoding="utf-8") + f"active {relative}\n",
+                encoding="utf-8",
+            )
+            target = self.make_target(temp, with_sentinel=False)
+            command = self.script_command(
+                shell_kind,
+                "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
+                "-TargetRoot",
+                target,
+                package_root=package,
+            )
+
+            failure_root = temp / "failure"
+            failure_root.mkdir()
+            failure_env, _ = self.make_fake_uv(failure_root, fail_sync=True)
             interrupted = subprocess.run(
                 command,
                 cwd=package,
@@ -2350,13 +1225,13 @@ class PackageScriptTest(unittest.TestCase):
                 text=True,
             )
             self.assertNotEqual(interrupted.returncode, 0)
-            inventory.write_bytes(inventory_bytes)
-            target_file = target / relative
-            target_file.write_text("created after interruption\n", encoding="utf-8")
-            before = self.snapshot_working_tree(target)
-            rerun_root = temp / "interrupted-tombstone-rerun"
+            self.assertTrue((target / relative).is_file())
+            self.assertFalse((target / "scripts/package-files.txt").exists())
+
+            (target / relative).write_text("user edit after interruption\n", encoding="utf-8")
+            rerun_root = temp / "rerun"
             rerun_root.mkdir()
-            rerun_env, call_log = self.make_fake_uv(rerun_root)
+            rerun_env, rerun_log = self.make_fake_uv(rerun_root)
             rerun = subprocess.run(
                 command,
                 cwd=package,
@@ -2366,103 +1241,124 @@ class PackageScriptTest(unittest.TestCase):
             )
             self.assertNotEqual(rerun.returncode, 0)
             self.assertIn(relative, rerun.stdout + rerun.stderr)
+            self.assertIn("different content", rerun.stdout + rerun.stderr)
+            self.assertEqual(
+                (target / relative).read_text(encoding="utf-8"),
+                "user edit after interruption\n",
+            )
+            self.assertFalse(rerun_log.exists())
+
+    def assert_future_tombstone_is_applied_and_resumable(self, shell_kind: str) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            package = self.make_package_copy(temp)
+            target = self.make_target(temp, with_sentinel=False)
+            command = self.script_command(
+                shell_kind,
+                "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
+                "-TargetRoot",
+                target,
+                package_root=package,
+            )
+            setup_root = temp / "setup"
+            setup_root.mkdir()
+            setup_env, _ = self.make_fake_uv(setup_root)
+            setup = subprocess.run(
+                command,
+                cwd=package,
+                env=setup_env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(setup.returncode, 0, setup.stdout + setup.stderr)
+
+            relative = "docs/acknowledgements.md"
+            package_inventory = package / "scripts/package-files.txt"
+            package_inventory.write_text(
+                package_inventory.read_text(encoding="utf-8").replace(
+                    f"active {relative}\n", f"remove {relative}\n"
+                ),
+                encoding="utf-8",
+            )
+            (package / relative).unlink()
+
+            update_root = temp / "update"
+            update_root.mkdir()
+            update_env, _ = self.make_fake_uv(update_root)
+            updated = subprocess.run(
+                command,
+                cwd=package,
+                env=update_env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(updated.returncode, 0, updated.stdout + updated.stderr)
+            self.assertFalse((target / relative).exists())
+            self.assertIn(
+                f"remove {relative}",
+                (target / "scripts/package-files.txt").read_text(encoding="utf-8"),
+            )
+
+            (target / relative).write_text("reappeared old package file\n", encoding="utf-8")
+            resumed = subprocess.run(
+                command,
+                cwd=package,
+                env=update_env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(resumed.returncode, 0, resumed.stdout + resumed.stderr)
+            self.assertFalse((target / relative).exists())
+
+            package_inventory.write_text(
+                package_inventory.read_text(encoding="utf-8").replace(
+                    f"remove {relative}\n", ""
+                ),
+                encoding="utf-8",
+            )
+            before = self.snapshot_working_tree(target)
+            dropped_root = temp / "dropped"
+            dropped_root.mkdir()
+            dropped_env, dropped_log = self.make_fake_uv(dropped_root)
+            dropped = subprocess.run(
+                command,
+                cwd=package,
+                env=dropped_env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(dropped.returncode, 0)
+            self.assertIn("old retired package path is absent", dropped.stdout + dropped.stderr)
             self.assertEqual(self.snapshot_working_tree(target), before)
-            self.assertFalse(call_log.exists())
+            self.assertFalse(dropped_log.exists())
 
     def assert_new_inventory_schema_guard(self, shell_kind: str) -> None:
-        script_name = "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh"
+        marker = "# inventory-schema: 1"
         cases = {
-            "missing_header": "must declare 'inventory all'",
-            "missing_inventory_marker": "inventory must declare '# inventory-format: complete'",
-            "missing_manifest_path": "inventory is missing active manifest path: WIKI.md",
-            "orphan_inventory": "inventory path is not classified by the manifest",
-            "duplicate_header": "exactly once",
-            "duplicate_inventory": "duplicate package path",
-            "classification_mismatch": "classification does not match the manifest",
-            "untyped_inventory": "Invalid New package complete inventory line",
-            "missing_retired_path": "inventory is missing retired manifest path",
+            "missing_schema": lambda text: text.replace(marker + "\n", ""),
+            "duplicate_schema": lambda text: text + marker + "\n",
+            "unsupported_schema": lambda text: text.replace(marker, "# inventory-schema: 2"),
+            "invalid_line": lambda text: text + "file WIKI.md\n",
+            "duplicate_path": lambda text: text + "active WIKI.md\n",
+            "missing_source": lambda text: text + "active docs/missing-source.md\n",
+            "remove_self": lambda text: text.replace(
+                "active scripts/package-files.txt\n",
+                "remove scripts/package-files.txt\n",
+            ),
+            "missing_self": lambda text: text.replace(
+                "active scripts/package-files.txt\n", ""
+            ),
         }
-        for case, expected in cases.items():
+        for case, mutate in cases.items():
             with self.subTest(case=case), tempfile.TemporaryDirectory() as temp_dir:
                 temp = Path(temp_dir)
                 package = self.make_package_copy(temp)
-                manifest = package / "scripts/upgrade-manifest.txt"
                 inventory = package / "scripts/package-files.txt"
-                if case == "missing_header":
-                    manifest.write_text(
-                        "\n".join(
-                            line
-                            for line in manifest.read_text(encoding="utf-8").splitlines()
-                            if line != "inventory all"
-                        )
-                        + "\n",
-                        encoding="utf-8",
-                    )
-                elif case == "missing_inventory_marker":
-                    inventory.write_text(
-                        "\n".join(
-                            line
-                            for line in inventory.read_text(encoding="utf-8").splitlines()
-                            if line != "# inventory-format: complete"
-                        )
-                        + "\n",
-                        encoding="utf-8",
-                    )
-                elif case == "missing_manifest_path":
-                    inventory.write_text(
-                        "\n".join(
-                            line
-                            for line in inventory.read_text(encoding="utf-8").splitlines()
-                            if line != "active WIKI.md"
-                        )
-                        + "\n",
-                        encoding="utf-8",
-                    )
-                elif case == "orphan_inventory":
-                    inventory.write_text(
-                        inventory.read_text(encoding="utf-8")
-                        + "active orphan-not-owned.md\n",
-                        encoding="utf-8",
-                    )
-                elif case == "duplicate_header":
-                    manifest.write_text(
-                        manifest.read_text(encoding="utf-8").replace(
-                            "inventory all\n", "inventory all\ninventory all\n", 1
-                        ),
-                        encoding="utf-8",
-                    )
-                elif case == "duplicate_inventory":
-                    inventory.write_text(
-                        inventory.read_text(encoding="utf-8") + "active wiki.md\n",
-                        encoding="utf-8",
-                    )
-                elif case == "classification_mismatch":
-                    inventory.write_text(
-                        inventory.read_text(encoding="utf-8").replace(
-                            "active WIKI.md\n", "remove WIKI.md\n"
-                        ),
-                        encoding="utf-8",
-                    )
-                elif case == "untyped_inventory":
-                    inventory.write_text(
-                        inventory.read_text(encoding="utf-8").replace(
-                            "active WIKI.md\n", "WIKI.md\n"
-                        ),
-                        encoding="utf-8",
-                    )
-                else:
-                    inventory.write_text(
-                        "\n".join(
-                            line
-                            for line in inventory.read_text(encoding="utf-8").splitlines()
-                            if line != f"remove {RETIRED_PACKAGE_FILE}"
-                        )
-                        + "\n",
-                        encoding="utf-8",
-                    )
-
-                target = temp / "target"
-                target.mkdir()
+                inventory.write_text(
+                    mutate(inventory.read_text(encoding="utf-8")),
+                    encoding="utf-8",
+                )
+                target = self.make_target(temp, with_sentinel=False)
                 before = self.snapshot_working_tree(target)
                 run_root = temp / "run"
                 run_root.mkdir()
@@ -2470,7 +1366,7 @@ class PackageScriptTest(unittest.TestCase):
                 result = subprocess.run(
                     self.script_command(
                         shell_kind,
-                        script_name,
+                        "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
                         "-TargetRoot",
                         target,
                         package_root=package,
@@ -2480,91 +1376,9 @@ class PackageScriptTest(unittest.TestCase):
                     capture_output=True,
                     text=True,
                 )
-                self.assertNotEqual(result.returncode, 0)
-                self.assertIn(expected, result.stdout + result.stderr)
+                self.assertNotEqual(result.returncode, 0, case)
                 self.assertEqual(self.snapshot_working_tree(target), before)
                 self.assertFalse(call_log.exists())
-
-    def assert_legacy_inventory_metadata_is_supported(self, shell_kind: str) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp = Path(temp_dir)
-            target = self.make_target(temp, with_sentinel=False)
-            env, call_log = self.make_fake_uv(temp)
-            command = self.script_command(
-                shell_kind,
-                "upgrade.ps1" if shell_kind == "powershell" else "upgrade.sh",
-                "-TargetRoot",
-                target,
-            )
-            first = subprocess.run(
-                command,
-                cwd=ROOT,
-                env=env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
-
-            self.convert_target_metadata_to_legacy(target)
-            (target / "WIKI.md").write_text("# Legacy-owned local copy\n", encoding="utf-8")
-            call_log.unlink()
-            second = subprocess.run(
-                command,
-                cwd=ROOT,
-                env=env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
-            self.assertEqual((target / "WIKI.md").read_bytes(), (ROOT / "WIKI.md").read_bytes())
-            self.assertTrue(call_log.exists())
-            if shell_kind == "bash" and os.name != "nt":
-                for relative in (
-                    "scripts/upgrade-manifest.txt",
-                    "scripts/package-files.txt",
-                ):
-                    self.assertEqual(
-                        stat.S_IMODE((target / relative).stat().st_mode),
-                        0o644,
-                    )
-
-            target_manifest = target / "scripts/upgrade-manifest.txt"
-            target_manifest.write_text(
-                "\n".join(
-                    line
-                    for line in target_manifest.read_text(
-                        encoding="utf-8"
-                    ).splitlines()
-                    if line != "inventory all"
-                )
-                + "\n",
-                encoding="utf-8",
-            )
-            (target / "WIKI.md").write_text(
-                "# Legacy manifest with marked inventory\n", encoding="utf-8"
-            )
-            call_log.unlink()
-            third = subprocess.run(
-                command,
-                cwd=ROOT,
-                env=env,
-                capture_output=True,
-                text=True,
-            )
-            self.assertEqual(third.returncode, 0, third.stdout + third.stderr)
-            self.assertEqual(
-                (target / "WIKI.md").read_bytes(), (ROOT / "WIKI.md").read_bytes()
-            )
-            self.assertEqual(
-                (target / "scripts/upgrade-manifest.txt").read_bytes(),
-                (ROOT / "scripts/upgrade-manifest.txt").read_bytes(),
-            )
-            self.assertEqual(
-                (target / "scripts/package-files.txt").read_bytes(),
-                (ROOT / "scripts/package-files.txt").read_bytes(),
-            )
-            self.assertTrue(call_log.exists())
-
     def assert_lock_failure_has_no_target_writes(self, shell_kind: str) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp = Path(temp_dir)
@@ -2741,6 +1555,7 @@ class PackageScriptTest(unittest.TestCase):
             self.assertIn("uv was not found", result.stdout + result.stderr)
             self.assertEqual(list(target.iterdir()), [])
 
+
     def test_powershell_package_ownership_guard(self) -> None:
         self.assert_ownership_guard("powershell")
 
@@ -2759,73 +1574,25 @@ class PackageScriptTest(unittest.TestCase):
     def test_bash_same_root_metadata_is_never_rewritten(self) -> None:
         self.assert_same_root_metadata_is_never_rewritten("bash")
 
-    def test_powershell_interrupted_metadata_activation_is_conservative(self) -> None:
-        self.assert_interrupted_metadata_activation_is_conservative("powershell")
-
-    def test_bash_interrupted_metadata_activation_is_conservative(self) -> None:
-        self.assert_interrupted_metadata_activation_is_conservative("bash")
-
-    def test_powershell_interrupted_legacy_metadata_activation_is_conservative(
-        self,
-    ) -> None:
-        self.assert_interrupted_legacy_metadata_activation_is_conservative(
-            "powershell"
-        )
-
-    def test_bash_interrupted_legacy_metadata_activation_is_conservative(self) -> None:
-        self.assert_interrupted_legacy_metadata_activation_is_conservative("bash")
-
-    def test_powershell_interrupted_initial_metadata_activation_is_conservative(
-        self,
-    ) -> None:
+    def test_powershell_interrupted_first_adoption_is_conservative(self) -> None:
         self.assert_interrupted_initial_metadata_activation_is_conservative(
             "powershell"
         )
 
-    def test_bash_interrupted_initial_metadata_activation_is_conservative(self) -> None:
+    def test_bash_interrupted_first_adoption_is_conservative(self) -> None:
         self.assert_interrupted_initial_metadata_activation_is_conservative("bash")
 
-    def test_powershell_interrupted_direct_file_activation_is_conservative(self) -> None:
-        self.assert_interrupted_direct_file_activation_is_conservative("powershell")
+    def test_powershell_future_tombstone_is_applied_and_resumable(self) -> None:
+        self.assert_future_tombstone_is_applied_and_resumable("powershell")
 
-    def test_bash_interrupted_direct_file_activation_is_conservative(self) -> None:
-        self.assert_interrupted_direct_file_activation_is_conservative("bash")
-
-    def test_powershell_interrupted_retired_to_active_transition_is_conservative(
-        self,
-    ) -> None:
-        self.assert_interrupted_retired_to_active_transition_is_conservative(
-            "powershell"
-        )
-
-    def test_bash_interrupted_retired_to_active_transition_is_conservative(
-        self,
-    ) -> None:
-        self.assert_interrupted_retired_to_active_transition_is_conservative("bash")
-
-    def test_powershell_interrupted_tombstone_drop_is_resumable(self) -> None:
-        self.assert_interrupted_tombstone_drop_is_resumable("powershell")
-
-    def test_bash_interrupted_tombstone_drop_is_resumable(self) -> None:
-        self.assert_interrupted_tombstone_drop_is_resumable("bash")
-
-    def test_powershell_fresh_tombstone_activation_is_conservative(self) -> None:
-        self.assert_fresh_tombstone_activation_is_conservative("powershell")
-
-    def test_bash_fresh_tombstone_activation_is_conservative(self) -> None:
-        self.assert_fresh_tombstone_activation_is_conservative("bash")
+    def test_bash_future_tombstone_is_applied_and_resumable(self) -> None:
+        self.assert_future_tombstone_is_applied_and_resumable("bash")
 
     def test_powershell_new_inventory_schema_guard(self) -> None:
         self.assert_new_inventory_schema_guard("powershell")
 
     def test_bash_new_inventory_schema_guard(self) -> None:
         self.assert_new_inventory_schema_guard("bash")
-
-    def test_powershell_legacy_inventory_metadata_is_supported(self) -> None:
-        self.assert_legacy_inventory_metadata_is_supported("powershell")
-
-    def test_bash_legacy_inventory_metadata_is_supported(self) -> None:
-        self.assert_legacy_inventory_metadata_is_supported("bash")
 
     def test_powershell_target_structure_preflight(self) -> None:
         self.assert_structure_preflight("powershell")
@@ -2850,19 +1617,6 @@ class PackageScriptTest(unittest.TestCase):
 
     def test_bash_lock_failure_has_no_target_writes(self) -> None:
         self.assert_lock_failure_has_no_target_writes("bash")
-
-    def test_powershell_removes_owned_retired_package_files(self) -> None:
-        self.assert_owned_retired_package_file_cleanup("powershell")
-
-    def test_bash_removes_owned_retired_package_files(self) -> None:
-        self.assert_owned_retired_package_file_cleanup("bash")
-
-    def test_powershell_continues_a_tombstone_cleanup(self) -> None:
-        self.assert_continued_tombstone_cleanup("powershell")
-
-    def test_bash_continues_a_tombstone_cleanup(self) -> None:
-        self.assert_continued_tombstone_cleanup("bash")
-
 
 if __name__ == "__main__":
     unittest.main()

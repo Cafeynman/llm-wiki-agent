@@ -16,6 +16,11 @@ from urllib.request import Request, urlopen
 import requests
 
 
+def has_nonempty_markdown(text: str) -> bool:
+    """Match intake normalization when deciding whether Markdown is empty."""
+    return bool(text.removeprefix("\ufeff").strip())
+
+
 def parse_env_file(path: Path) -> dict[str, str]:
     if not path.exists():
         return {}

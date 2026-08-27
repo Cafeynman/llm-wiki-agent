@@ -1,7 +1,8 @@
-# Complete package-ownership activation inventory for upgrade-manifest.txt.
-# inventory-format: complete
-# Every active file and retired path is listed; this file is committed last.
+# Package ownership inventory.
+# inventory-schema: 1
+# Every package-owned file is listed here; this inventory is committed last.
 # Format: active <path> or remove <path>.
+# Keep each remove record until that path explicitly returns as active.
 active AGENTS.md
 active WIKI.md
 active README.md
@@ -68,10 +69,8 @@ active .agents/skills/source-extraction/references/source-kinds.md
 active .agents/skills/source-extraction/scripts/audit_chunks.py
 active .agents/skills/source-extraction/scripts/audit_intake_file.py
 active .agents/skills/source-extraction/scripts/chunk_contract.py
-active .agents/skills/source-extraction/scripts/record_chunk_exception.py
 active .agents/skills/source-extraction/tests/test_audit_chunks.py
 active .agents/skills/source-extraction/tests/test_audit_intake_file.py
-active .agents/skills/source-extraction/tests/test_record_chunk_exception.py
 active .agents/skills/wiki-maintenance-feedback/SKILL.md
 active .agents/skills/wiki-maintenance-feedback/references/report-template.md
 active .agents/skills/wiki-contract-review/SKILL.md
@@ -88,7 +87,6 @@ active docs/usage.md
 active docs/usage.zh-CN.md
 active docs/wiki-page-templates.md
 active docs/wiki-page-templates.zh-CN.md
-active docs/通用底座改进计划.md
 active scenarios/README.md
 active scenarios/exam-study/PROJECT.template.md
 active scenarios/exam-study/README.md
@@ -99,29 +97,5 @@ active scenarios/exam-study/starter-pages.md
 active scripts/init.ps1
 active scripts/init.sh
 active scripts/package-files.txt
-active scripts/upgrade-manifest.txt
 active scripts/upgrade.ps1
 active scripts/upgrade.sh
-
-# Retired package paths remain activated tombstones.
-remove scenarios/exam-study/scripts/audit_wrong_questions.py
-remove .agents/skills/markitdown-skill/README.md
-remove .agents/skills/markitdown-skill/POST_INSTALL.md
-remove .agents/skills/markitdown-skill/USAGE-GUIDE.md
-remove .agents/skills/markitdown-skill/reference.md
-remove .agents/skills/markitdown-skill/package.json
-remove .agents/skills/markitdown-skill/_meta.json
-remove .agents/skills/skill-creator/agents/analyzer.md
-remove .agents/skills/skill-creator/agents/comparator.md
-remove .agents/skills/skill-creator/agents/grader.md
-remove .agents/skills/skill-creator/assets/eval_review.html
-remove .agents/skills/skill-creator/eval-viewer/generate_review.py
-remove .agents/skills/skill-creator/eval-viewer/viewer.html
-remove .agents/skills/skill-creator/references/schemas.md
-remove .agents/skills/skill-creator/scripts/__init__.py
-remove .agents/skills/skill-creator/scripts/aggregate_benchmark.py
-remove .agents/skills/skill-creator/scripts/generate_report.py
-remove .agents/skills/skill-creator/scripts/improve_description.py
-remove .agents/skills/skill-creator/scripts/run_eval.py
-remove .agents/skills/skill-creator/scripts/run_loop.py
-remove .agents/skills/skill-creator/scripts/utils.py

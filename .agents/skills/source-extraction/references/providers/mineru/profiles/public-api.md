@@ -180,6 +180,8 @@ Batch run:
 
 If `full.md` contains watermark-like text such as `watermark` or `水印`, `result.json` and `batch.json` set `needs_review: true` with a review reason. The provider still writes `source.md`; Source Review Gate decides whether the source can proceed.
 
+The command exits `0` when every requested item produced a non-empty `source.md`, including items marked `needs_review`. It exits non-zero when any item fails or has no usable Markdown, so partial batch success never hides a failed item.
+
 ## Test Fixture
 
 This repository keeps a stable public PDF fixture for this profile at:

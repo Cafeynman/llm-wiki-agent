@@ -255,6 +255,47 @@ class TestFastApiParse(unittest.TestCase):
         self.assertFalse((output_dir / "images").exists())
         self.assertFalse((output_dir / "extracted").exists())
 
+    def test_partial_batch_failure_preserves_success_and_reports_missing_output(self):
+        env_path = self.write_env()
+        first = self.write_file("alpha.pdf")
+        second = self.write_file("beta.pdf")
+        output_dir = self.root / "out"
+        post_sequence = PostSequence(
+            [
+                FakeResponse(
+                    headers={"content-type": "application/json"},
+                    json_payload={
+                        "status": "success",
+                        "results": {
+                            "alpha.pdf": {"md_content": "# Alpha\n"},
+                            "beta.pdf": {"md_content": ""},
+                        },
+                    },
+                )
+            ]
+        )
+        stderr = io.StringIO()
+
+        with patch("fastapi_parse.requests.post", post_sequence), redirect_stderr(stderr):
+            result = fastapi_parse.main(
+                [
+                    "--file",
+                    str(first),
+                    "--file",
+                    str(second),
+                    "--env-file",
+                    str(env_path),
+                    "--output-dir",
+                    str(output_dir),
+                ]
+            )
+
+        self.assertEqual(result, 1)
+        self.assertTrue((output_dir / "alpha" / "source.md").exists())
+        self.assertFalse((output_dir / "beta" / "source.md").exists())
+        self.assertIn("one or more requested items produced no usable source.md", stderr.getvalue())
+        self.assertNotIn("no usable source.md was produced", stderr.getvalue())
+
     def test_unsafe_zip_member_marks_review_without_writing_member(self):
         env_path = self.write_env()
         input_file = self.write_file("demo.pdf")
@@ -313,6 +354,41 @@ class TestFastApiParse(unittest.TestCase):
         self.assertTrue(metadata["needs_review"])
         self.assertIn("could not be opened", metadata["error"])
 
+    def test_blank_or_bom_only_markdown_is_a_failed_parse(self):
+        env_path = self.write_env()
+        input_file = self.write_file("demo.pdf")
+        for label, markdown in (("whitespace", " \r\n\t\n"), ("bom", "\ufeff")):
+            with self.subTest(label=label):
+                output_dir = self.root / label
+                zip_bytes = self.build_zip_bytes(
+                    {"demo/vlm-engine_auto/demo.md": markdown}
+                )
+                post_sequence = PostSequence(
+                    [FakeResponse(headers={"content-type": "application/zip"}, content=zip_bytes)]
+                )
+                stderr = io.StringIO()
+
+                with patch("fastapi_parse.requests.post", post_sequence), redirect_stderr(stderr):
+                    result = fastapi_parse.main(
+                        [
+                            "--file",
+                            str(input_file),
+                            "--env-file",
+                            str(env_path),
+                            "--output-dir",
+                            str(output_dir),
+                        ]
+                    )
+
+                self.assertEqual(result, 1)
+                self.assertFalse((output_dir / "source.md").exists())
+                metadata = json.loads(
+                    (output_dir / "result.json").read_text(encoding="utf-8")
+                )
+                self.assertEqual(metadata["status"], "failed")
+                self.assertIn("empty or whitespace-only", metadata["error"])
+                self.assertIn("one or more requested items produced no usable source.md", stderr.getvalue())
+
     def test_watermark_text_marks_review(self):
         env_path = self.write_env()
         input_file = self.write_file("demo.pdf")
@@ -333,7 +409,8 @@ class TestFastApiParse(unittest.TestCase):
                 ]
             )
 
-        self.assertEqual(result, 1)
+        self.assertEqual(result, 0)
+        self.assertEqual((output_dir / "source.md").read_text(encoding="utf-8"), "# Demo\n识别出了水印\n")
         metadata = json.loads((output_dir / "result.json").read_text(encoding="utf-8"))
         self.assertTrue(metadata["needs_review"])
         self.assertIn("possible watermark text detected in full.md", metadata["review_reasons"])

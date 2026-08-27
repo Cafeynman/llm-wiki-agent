@@ -70,7 +70,7 @@ cd llm-wiki-agent
 ./scripts/init.sh -VaultRoot "/path/to/your/vault"
 ```
 
-外部根目录初始化完成后，请从初始化后的根目录打开或运行智能体。目标目录会得到包拥有的入口文件、本地技能、脚本、文档、运行目录和项目环境。初始化与升级使用同一所有权协调：新认领路径缺失时创建、逐字节相同时接管、内容不同时拒绝；两份旧元数据都不存在时，首次接管门把这条规则应用到全部候选路径。带完整格式标记的 inventory 可在中断时单独作为检查点；单独 manifest、无标记的单独 inventory 或无效元数据都会在写入目标前停止。工作区个性化偏好应放在 `PROJECT.md`。
+外部根目录初始化完成后，请从初始化后的根目录打开或运行智能体。目标目录会得到包拥有的入口文件、本地技能、脚本、文档、运行目录和项目环境。初始化与升级使用同一所有权协调。`scripts/package-files.txt` 是唯一包所有权来源：目标没有 inventory 时执行首次接管，存在有效 `# inventory-schema: 1` inventory 时支持 1.0+ 升级；已有 inventory 格式错误或版本不受支持时会在写入目标前停止。新认领路径缺失时创建、逐字节相同时接管、内容不同时拒绝。工作区个性化偏好应放在 `PROJECT.md`。
 
 **它的作用是：**
 1. 将包管理的入口文件、本地技能、脚本和文档安装到目标根目录。
@@ -111,9 +111,9 @@ Obsidian 和 Claudian 都不是必需项。本工作流包可以通过文件系�
 ./scripts/upgrade.sh -TargetRoot "/path/to/your/workspace"
 ```
 
-升级会读取目标中的旧 `scripts/upgrade-manifest.txt` 与 `scripts/package-files.txt`，再和当前包中的同名文件比较。当前 manifest 声明 `inventory all`；inventory 声明 `# inventory-format: complete`，并用 `active <path>` 与 `remove <path>` 记录一次性激活每个顶层文件、目录展开文件和退役路径及其所有权类型。两份文件共同构成唯一包所有权状态，不读取目标 Git 历史。没有 inventory 格式标记的早期目标仍按 directory-only 格式兼容读取；依赖同步成功后，脚本先把旧 inventory 原子替换为“所有权完全不变”的完整快照。没有旧元数据的目标则先得到一份完整 inventory 检查点，它只认领本次升级刚创建的 inventory 控制文件。后续中断时，无论 manifest 仍是旧版、已经是新版还是暂时不存在，重跑都以带标记的 typed inventory 中的旧路径和类型为准。新旧版本都拥有的路径会按现状创建、跳过或替换；新认领路径缺失时创建、逐字节相同时接管，已有不同内容时冲突。旧版拥有而新版不再拥有的路径必须在新 manifest 中有明确 `remove`，之后才可移除。首次出现的退役路径只有在旧元数据已将它记为活动或退役所有权时才能删除现存文件，否则冲突并保留。单独 manifest、无标记的单独 inventory、格式错误、重复或越界元数据都会在写入目标前阻断；只有两份都不存在时才进入首次接管门，已有内容不同的包路径和已有退役路径仍按冲突处理。同一次预检还会拒绝包来源路径、目标根的既有祖先、目标根或待写路径中的符号链接、目录联接或 reparse point，以及 `PROJECT.md`、`.gitignore`、`.venv` 或固定运行路径的类型错误。包目录中的其他目标专有文件、`PROJECT.md`、`.env` 和运行知识内容保持不变。
+升级会比较目标中的旧 `scripts/package-files.txt` 与当前包 inventory。inventory 必须且只能声明一次 `# inventory-schema: 1`，并使用 `active <path>` 与 `remove <path>`；它是唯一包所有权状态，不读取目标 Git 历史。新旧版本都拥有的路径会按现状创建、跳过或替换；新认领路径缺失时创建、逐字节相同时接管，已有不同内容时冲突。旧版拥有而新版不再拥有的路径必须有明确 `remove`，之后才可移除。`remove` 一旦出现，就保留到该路径明确重新成为 `active`，从而允许任意受支持的 1.0+ inventory 直接升级。首次出现的退役路径只有在旧 inventory 已将它记为活动或退役所有权时才能删除现存文件，否则冲突并保留。目标没有 inventory 时执行首次接管；inventory 格式错误、重复、越界、schema 不受支持或未认领自身时会在写入目标前阻断。1.0 之前的版本不作为升级来源支持。同一次预检还会拒绝包来源路径、目标根的既有祖先、目标根或待写路径中的符号链接、目录联接或 reparse point，以及 `PROJECT.md`、`.gitignore`、`.venv` 或固定运行路径的类型错误。包目录中的其他目标专有文件、`PROJECT.md`、`.env` 和运行知识内容保持不变。
 
-运行一次升级，检查 create、replace、remove、unchanged 汇总和实际文件，再执行相关验证。若目标本身使用版本控制，可继续采用它原有的分支与审查流程，但这只是操作者的可选证据，不是包所有权状态。升级脚本本身不创建分支、提交或合并。脚本会补齐缺失的运行结构，保留已有 `.gitignore` 的目标域规则并补齐密钥和缓存规则，运行 `uv sync --locked --default-index https://pypi.org/simple`。同步成功后，旧 path-only inventory 先在不改变所有权的前提下原子类型化；没有旧元数据时先写一份只拥有新建 inventory 控制文件的 typed 检查点。随后先提交新 manifest，最后提交最终 typed inventory，每次都使用同目录临时文件原子替换。最终 inventory 一次性激活顶层文件、目录文件和 tombstone 及其类型，使每个元数据中断窗口都能保守且自动重跑。Windows 使用 PowerShell；Bash 入口只支持 macOS/Linux，并会拒绝 Windows 运行时。
+运行一次升级，检查 create、replace、remove、unchanged 汇总和实际文件，再执行相关验证。若目标本身使用版本控制，可继续采用它原有的分支与审查流程，但这只是操作者的可选证据，不是包所有权状态。升级脚本本身不创建分支、提交或合并。脚本会补齐缺失的运行结构，保留已有 `.gitignore` 的目标域规则并补齐密钥和缓存规则，并在推进所有权前运行 `uv sync --locked --default-index https://pypi.org/simple`。新 inventory 最后通过同目录临时文件原子替换。中断时，首次接管目标仍没有 inventory；后续升级则仍保留上一份完整 1.0+ inventory。首次接管中断后应从原包根目录重跑；已复制文件逐字节相同时接管，中途被改成不同内容则冲突。Windows 使用 PowerShell；Bash 入口只支持 macOS/Linux，并会拒绝 Windows 运行时。
 
 ### 本地服务密钥
 

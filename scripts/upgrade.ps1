@@ -7,11 +7,10 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $PackageRoot = Split-Path -Parent $ScriptDir
 $PackagePath = (Resolve-Path -LiteralPath $PackageRoot).Path
-$ManifestPath = Join-Path $ScriptDir "upgrade-manifest.txt"
 $InventoryPath = Join-Path $ScriptDir "package-files.txt"
 $PathComparer = [System.StringComparer]::OrdinalIgnoreCase
 $Utf8NoBomStrict = New-Object System.Text.UTF8Encoding($false, $true)
-$CompleteInventoryMarker = "# inventory-format: complete"
+$InventorySchemaMarker = "# inventory-schema: 1"
 $RootPathComparison = if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT) {
     [System.StringComparison]::OrdinalIgnoreCase
 } else {
@@ -20,7 +19,6 @@ $RootPathComparison = if ([System.Environment]::OSVersion.Platform -eq [System.P
 
 $script:FileCount = 0
 $script:RemovedFileCount = 0
-$script:ManifestDirectoryCount = 0
 $script:CreatedRuntimeCount = 0
 $RuntimeDirectories = @(
     "inbox",
@@ -397,291 +395,86 @@ function Assert-OwnershipMetadataPathSafe {
     }
 }
 
-function Read-PackageOwnershipMetadata {
+function Read-PackageInventory {
     param(
         [string]$RootPath,
-        [string]$ManifestFile,
         [string]$InventoryFile,
         [bool]$RequireSourceFiles,
         [string]$Label
     )
 
-    $manifestDirectActive = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
-    $manifestRemoved = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
-    $manifestDirectories = [System.Collections.Generic.List[string]]::new()
-    $manifestDirectorySeen = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
-    $manifestExplicitSeen = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
-    $inventoryMode = "directories"
-    $inventoryDirectiveSeen = $false
-    $ownershipEntrySeen = $false
-    $completeInventoryMarkerSeen = $false
-
-    foreach ($inventoryLine in [System.IO.File]::ReadAllLines($InventoryFile, $Utf8NoBomStrict)) {
-        $line = $inventoryLine.TrimStart([char]0xFEFF).Trim()
-        if ($line -ceq $CompleteInventoryMarker) {
-            if ($completeInventoryMarkerSeen) {
-                throw "$Label inventory contains a duplicate complete-format marker."
-            }
-            $completeInventoryMarkerSeen = $true
-        }
-    }
-
-    $manifestAvailable = -not [string]::IsNullOrEmpty($ManifestFile)
-    if ($manifestAvailable) {
-        foreach ($manifestLine in [System.IO.File]::ReadAllLines($ManifestFile, $Utf8NoBomStrict)) {
-            $line = $manifestLine.TrimStart([char]0xFEFF).Trim()
-            if (-not $line -or $line.StartsWith("#")) {
-                continue
-            }
-            $parts = $line -split "\s+", 2
-            if ($parts.Count -ne 2) {
-                throw "Invalid $Label manifest line: $line"
-            }
-            $kind = $parts[0]
-            if ($kind -ceq "inventory") {
-                if ($parts[1] -cne "all") {
-                    throw "Invalid $Label inventory directive: $line"
-                }
-                if ($inventoryDirectiveSeen -or $ownershipEntrySeen) {
-                    throw "$Label manifest must declare 'inventory all' exactly once before ownership entries."
-                }
-                $inventoryDirectiveSeen = $true
-                $inventoryMode = "all"
-                continue
-            }
-            if ($kind -cnotin @("file", "dir", "remove")) {
-                throw "Invalid $Label manifest entry kind: $kind"
-            }
-
-            $relativePath = ConvertTo-PackageRelativePath $parts[1] "$Label manifest"
-            $ownershipEntrySeen = $true
-            if ($kind -cin @("file", "remove") -and -not $manifestExplicitSeen.Add($relativePath)) {
-                throw "$Label manifest contains a duplicate package path: $relativePath"
-            }
-
-            if ($kind -ceq "file") {
-                $manifestDirectActive.Add($relativePath) | Out-Null
-                continue
-            }
-            if ($kind -ceq "dir") {
-                if (-not $manifestDirectorySeen.Add($relativePath)) {
-                    throw "$Label manifest contains a duplicate directory entry: $relativePath"
-                }
-                $manifestDirectories.Add($relativePath) | Out-Null
-                continue
-            }
-
-            if ($relativePath -in @("scripts/upgrade-manifest.txt", "scripts/package-files.txt")) {
-                throw "$Label manifest cannot retire ownership metadata: $relativePath"
-            }
-            $manifestRemoved.Add($relativePath) | Out-Null
-        }
-    }
-
-    $manifestInventoryMode = $inventoryMode
-    if ($RequireSourceFiles -and $manifestInventoryMode -ne "all") {
-        throw "$Label manifest must declare 'inventory all' before ownership entries."
-    }
-    if ($RequireSourceFiles -and -not $completeInventoryMarkerSeen) {
-        throw "$Label inventory must declare '$CompleteInventoryMarker'."
-    }
-    if (-not $manifestAvailable -and -not $completeInventoryMarkerSeen) {
-        throw "$Label ownership metadata is incomplete; a standalone inventory must declare '$CompleteInventoryMarker'."
-    }
-    if ($completeInventoryMarkerSeen) {
-        $inventoryMode = "all"
-    } elseif ($manifestInventoryMode -eq "all") {
-        throw "$Label complete manifest is paired with an unmarked inventory; restore the matching ownership metadata pair and rerun."
-    }
-
     $active = [System.Collections.Generic.Dictionary[string, string]]::new($PathComparer)
     $removed = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
-    $directoryCount = $manifestDirectories.Count
+    $seen = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
+    $schemaMarkerSeen = $false
 
-    if ($inventoryMode -eq "directories") {
-        $inventory = [System.Collections.Generic.List[string]]::new()
-        $inventorySeen = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
-        foreach ($inventoryLine in [System.IO.File]::ReadAllLines($InventoryFile, $Utf8NoBomStrict)) {
-            $line = $inventoryLine.TrimStart([char]0xFEFF).Trim()
-            if (-not $line -or $line.StartsWith("#")) {
-                continue
-            }
-            $relativePath = ConvertTo-PackageRelativePath $line "$Label inventory"
-            if (-not $inventorySeen.Add($relativePath)) {
-                throw "$Label inventory contains a duplicate package path: $relativePath"
-            }
-            $inventory.Add($relativePath) | Out-Null
-        }
-
-        foreach ($relativePath in $manifestDirectActive) {
-            $active.Add($relativePath, (Join-Path $RootPath $relativePath))
-        }
-
-        $consumedInventory = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
-        foreach ($directoryPath in $manifestDirectories) {
-            $prefix = "$directoryPath/"
-            $expandedPaths = @(
-                $inventory | Where-Object {
-                    $_.StartsWith($prefix, [System.StringComparison]::Ordinal)
-                }
-            )
-            if ($expandedPaths.Count -eq 0) {
-                throw "$Label manifest directory has no files in its inventory: $directoryPath"
-            }
-            foreach ($relativePath in $expandedPaths) {
-                if ($active.ContainsKey($relativePath) -or $removed.Contains($relativePath)) {
-                    throw "$Label manifest contains a duplicate package path: $relativePath"
-                }
-                $active.Add($relativePath, (Join-Path $RootPath $relativePath))
-                $consumedInventory.Add($relativePath) | Out-Null
-            }
-        }
-
-        foreach ($relativePath in $manifestRemoved) {
-            if ($active.ContainsKey($relativePath) -or -not $removed.Add($relativePath)) {
-                throw "$Label manifest contains a duplicate package path: $relativePath"
-            }
-        }
-
-        foreach ($relativePath in $inventory) {
-            if (-not $consumedInventory.Contains($relativePath)) {
-                throw "$Label inventory path is not owned by a manifest directory: $relativePath"
-            }
-        }
-
-        return [pscustomobject]@{
-            Available = $true
-            ActivePaths = $active
-            RemovedPaths = $removed
-            DirectoryCount = $directoryCount
-            InventoryMode = $inventoryMode
-        }
-    }
-
-    $inventoryKinds = [System.Collections.Generic.Dictionary[string, string]]::new($PathComparer)
-    $inventoryPaths = [System.Collections.Generic.List[string]]::new()
     foreach ($inventoryLine in [System.IO.File]::ReadAllLines($InventoryFile, $Utf8NoBomStrict)) {
         $line = $inventoryLine.TrimStart([char]0xFEFF).Trim()
+        if ($line -ceq $InventorySchemaMarker) {
+            if ($schemaMarkerSeen) {
+                throw "$Label inventory contains a duplicate schema marker."
+            }
+            $schemaMarkerSeen = $true
+            continue
+        }
+        if ($line.StartsWith("# inventory-schema:")) {
+            throw "$Label inventory uses an unsupported schema marker: $line"
+        }
         if (-not $line -or $line.StartsWith("#")) {
             continue
         }
+
         $parts = $line -split "\s+", 2
         if ($parts.Count -ne 2 -or $parts[0] -cnotin @("active", "remove")) {
-            throw "Invalid $Label complete inventory line: $line"
+            throw "Invalid $Label inventory line: $line"
         }
-        $inventoryKind = $parts[0]
+        $kind = $parts[0]
         $relativePath = ConvertTo-PackageRelativePath $parts[1] "$Label inventory"
-        if ($inventoryKinds.ContainsKey($relativePath)) {
+        if (-not $seen.Add($relativePath)) {
             throw "$Label inventory contains a duplicate package path: $relativePath"
         }
-        $inventoryKinds.Add($relativePath, $inventoryKind)
-        $inventoryPaths.Add($relativePath) | Out-Null
-    }
 
-    foreach ($relativePath in $inventoryPaths) {
-        $inventoryKind = $inventoryKinds[$relativePath]
-        $declaredActive = $manifestDirectActive.Contains($relativePath)
-        foreach ($directoryPath in $manifestDirectories) {
-            if ($relativePath.StartsWith("$directoryPath/", [System.StringComparison]::Ordinal)) {
-                $declaredActive = $true
-                break
-            }
-        }
-        $declaredRemoved = $manifestRemoved.Contains($relativePath)
-        if ($RequireSourceFiles) {
-            if (-not $declaredActive -and -not $declaredRemoved) {
-                throw "$Label inventory path is not classified by the manifest: $relativePath"
-            }
-            if ($inventoryKind -ceq "active" -and (-not $declaredActive -or $declaredRemoved)) {
-                throw "$Label inventory classification does not match the manifest: active $relativePath"
-            }
-            if ($inventoryKind -ceq "remove" -and -not $declaredRemoved) {
-                throw "$Label inventory classification does not match the manifest: remove $relativePath"
-            }
-        }
-
-        if ($inventoryKind -ceq "active") {
-            $source = Join-Path $RootPath $relativePath
+        if ($kind -ceq "active") {
+            $sourcePath = Join-Path $RootPath $relativePath
             if ($RequireSourceFiles) {
                 Assert-PackageSourcePathSafe $RootPath $relativePath "file" "$Label active inventory entry"
             }
-            $active.Add($relativePath, $source)
+            $active.Add($relativePath, $sourcePath)
         } else {
+            if ($relativePath -ceq "scripts/package-files.txt") {
+                throw "$Label inventory cannot retire itself: $relativePath"
+            }
             $removed.Add($relativePath) | Out-Null
         }
     }
 
-    if ($RequireSourceFiles) {
-        foreach ($relativePath in $manifestDirectActive) {
-            if (
-                -not $inventoryKinds.ContainsKey($relativePath) -or
-                $inventoryKinds[$relativePath] -cne "active"
-            ) {
-                throw "$Label inventory is missing active manifest path: $relativePath"
-            }
-        }
-        foreach ($relativePath in $manifestRemoved) {
-            if (
-                -not $inventoryKinds.ContainsKey($relativePath) -or
-                $inventoryKinds[$relativePath] -cne "remove"
-            ) {
-                throw "$Label inventory is missing retired manifest path: $relativePath"
-            }
-        }
-        foreach ($directoryPath in $manifestDirectories) {
-            $prefix = "$directoryPath/"
-            $hasActivePath = $false
-            foreach ($relativePath in $inventoryPaths) {
-                if (
-                    $inventoryKinds[$relativePath] -ceq "active" -and
-                    $relativePath.StartsWith($prefix, [System.StringComparison]::Ordinal)
-                ) {
-                    $hasActivePath = $true
-                    break
-                }
-            }
-            if (-not $hasActivePath) {
-                throw "$Label manifest directory has no active files in its inventory: $directoryPath"
-            }
-            Assert-PackageSourcePathSafe $RootPath $directoryPath "directory" "$Label manifest directory entry"
-        }
+    if (-not $schemaMarkerSeen) {
+        throw "$Label inventory must declare '$InventorySchemaMarker'."
+    }
+    if (-not $active.ContainsKey("scripts/package-files.txt")) {
+        throw "$Label inventory must own scripts/package-files.txt as an active path."
     }
 
     return [pscustomobject]@{
         Available = $true
         ActivePaths = $active
         RemovedPaths = $removed
-        DirectoryCount = $directoryCount
-        InventoryMode = $inventoryMode
     }
 }
 
-function Get-OldPackageOwnershipMetadata {
+function Get-OldPackageOwnership {
     param([string]$TargetPath)
 
-    $oldManifest = Join-Path $TargetPath "scripts/upgrade-manifest.txt"
     $oldInventory = Join-Path $TargetPath "scripts/package-files.txt"
-    Assert-OwnershipMetadataPathSafe $TargetPath "scripts/upgrade-manifest.txt"
     Assert-OwnershipMetadataPathSafe $TargetPath "scripts/package-files.txt"
-
-    $manifestExists = Test-Path -LiteralPath $oldManifest -PathType Leaf
-    $inventoryExists = Test-Path -LiteralPath $oldInventory -PathType Leaf
-    if (-not $manifestExists -and -not $inventoryExists) {
+    if (-not (Test-Path -LiteralPath $oldInventory -PathType Leaf)) {
         return [pscustomobject]@{
             Available = $false
             ActivePaths = [System.Collections.Generic.Dictionary[string, string]]::new($PathComparer)
             RemovedPaths = [System.Collections.Generic.HashSet[string]]::new($PathComparer)
-            DirectoryCount = 0
-            InventoryMode = "none"
         }
     }
-    if (-not $manifestExists -and $inventoryExists) {
-        return Read-PackageOwnershipMetadata $TargetPath $null $oldInventory $false "Old package"
-    }
-    if (-not $manifestExists -or -not $inventoryExists) {
-        throw "Old package ownership metadata is incomplete; both scripts/upgrade-manifest.txt and scripts/package-files.txt are required."
-    }
-    return Read-PackageOwnershipMetadata $TargetPath $oldManifest $oldInventory $false "Old package"
+    return Read-PackageInventory $TargetPath $oldInventory $false "Old package"
 }
 
 function Add-PlanRecord {
@@ -698,11 +491,7 @@ function Add-PlanRecord {
     if (-not $Seen.Add($RelativePath)) {
         throw "Duplicate package path while building the ownership plan: $RelativePath"
     }
-    $metadataOrder = switch ($RelativePath) {
-        "scripts/upgrade-manifest.txt" { 1 }
-        "scripts/package-files.txt" { 2 }
-        default { 0 }
-    }
+    $metadataOrder = if ($RelativePath -ceq "scripts/package-files.txt") { 1 } else { 0 }
     $Records.Add([pscustomobject]@{
         RelativePath = $RelativePath
         SourcePath = $SourcePath
@@ -757,7 +546,7 @@ function Get-PackagePlan {
             $target = Join-Path $TargetPath $relativePath
             $targetState = Get-SafeTargetFileState $TargetPath $relativePath
             if (-not $NewMetadata.RemovedPaths.Contains($relativePath)) {
-                Add-PlanRecord $records $seen $relativePath $null $target "CONFLICT" "old package-owned path is absent from the new manifest without an explicit remove entry"
+                Add-PlanRecord $records $seen $relativePath $null $target "CONFLICT" "old package-owned path is absent from the new inventory without an explicit remove entry"
                 continue
             }
             $action = "UNCHANGED"
@@ -771,6 +560,17 @@ function Get-PackagePlan {
                 }
             }
             Add-PlanRecord $records $seen $relativePath $null $target $action $reason
+        }
+
+        foreach ($relativePath in @($OldMetadata.RemovedPaths | Sort-Object)) {
+            if (
+                $NewMetadata.ActivePaths.ContainsKey($relativePath) -or
+                $NewMetadata.RemovedPaths.Contains($relativePath)
+            ) {
+                continue
+            }
+            $target = Join-Path $TargetPath $relativePath
+            Add-PlanRecord $records $seen $relativePath $null $target "CONFLICT" "old retired package path is absent from the new inventory; retain its remove entry or explicitly reactivate it"
         }
     }
 
@@ -859,88 +659,14 @@ function Write-PackageMetadataAtomically {
     }
 }
 
-function Get-CompleteInventorySnapshotContent {
-    param(
-        [object]$Metadata,
-        [bool]$ClaimInventoryFile = $false
-    )
-
-    $entries = [System.Collections.Generic.List[string]]::new()
-    if ($ClaimInventoryFile) {
-        $entries.Add("active scripts/package-files.txt") | Out-Null
-    }
-    foreach ($relativePath in $Metadata.ActivePaths.Keys) {
-        $entries.Add("active $relativePath") | Out-Null
-    }
-    foreach ($relativePath in $Metadata.RemovedPaths) {
-        $entries.Add("remove $relativePath") | Out-Null
-    }
-    $sortedEntries = $entries.ToArray()
-    [System.Array]::Sort($sortedEntries, [System.StringComparer]::Ordinal)
-
-    $lines = [System.Collections.Generic.List[string]]::new()
-    $lines.Add("# Complete package-ownership activation inventory for upgrade-manifest.txt.") | Out-Null
-    $lines.Add($CompleteInventoryMarker) | Out-Null
-    $lines.Add("# Every active file and retired path is listed; the final inventory is committed last.") | Out-Null
-    $lines.Add("# Format: active <path> or remove <path>.") | Out-Null
-    foreach ($entry in $sortedEntries) {
-        $lines.Add($entry) | Out-Null
-    }
-    return [string]::Join("`n", $lines) + "`n"
-}
-
-function Write-PackageMetadataContentAtomically {
-    param(
-        [string]$Content,
-        [string]$TargetPath
-    )
-
-    $targetDirectory = Split-Path -Parent $TargetPath
-    Ensure-Directory $targetDirectory $false
-    $targetName = Split-Path -Leaf $TargetPath
-    $temporaryPath = Join-Path $targetDirectory (".$targetName.upgrade-" + [Guid]::NewGuid().ToString("N") + ".tmp")
-    $backupPath = Join-Path $targetDirectory (".$targetName.upgrade-backup-" + [Guid]::NewGuid().ToString("N") + ".tmp")
-    try {
-        [System.IO.File]::WriteAllText($temporaryPath, $Content, $Utf8NoBomStrict)
-        if (Test-Path -LiteralPath $TargetPath -PathType Leaf) {
-            [System.IO.File]::Replace($temporaryPath, $TargetPath, $backupPath)
-        } else {
-            [System.IO.File]::Move($temporaryPath, $TargetPath)
-        }
-        $script:FileCount += 1
-    }
-    finally {
-        if (Test-Path -LiteralPath $temporaryPath) {
-            Remove-Item -LiteralPath $temporaryPath -Force
-        }
-        if (Test-Path -LiteralPath $backupPath) {
-            Remove-Item -LiteralPath $backupPath -Force
-        }
-    }
-}
-
 function Apply-PackagePlanMetadata {
-    param(
-        [object[]]$Plan,
-        [object]$OldMetadata,
-        [string]$TargetPath
-    )
+    param([object[]]$Plan)
 
-    if ($OldMetadata.InventoryMode -in @("directories", "none")) {
-        $oldInventoryPath = Join-Path $TargetPath "scripts/package-files.txt"
-        $snapshotContent = Get-CompleteInventorySnapshotContent `
-            $OldMetadata `
-            ($OldMetadata.InventoryMode -eq "none")
-        Write-PackageMetadataContentAtomically $snapshotContent $oldInventoryPath
-    }
-
-    foreach ($metadataOrder in 1, 2) {
-        foreach ($record in @($Plan | Where-Object MetadataOrder -eq $metadataOrder)) {
-            if ($record.Action -notin @("CREATE", "REPLACE")) {
-                continue
-            }
-            Write-PackageMetadataAtomically $record.SourcePath $record.TargetPath
+    foreach ($record in @($Plan | Where-Object MetadataOrder -eq 1)) {
+        if ($record.Action -notin @("CREATE", "REPLACE")) {
+            continue
         }
+        Write-PackageMetadataAtomically $record.SourcePath $record.TargetPath
     }
 }
 
@@ -1059,15 +785,13 @@ function Ensure-RuntimeStructure {
 
 $TargetPath = [System.IO.Path]::GetFullPath($TargetRoot)
 Assert-TargetRootPath $TargetPath
-Assert-PackageSourcePathSafe $PackagePath "scripts/upgrade-manifest.txt" "file" "Upgrade manifest"
 Assert-PackageSourcePathSafe $PackagePath "scripts/package-files.txt" "file" "Package file inventory"
 foreach ($templateName in @("PROJECT.md", ".gitignore")) {
     Assert-PackageSourcePathSafe $PackagePath $templateName "file" "Package template"
 }
 $sameRoot = [string]::Equals($PackagePath, $TargetPath, $RootPathComparison)
-$newMetadata = Read-PackageOwnershipMetadata $PackagePath $ManifestPath $InventoryPath $true "New package"
-$script:ManifestDirectoryCount = $newMetadata.DirectoryCount
-$oldMetadata = Get-OldPackageOwnershipMetadata $TargetPath
+$newMetadata = Read-PackageInventory $PackagePath $InventoryPath $true "New package"
+$oldMetadata = Get-OldPackageOwnership $TargetPath
 $plan = Get-PackagePlan $TargetPath $sameRoot $newMetadata $oldMetadata
 $conflicts = @(
     Get-PlanConflicts $plan
@@ -1109,11 +833,10 @@ finally {
     Pop-Location
 }
 if (-not $sameRoot) {
-    Apply-PackagePlanMetadata $plan $oldMetadata $TargetPath
+    Apply-PackagePlanMetadata $plan
 }
 
 Write-Host "Upgraded package files at: $TargetPath"
-Write-Host "Merged manifest directories: $script:ManifestDirectoryCount"
 Write-Host "Copied package files: $script:FileCount"
 Write-Host "Removed retired package files: $script:RemovedFileCount"
 Write-Host "Created missing runtime entries: $script:CreatedRuntimeCount"

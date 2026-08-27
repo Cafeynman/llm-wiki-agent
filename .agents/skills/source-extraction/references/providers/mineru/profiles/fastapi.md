@@ -119,12 +119,13 @@ The script accepts ZIP or JSON responses:
 - `response.json`, `result.zip`, and full `extracted/` contents are kept only when `--keep-json-response`, `--keep-result-zip`, or `--keep-all-extracted` is explicitly set.
 - Multi-file runs require unique original base filenames and write one output directory per original base filename.
 - Watermark-like text in `full.md` marks `needs_review: true`; Source Review Gate decides whether the source can proceed.
+- The command exits `0` when every requested item produced a non-empty `source.md`, including items marked `needs_review`. It exits non-zero when any requested item has no usable Markdown.
 
 For ZIP output with images, the expected service layout contains Markdown and an `images/` directory under the same result folder. The script copies the returned image files into the normalized `images/` directory. Intake promotes or deletes that directory with the source folder and records its disposition.
 
 ## Error Handling
 
-If the service returns JSON without `md_content`, a ZIP without an identifiable Markdown file, a failed async task, or an async timeout, the script writes review metadata when enough task context exists and exits non-zero. Record the profile id, task id when present, status history, backend, parse method, and error summary in the intake manifest or review notes before Source Review Gate decides `needs-review` or `unsupported`.
+If the service returns JSON without non-empty `md_content`, a ZIP without identifiable non-empty Markdown, a failed async task, or an async timeout, the script writes review metadata when enough task context exists and exits non-zero. Record the profile id, task id when present, status history, backend, parse method, and error summary in the intake manifest or review notes before Source Review Gate decides `needs-review` or `unsupported`.
 
 Use `needs-review` when the user can retry with a different backend, page range, async mode, gateway delay, or service configuration. Use `unsupported` only when this profile cannot process the source after an explicit user-approved retry strategy.
 

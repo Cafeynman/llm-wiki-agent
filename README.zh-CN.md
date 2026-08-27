@@ -39,13 +39,13 @@ cd llm-wiki-agent
 ./scripts/init.sh -VaultRoot .
 ```
 
-*提示：如果要使用单独的工作目录，包括现有 Obsidian 库，请传递该路径，例如 `.\scripts\init.ps1 -VaultRoot "C:\path\to\your\workspace"`。目标目录会成为工作根目录，并获得包拥有的智能体文件、本地技能、脚本、文档和运行结构。初始化根据包所有权元数据处理，不依赖目标 Git 历史。新认领路径缺失时创建、逐字节相同时接管、内容不同时拒绝；两份旧元数据都不存在时，首次接管门把这条规则应用到全部候选路径。带完整格式标记的 inventory 可在中断时单独作为旧所有权检查点；单独 manifest、无标记的单独 inventory 或无效元数据都会在写入前阻断。工作区个性化偏好应放在 `PROJECT.md`。*
+*提示：如果要使用单独的工作目录，包括现有 Obsidian 库，请传递该路径，例如 `.\scripts\init.ps1 -VaultRoot "C:\path\to\your\workspace"`。目标目录会成为工作根目录，并获得包拥有的智能体文件、本地技能、脚本、文档和运行结构。`scripts/package-files.txt` 是唯一所有权来源；目标没有 inventory 时执行首次接管，存在有效 schema-1 inventory 时支持后续 1.0+ 升级。目标 Git 历史不作为所有权状态。新认领路径缺失时创建、逐字节相同时接管、内容不同时拒绝。无效 inventory 会在写入前阻断，新 inventory 只在依赖同步成功后最后提交。工作区个性化偏好应放在 `PROJECT.md`。*
 
 初始化后的工作区中，所有对话一开始，智能体都先完整读取该工作区的 `WIKI.md` 和 `PROJECT.md`。编程、调试、普通问答、技术工作和文件操作都使用同一启动门；恢复已有对话时也重新读取，对话历史不能替代这一步。
 
 默认来源提取偏好记录在 `PROJECT.md`。智能体只在当前来源任务需要时确认对应 provider 选择；选用 MinerU API 模式时，再确认所需 profile、本地凭据配置和是否优先使用 MinerU。
 如果使用需要本地服务配置的 provider 或 OCR 后端，请将 `.env.example` 复制为初始化后工作根目录中的 `.env`，并只填写所选 provider profile 真正需要的变量。真实 `.env` 已被 Git 忽略；智能体运行 provider 命令时应通过 `uv run --env-file .env` 加载它。
-后续升级包文件时，请使用 [使用指南](docs/usage.zh-CN.md#升级包文件) 中的 manifest 驱动升级脚本。manifest 声明候选所有权，带类型的完整 inventory 最后提交，统一激活顶层文件、目录文件和退役路径。
+后续升级包文件时，请使用 [使用指南](docs/usage.zh-CN.md#升级包文件) 中的 inventory 驱动升级脚本。schema-1 inventory 列出活动文件与未来退役路径，并作为所有权激活门最后提交。
 默认 `.gitignore` 会让本地 wiki 运行内容保持私有；如果这个 checkout 本身是需要版本化的 wiki 项目，请参考 [Git Ignore 模板](docs/gitignore-templates.zh-CN.md)。
 
 `scenarios/` 下的可选场景包可将初始化后的工作区适配为考试备考等专门用途。根 `PROJECT.md` 选择唯一活动场景，相关工作才读取该场景内的 skill；见 [可选场景包](docs/usage.zh-CN.md#可选场景包)。
@@ -130,7 +130,6 @@ LLM Wiki Agent 可以直接通过文件系统运行，不需要安装 Obsidian �
 │   ├── init.ps1
 │   ├── init.sh
 │   ├── package-files.txt
-│   ├── upgrade-manifest.txt
 │   ├── upgrade.ps1
 │   └── upgrade.sh
 ├── scenarios/

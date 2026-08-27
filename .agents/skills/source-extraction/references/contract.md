@@ -34,6 +34,8 @@ A successful provider run must produce:
   - missing content
   - links to generated side outputs when they are necessary for traceability
 
+For provider CLIs, exit code `0` means every requested item produced its current non-empty `source.md`. Review warnings may still set `needs_review: true`; that flag belongs to Source Review Gate and does not turn a usable extraction into a command failure. A request, response, decoding, contract, or partial-batch failure that leaves any requested item without usable Markdown exits non-zero.
+
 For the initial live-URL flow, Defuddle instead returns structured Markdown and page metadata to the caller, which serializes the lifecycle source capture under `inbox/web/`. Intake then stages that capture unchanged as `source.md`; it does not run Defuddle a second time.
 
 Provider-returned images and attachments may be stored under the same intake folder as `source.md`, normally under `images/`. They are passive source side outputs, not first-class wiki knowledge. Promote them with an accepted intake folder or delete them with temporary output for every other outcome. Record accepted paths in `manifest.md`; record relevant disposition in source review or intake logs before deleting non-accepted output.

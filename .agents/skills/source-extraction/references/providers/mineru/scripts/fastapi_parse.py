@@ -15,7 +15,7 @@ from typing import Any
 
 import requests
 
-from api_common import api_url, env_value, parse_env_file
+from api_common import api_url, env_value, has_nonempty_markdown, parse_env_file
 
 
 PROFILE_ID = "fastapi"
@@ -369,6 +369,8 @@ def normalize_markdown_output(
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
+    if not has_nonempty_markdown(markdown_text):
+        raise RuntimeError("Markdown output is empty or whitespace-only")
     (output_dir / "full.md").write_text(markdown_text, encoding="utf-8")
     (output_dir / "source.md").write_text(markdown_text, encoding="utf-8")
     if "full.md" not in preserved_outputs:
@@ -559,7 +561,7 @@ def process_json_response(
             processed.append(metadata)
             continue
         markdown_text = str(result.get("md_content") or "")
-        if not markdown_text:
+        if not markdown_text.strip():
             metadata = build_result_metadata(
                 mode=mode,
                 file_path=file_path,
@@ -569,7 +571,7 @@ def process_json_response(
                 content_type=response.headers.get("content-type", ""),
                 backend=backend,
                 parse_method=parse_method,
-                error="JSON result contains no md_content",
+                error="JSON result contains no non-empty md_content",
                 extra={"result_keys": sorted(result.keys())},
             )
             write_json(target_dir / "result.json", metadata)
@@ -827,9 +829,11 @@ def main(argv: list[str] | None = None) -> int:
         print(str(exc), file=sys.stderr)
         return 1
 
+    if any(item.get("status") != "completed" for item in results):
+        print("one or more requested items produced no usable source.md and need review", file=sys.stderr)
+        return 1
     if any(item.get("needs_review") for item in results):
         print("one or more parsed files need review", file=sys.stderr)
-        return 1
     return 0
 
 

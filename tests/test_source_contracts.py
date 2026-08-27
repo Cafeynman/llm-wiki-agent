@@ -158,10 +158,6 @@ class SourceContractTest(unittest.TestCase):
         chunk_contract = self.read(
             ".agents/skills/source-extraction/scripts/chunk_contract.py"
         )
-        recorder = self.read(
-            ".agents/skills/source-extraction/scripts/record_chunk_exception.py"
-        )
-
         self.assertIn("canonical accepted Markdown extraction", lifecycle)
         self.assertIn("do not overwrite, truncate, or reorder", lifecycle)
         self.assertIn("Excerpt-Type", lifecycle + chunking)
@@ -170,13 +166,21 @@ class SourceContractTest(unittest.TestCase):
         self.assertIn("hard maximum is 10000", chunking)
         self.assertIn("does not decide whether adjacent chunks can merge", chunking)
         self.assertIn("块 | 标题与覆盖范围 | 内容说明 | 规模与尺寸裁决 | 内容评审", chunking)
-        self.assertIn("<!-- chunk-size-exceptions", chunking)
-        self.assertIn("record_chunk_exception.py", chunking)
+        self.assertIn("`accepted-under — <reason>`", chunking)
+        self.assertIn("`accepted-over — <reason>`", chunking)
+        self.assertIn("`reviewed`", chunking)
         self.assertIn('SCHEMA_VERSION = 2', source_audit)
         self.assertIn('SCHEMA_VERSION = 2', chunk_audit)
         self.assertIn('DEFAULT_SMALL_CHUNK_THRESHOLD = 2000', chunk_contract)
         self.assertIn('DEFAULT_SMALL_CHUNK_THRESHOLD', chunk_audit)
-        self.assertIn("atomic_write_text", recorder)
+        for removed_surface in (
+            "chunk-size-exceptions",
+            "content_sha256",
+            "reason_sha256",
+            "review_ref",
+            "record_chunk_exception.py",
+        ):
+            self.assertNotIn(removed_surface, chunking + chunk_contract + chunk_audit)
 
     def test_manifest_is_thin_and_final_processed_markdown_is_linted(self) -> None:
         lifecycle = self.read(

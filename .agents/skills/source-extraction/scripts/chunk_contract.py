@@ -1,19 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import hashlib
-import json
-import os
-from pathlib import Path, PurePosixPath
 import re
-import tempfile
 
-from audit_intake_file import (
-    UNITS_ALGO,
-    is_closing_fence,
-    normalize_markdown_text,
-    opening_fence,
-)
+from audit_intake_file import normalize_markdown_text
 
 
 INDEX_COLUMNS = ("块", "标题与覆盖范围", "内容说明", "规模与尺寸裁决", "内容评审")
@@ -24,12 +14,6 @@ SIZE_DECISION_RE = re.compile(
 )
 GROUP_DECISION_RE = re.compile(r"^— · group$")
 TABLE_SEPARATOR_RE = re.compile(r"^:?-{3,}:?$")
-REGISTRY_RE = re.compile(
-    r"<!--\s*chunk-size-exceptions\s*\n(.*?)\n\s*-->",
-    re.DOTALL,
-)
-SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
-REGISTRY_SCHEMA = 1
 DEFAULT_SMALL_CHUNK_THRESHOLD = 2000
 LEGACY_INDEX_LINK_RE = re.compile(r"(?m)^\s*(?:[-*]\s+)?\[[^]]+\]\([^)]+\)")
 
@@ -188,7 +172,6 @@ def parse_index_text(text: str) -> tuple[list[IndexRow], list[ParseProblem]]:
                         "accepted decisions require one single-line reason after ' — '; other decisions cannot carry a reason",
                     )
                 )
-                continue
 
         if cells[4] not in {"pending", "reviewed"}:
             problems.append(
@@ -213,228 +196,3 @@ def parse_index_text(text: str) -> tuple[list[IndexRow], list[ParseProblem]]:
             )
         )
     return rows, problems
-
-
-def registry_blocks(text: str) -> list[re.Match[str]]:
-    normalized = normalize_markdown_text(text)
-    fenced_spans = fenced_code_spans(normalized)
-    return [
-        match
-        for match in REGISTRY_RE.finditer(normalized)
-        if not any(match.start() < end and match.end() > start for start, end in fenced_spans)
-    ]
-
-
-def fenced_code_spans(text: str) -> list[tuple[int, int]]:
-    spans: list[tuple[int, int]] = []
-    fence_start: int | None = None
-    fence_char: str | None = None
-    fence_length = 0
-    offset = 0
-    for line in text.splitlines(keepends=True):
-        opening = opening_fence(line) if fence_char is None else None
-        if opening is not None:
-            fence_start = offset
-            fence_char, fence_length = opening
-        elif fence_char is not None and is_closing_fence(line, fence_char, fence_length):
-            spans.append((fence_start if fence_start is not None else offset, offset + len(line)))
-            fence_start = None
-            fence_char = None
-            fence_length = 0
-        offset += len(line)
-    if fence_char is not None:
-        spans.append((fence_start if fence_start is not None else offset, len(text)))
-    return spans
-
-
-def _valid_relative_chunk_path(value: str) -> bool:
-    if not value or "\\" in value or value.startswith("/"):
-        return False
-    pure = PurePosixPath(value)
-    return pure.suffix == ".md" and pure.name != "index.md" and ".." not in pure.parts
-
-
-def valid_review_ref(value: str) -> bool:
-    if not value or value != value.strip() or "\\" in value or "\n" in value or "\r" in value:
-        return False
-    path_text, separator, fragment = value.partition("#")
-    path = PurePosixPath(path_text)
-    return bool(
-        path.parts
-        and path.parts[0] == "reviews"
-        and not path.is_absolute()
-        and ".." not in path.parts
-        and path.suffix == ".md"
-        and (not separator or bool(fragment))
-    )
-
-
-def parse_registry_text(text: str) -> tuple[dict | None, list[ParseProblem]]:
-    matches = registry_blocks(text)
-    if not matches:
-        return None, []
-    if len(matches) > 1:
-        return None, [
-            ParseProblem(
-                "duplicate_chunk_exception",
-                1,
-                "root chunks/index.md contains more than one chunk-size-exceptions registry",
-            )
-        ]
-    raw = matches[0].group(1)
-    try:
-        registry = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        return None, [
-            ParseProblem(
-                "malformed_chunk_exception",
-                normalize_markdown_text(text)[: matches[0].start()].count("\n") + 1,
-                f"chunk exception registry is not valid JSON: {exc.msg}",
-            )
-        ]
-
-    if not isinstance(registry, dict) or set(registry) != {"schema", "policy", "items"}:
-        return None, [
-            ParseProblem(
-                "malformed_chunk_exception",
-                1,
-                "registry must contain exactly schema, policy, and items",
-            )
-        ]
-    policy = registry.get("policy")
-    items = registry.get("items")
-    if registry.get("schema") != REGISTRY_SCHEMA or not isinstance(policy, dict) or not isinstance(items, list):
-        return None, [
-            ParseProblem(
-                "malformed_chunk_exception",
-                1,
-                "registry schema, policy, or items has the wrong type or version",
-            )
-        ]
-    if set(policy) != {"min", "max", "units_algo"} or not isinstance(policy.get("min"), int) or not isinstance(
-        policy.get("max"), int
-    ) or not isinstance(policy.get("units_algo"), str):
-        return None, [
-            ParseProblem(
-                "malformed_chunk_exception",
-                1,
-                "registry policy must contain integer min/max and string units_algo",
-            )
-        ]
-    if policy["min"] < 1 or policy["max"] <= policy["min"]:
-        return None, [
-            ParseProblem(
-                "malformed_chunk_exception",
-                1,
-                "registry policy must satisfy 0 < min < max",
-            )
-        ]
-
-    problems: list[ParseProblem] = []
-    seen: set[str] = set()
-    for position, item in enumerate(items, start=1):
-        if not isinstance(item, dict) or set(item) != {
-            "path",
-            "kind",
-            "content_sha256",
-            "reason_sha256",
-            "review_ref",
-        }:
-            problems.append(
-                ParseProblem(
-                    "malformed_chunk_exception",
-                    1,
-                    f"registry item {position} has invalid fields",
-                )
-            )
-            continue
-        path = item.get("path")
-        if not isinstance(path, str) or not _valid_relative_chunk_path(path):
-            problems.append(
-                ParseProblem(
-                    "malformed_chunk_exception",
-                    1,
-                    f"registry item {position} has an invalid relative chunk path",
-                )
-            )
-            continue
-        if path in seen:
-            problems.append(
-                ParseProblem(
-                    "duplicate_chunk_exception",
-                    1,
-                    f"registry has duplicate entries for {path}",
-                )
-            )
-            continue
-        seen.add(path)
-        if item.get("kind") not in {"under", "over"}:
-            problems.append(ParseProblem("malformed_chunk_exception", 1, f"registry item {path} has invalid kind"))
-        if not isinstance(item.get("content_sha256"), str) or not SHA256_RE.fullmatch(item["content_sha256"]):
-            problems.append(
-                ParseProblem("malformed_chunk_exception", 1, f"registry item {path} has invalid content_sha256")
-            )
-        if not isinstance(item.get("reason_sha256"), str) or not SHA256_RE.fullmatch(item["reason_sha256"]):
-            problems.append(
-                ParseProblem("malformed_chunk_exception", 1, f"registry item {path} has invalid reason_sha256")
-            )
-        review_ref = item.get("review_ref")
-        if not isinstance(review_ref, str) or not valid_review_ref(review_ref):
-            problems.append(
-                ParseProblem(
-                    "malformed_chunk_exception",
-                    1,
-                    f"registry item {path} review_ref must be a vault-root-relative reviews/*.md reference",
-                )
-            )
-    if problems:
-        return None, problems
-    return registry, []
-
-
-def sha256_text(text: str) -> str:
-    return hashlib.sha256(normalize_markdown_text(text).encode("utf-8")).hexdigest()
-
-
-def render_registry(registry: dict) -> str:
-    return "<!-- chunk-size-exceptions\n" + json.dumps(
-        registry,
-        ensure_ascii=False,
-        indent=2,
-        sort_keys=True,
-    ) + "\n-->"
-
-
-def replace_registry(text: str, registry: dict | None) -> str:
-    had_bom = text.startswith("\ufeff")
-    newline = "\r\n" if "\r\n" in text else "\r" if "\r" in text else "\n"
-    normalized = normalize_markdown_text(text)
-    matches = registry_blocks(normalized)
-    if len(matches) > 1:
-        raise ValueError("cannot update duplicate chunk exception registries")
-    replacement = render_registry(registry) if registry is not None else ""
-    if matches:
-        updated = normalized[: matches[0].start()] + replacement + normalized[matches[0].end() :]
-    elif replacement:
-        updated = normalized.rstrip() + "\n\n" + replacement + "\n"
-    else:
-        updated = normalized
-    rendered = updated.rstrip() + "\n"
-    if newline != "\n":
-        rendered = rendered.replace("\n", newline)
-    return ("\ufeff" if had_bom else "") + rendered
-
-
-def atomic_write_text(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
-    temp_path = Path(temp_name)
-    try:
-        with os.fdopen(descriptor, "w", encoding="utf-8", newline="") as handle:
-            handle.write(text)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temp_path, path)
-    except BaseException:
-        temp_path.unlink(missing_ok=True)
-        raise

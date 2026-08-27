@@ -38,7 +38,7 @@ Begin after the working root's complete `WIKI.md` and `PROJECT.md` have been rea
 1. `AGENTS.md` and any optional adapter entrypoints for repository workflow, runtime, skill-source, precedence, and ownership rules.
 2. `WIKI.md` for the stable wiki directory contract and Add Knowledge, Use Knowledge, and Maintain Wiki workflows.
 3. `PROJECT.md` only for project-specific preferences; do not use it as a stable package contract.
-4. `scripts/upgrade-manifest.txt`, `scripts/init.ps1`, `scripts/init.sh`, `scripts/upgrade.ps1`, and `scripts/upgrade.sh` when reviewing migration, initialization, or upgrade behavior.
+4. `scripts/package-files.txt`, `scripts/init.ps1`, `scripts/init.sh`, `scripts/upgrade.ps1`, and `scripts/upgrade.sh` when reviewing migration, initialization, or upgrade behavior.
 5. For full package reviews or local skill consistency reviews, inspect every
    universal skill under `.agents/skills/` and every scenario skill under
    `scenarios/*/skills/`, not global skill copies. For scoped package-root
@@ -63,7 +63,7 @@ If the user gives a separate vault root, inspect that initialized vault as the w
 Start every review by stating the target root, whether it is a package root or initialized vault, and the specific surfaces in scope. For full package reviews, use at least three independent repository scans before concluding. For scoped reviews, run the smallest set of scans that can prove or disprove the scoped risk and name any excluded surfaces.
 
 1. **Flow and simplicity scan:** trace input, owner, decision gates, state transitions, outputs, logs, cleanup, and next action. Flag unclosed states, duplicate routes, hidden side paths, and branches that exist only as speculative safety or historical residue.
-2. **Contract scan:** inventory package source files, hidden files, old/new ownership metadata, scripts, entrypoint docs, and package-managed skills.
+2. **Contract scan:** inventory package source files, hidden files, the current package inventory, a target's prior 1.0+ inventory when present, scripts, entrypoint docs, and package-managed skills.
 3. **Full local skill scan:** enumerate all `.agents/skills/*/SKILL.md` and
    `scenarios/*/skills/*/SKILL.md` files, validate each skill, inspect auxiliary
    files, and compare trigger and ownership boundaries across universal and
@@ -94,10 +94,10 @@ Check whether scripts and package-managed files match the current wiki structure
 
 1. Derive the expected runtime directories from `WIKI.md` and the initialization rules in `AGENTS.md`.
 2. Confirm `init` and `upgrade` scripts create the same required runtime directories and seed files.
-3. Confirm `upgrade-manifest.txt` includes stable package files and directories that must migrate, including `.agents/skills`, `docs`, `scripts`, `AGENTS.md`, and `WIKI.md` when present. Optional runtime adapters may remain user-owned instead of package-owned.
-4. Confirm initialization and upgrade derive target ownership only from the target's old manifest/inventory and the current package's new manifest/inventory. They must not use target Git state, version numbers, or guessed hashes as ownership evidence. Check the create, adopt, replace, explicit-remove, conflict, legacy-adoption, and metadata-last paths. Only two absent old metadata files may enter legacy adoption; a marked complete inventory may stand alone as an interruption checkpoint, while a lone manifest, an unmarked lone inventory, or invalid metadata blocks. After dependency synchronization, a legacy path-only inventory must first be atomically normalized to the same old ownership; a target without old metadata must receive a typed checkpoint that claims only the inventory control file the upgrade just created. The new manifest is then committed before the final complete inventory. Verify every interruption window remains conservative and resumable both with no intervening target edit and with a conflicting edit to a newly copied business path.
+3. Confirm `scripts/package-files.txt` is the single complete list of stable package files and future retired paths, including `.agents/skills`, `docs`, `scripts`, `AGENTS.md`, and `WIKI.md` when present. It must declare the supported schema once, use only `active <path>` and `remove <path>`, and own itself as an active path. A `remove` record persists through later inventories until that path explicitly returns as `active`; silently dropping it would break direct updates from an earlier 1.0+ generation. Optional runtime adapters may remain user-owned instead of package-owned.
+4. Confirm initialization and upgrade derive target ownership only from the target's prior valid inventory and the current package inventory. They must not use target Git state, version numbers, or persisted or guessed content hashes as ownership metadata; a transient byte-equivalence check may decide whether an existing path is safe to adopt during first adoption. A missing target inventory is first adoption; an existing malformed or unsupported inventory blocks before writes. Check create, byte-identical adoption, replace, explicit remove, conflict, future tombstone, and inventory-last paths. The current inventory is committed atomically only after dependency synchronization, leaving it absent or at the previous complete generation after interruption. Verify first-adoption reruns from the original package root and conflicting edits to newly copied paths remain conservative. Do not require or preserve pre-1.0 readers, normalization passes, paired metadata, or checkpoint inventories.
 5. Confirm package-owned files are copied from the package root and workspace-specific context stays in `PROJECT.md`.
-6. Compare `git ls-files`, `git status --ignored --short`, and the current package manifest so untracked archives, ignored vault folders, adapter directories, caches, and runtime folders are not mistaken for publishable package source. This source-package integrity check does not define ownership in an initialized target.
+6. Compare `git ls-files`, `git status --ignored --short`, and the current package inventory so untracked archives, ignored vault folders, adapter directories, caches, and runtime folders are not mistaken for publishable package source. This source-package integrity check does not define ownership in an initialized target.
 7. Verify that initialization and upgrade preserve an existing target-owned
    `.gitignore` domain policy. They may add required secret and technical-cache
    rules, but must not infer a private or versioned wiki-runtime policy from an
@@ -131,7 +131,7 @@ For each skill:
 4. Check whether the trigger description overlaps another local skill or bypasses the owner of a workflow. Provider/helper skills must point back to their router; router skills must not hide provider-specific secrets or scenario-specific behavior.
 5. Check runtime portability. Flag active instructions that assume a specific runtime, stale user-level paths, direct `python`/`pip` where this package requires `uv run`, runtime-specific skill paths that conflict with `.agents/skills`, or hidden local service assumptions.
 6. Check package suitability. Flag skill-specific README, `POST_INSTALL.md`, `_meta.json`, `package.json`, hooks, copied upstream docs, or examples when they are stale, redundant, or not needed for the package contract.
-7. Check source-control status. A skill inside a manifest-managed directory but untracked is pending local state, not confirmed package source, until the user decides to add it.
+7. Check source-control status. A skill inside an inventory-managed directory but untracked is pending local state, not confirmed package source, until the user decides to add it.
 
 Build a skill boundary matrix before reporting:
 
@@ -229,7 +229,7 @@ Return a concise engineering review:
 [Whether the process has a clear canonical route, closed states, proportionate review depth, and no unjustified branches or fallback paths.]
 
 ## Script Migration Check
-[What was verified about init/upgrade/manifest behavior.]
+[What was verified about init/upgrade/inventory behavior.]
 
 ## Full Local Skill Check
 [When in scope, per-skill summary plus the skill boundary matrix. State which skills were validated, which are package-managed, which are local-only, and which need decisions.]

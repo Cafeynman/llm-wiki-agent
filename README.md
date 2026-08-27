@@ -39,13 +39,13 @@ cd llm-wiki-agent
 ./scripts/init.sh -VaultRoot .
 ```
 
-*Note: For a separate working directory, including an existing Obsidian vault, pass that path like `.\scripts\init.ps1 -VaultRoot "C:\path\to\your\workspace"`. The target becomes the working root and receives the package-owned agent files, local skills, scripts, docs, and runtime structure. Initialization uses package ownership metadata rather than target Git history. A newly claimed path is created when missing, adopted when byte-identical, and rejected when different; when both old metadata files are absent, that rule applies through the initial-adoption gate to every candidate path. A marked complete inventory may stand alone as an interruption checkpoint, while a lone manifest, an unmarked lone inventory, or invalid metadata stops before target writes. Workspace-specific preferences belong in `PROJECT.md`.*
+*Note: For a separate working directory, including an existing Obsidian vault, pass that path like `.\scripts\init.ps1 -VaultRoot "C:\path\to\your\workspace"`. The target becomes the working root and receives the package-owned agent files, local skills, scripts, docs, and runtime structure. `scripts/package-files.txt` is the only ownership source; a missing target inventory is first adoption, while a valid schema-1 inventory supports future 1.0+ updates. Target Git history is not ownership state. A newly claimed path is created when missing, adopted when byte-identical, and rejected when different. Invalid inventory stops before target writes, and the new inventory is committed last after dependency synchronization. Workspace-specific preferences belong in `PROJECT.md`.*
 
 Every conversation in the initialized workspace begins with the agent reading that workspace's complete `WIKI.md` and `PROJECT.md`. Programming, debugging, questions, technical work, and file operations all use this same automatic start; resumed conversations read them again, and conversation history is not a substitute.
 
 Default source extraction preferences are recorded in `PROJECT.md`. The agent confirms only the provider choices needed by the current source task. When MinerU API mode is selected, this may include its profile, local credential setup, and whether MinerU should be preferred when available.
 For service-backed providers and OCR backends, copy `.env.example` to `.env` in the initialized working root and fill only the variables required by the selected provider profile. The real `.env` file is ignored by Git; agents should load it with `uv run --env-file .env` when running provider commands.
-For package upgrades, use the manifest-driven scripts documented in [Usage Guide](docs/usage.md#upgrade-package-files). The manifest declares candidate ownership, and its complete typed inventory is committed last as the activation gate for direct files, directory files, and retired paths.
+For package upgrades, use the inventory-driven scripts documented in [Usage Guide](docs/usage.md#upgrade-package-files). The schema-1 inventory lists active files and future retired paths and is committed last as the ownership activation gate.
 The default `.gitignore` keeps local wiki runtime content private; refer to [Git Ignore Templates](docs/gitignore-templates.md) when this checkout is a versioned wiki project.
 
 Optional scenario packages under `scenarios/` can adapt an initialized workspace for specialized uses such as exam study. The root `PROJECT.md` selects one active scenario, and its local skill is read only for relevant work; see [Optional Scenario Packages](docs/usage.md#optional-scenario-packages).
@@ -130,7 +130,6 @@ LLM Wiki Agent works directly from the filesystem without Obsidian or Claudian. 
 │   ├── init.ps1
 │   ├── init.sh
 │   ├── package-files.txt
-│   ├── upgrade-manifest.txt
 │   ├── upgrade.ps1
 │   └── upgrade.sh
 ├── scenarios/

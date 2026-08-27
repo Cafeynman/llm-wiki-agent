@@ -31,6 +31,11 @@ scenario. Do not read skills from inactive scenarios. The scenario skill is used
 in place; do not copy it into `.agents/skills/` or create a second activation
 registry.
 
+This activation gate controls runtime use. An explicit read-only package or
+contract audit may inspect inactive scenario sources when those files are in the
+requested audit scope; inspection does not activate the scenario or authorize
+scenario-specific writes.
+
 If `Active scenario` is nonblank but the corresponding distributed scenario or
 skill path is missing, report the missing name and path and stop
 scenario-specific work. Do not guess, silently ignore it, or substitute another
@@ -87,7 +92,7 @@ At the beginning of the first conversation intended to use a knowledge workspace
 
 Use `.\scripts\init.ps1 -VaultRoot .` on Windows and `./scripts/init.sh -VaultRoot .` on macOS or Linux.
 
-When the user wants the wiki structure in a separate directory, including an existing Obsidian vault, pass that path as `-VaultRoot`. After external-root initialization, treat the initialized root as the working package root. Initialization and upgrade reconcile package-owned files from the target's old ownership metadata and the current package's new ownership metadata; they do not use target Git history as ownership state. The current manifest declares candidate direct-file, directory-file, and retirement ownership, while the complete typed inventory is committed last as their shared activation gate and may stand alone as an interruption checkpoint. With valid old metadata, old package-owned files may be rebuilt or replaced and explicitly retired paths may be removed. A newly claimed path is created when missing, adopted when byte-identical, and rejected when different; when both old metadata files are absent, this rule applies through the initial-adoption gate to every candidate path. A lone manifest, an unmarked lone inventory, or invalid metadata stops before target writes. Workspace-specific preferences belong in `PROJECT.md`.
+When the user wants the wiki structure in a separate directory, including an existing Obsidian vault, pass that path as `-VaultRoot`. After external-root initialization, treat the initialized root as the working package root. `scripts/package-files.txt` is the only package ownership source. A missing target inventory means first adoption; a target inventory with `# inventory-schema: 1` is the supported 1.0+ update state; an existing malformed or unsupported inventory stops before target writes. Target Git history is not ownership state. Package-owned files may be rebuilt or replaced, and a path dropped after 1.0 must have an explicit `remove` record before it can be retired. Retain that record in later inventories until the path explicitly returns as `active`, so any supported 1.0+ generation can update directly. A newly claimed path is created when missing, adopted when byte-identical, and rejected when different. The new inventory is committed atomically only after dependency synchronization succeeds, so an interruption leaves the target inventory absent or at its previous complete generation. Resume an interrupted first adoption from the original package root. Workspace-specific preferences belong in `PROJECT.md`.
 
 ## Skill Source
 

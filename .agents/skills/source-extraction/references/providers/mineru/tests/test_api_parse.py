@@ -87,6 +87,21 @@ class TestApiParse(unittest.TestCase):
                 zf.writestr(name, content)
         return zip_path.read_bytes()
 
+    def test_blank_or_bom_only_full_markdown_is_not_usable_output(self):
+        for label, markdown in (("whitespace", " \r\n\t\n"), ("bom", "\ufeff")):
+            with self.subTest(label=label):
+                self.build_zip_bytes({"result/full.md": markdown})
+                output_dir = self.root / label
+
+                with self.assertRaisesRegex(RuntimeError, "empty or whitespace-only"):
+                    api_parse.extract_full_markdown(
+                        zip_path=self.root / "fixture.zip",
+                        output_dir=output_dir,
+                        keep_all_extracted=False,
+                    )
+
+                self.assertFalse((output_dir / "source.md").exists())
+
     def test_missing_token_is_allowed_by_script(self):
         env_path = self.write_env("")
         input_file = self.write_file("demo.pdf")

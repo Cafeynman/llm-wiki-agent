@@ -13,7 +13,6 @@ from audit_intake_file import (
     content_units,
     extract_headings,
     inspect_markdown,
-    normalize_markdown_text,
     read_markdown,
     reviewable_payload_characters,
 )
@@ -21,9 +20,6 @@ from chunk_contract import (
     DEFAULT_SMALL_CHUNK_THRESHOLD,
     IndexRow,
     parse_index_text,
-    parse_registry_text,
-    registry_blocks,
-    sha256_text,
 )
 
 
@@ -274,9 +270,9 @@ def size_kind(units: int, minimum: int, maximum: int) -> str:
 
 def expected_table_status(kind: str) -> set[str]:
     if kind == "under":
-        return {"undersized", "accepted-under"}
+        return {"undersized"}
     if kind == "over":
-        return {"oversized", "accepted-over"}
+        return {"oversized"}
     return {"normal"}
 
 
@@ -361,15 +357,6 @@ def inspect_chunks(root: Path, minimum: int, maximum: int) -> dict:
                         index_has_parse_error.add(index_path.resolve())
                         continue
                     rows, problems = parse_index_text(index_text)
-                    if index_path != root_index and registry_blocks(index_text):
-                        errors.append(
-                            issue(
-                                "stray_chunk_exception_registry",
-                                index_path,
-                                root,
-                                "chunk-size-exceptions registry is allowed only in the root chunks/index.md",
-                            )
-                        )
                     if problems:
                         index_has_parse_error.add(index_path.resolve())
                         errors.extend(parse_problem_issue(problem, index_path, root) for problem in problems)
@@ -477,26 +464,6 @@ def inspect_chunks(root: Path, minimum: int, maximum: int) -> dict:
                             )
                         )
 
-                root_text = read_markdown(root_index)
-                registry, registry_problems = parse_registry_text(root_text)
-                if registry_problems:
-                    errors.extend(parse_problem_issue(problem, root_index, root) for problem in registry_problems)
-                registry_items = {
-                    item["path"]: item for item in registry["items"]
-                } if registry is not None else {}
-                leaf_by_relative = {
-                    leaf.relative_to(chunks_dir).as_posix(): leaf for leaf in leaf_files
-                }
-                for registered_path in sorted(set(registry_items) - set(leaf_by_relative)):
-                    errors.append(
-                        issue(
-                            "orphan_chunk_exception",
-                            root_index,
-                            root,
-                            f"registry entry has no matching leaf chunk: {registered_path}",
-                        )
-                    )
-
                 for leaf in leaf_files:
                     relative_leaf = leaf.relative_to(chunks_dir).as_posix()
                     index_path = nearest_index_for(leaf, chunks_dir)
@@ -560,7 +527,8 @@ def inspect_chunks(root: Path, minimum: int, maximum: int) -> dict:
 
                     units = content_units(text)
                     kind = size_kind(units, minimum, maximum)
-                    registry_item = registry_items.get(relative_leaf)
+                    accepted = False
+                    accepted_row = row is not None and row.size_status.startswith("accepted-")
 
                     if row is not None:
                         if row.units is None:
@@ -572,7 +540,7 @@ def inspect_chunks(root: Path, minimum: int, maximum: int) -> dict:
                                     f"leaf row for {relative_leaf} cannot use the group size decision",
                                 )
                             )
-                        elif row.units != units:
+                        elif not accepted_row and row.units != units:
                             warnings.append(
                                 issue(
                                     "index_size_mismatch",
@@ -581,7 +549,51 @@ def inspect_chunks(root: Path, minimum: int, maximum: int) -> dict:
                                     f"index records {row.units} units for {relative_leaf}; audit measured {units}",
                                 )
                             )
-                        if row.size_status not in expected_table_status(kind):
+
+                        if accepted_row:
+                            accepted_kind = row.size_status.removeprefix("accepted-")
+                            if not row.reason:
+                                # The parser owns this primary syntax diagnostic. Keeping
+                                # the row addressable avoids dependent unlisted/threshold noise.
+                                pass
+                            elif row.units != units:
+                                errors.append(
+                                    issue(
+                                        "accepted_size_measurement_mismatch",
+                                        index_path,
+                                        root,
+                                        f"index records {row.units} units for {relative_leaf}; audit measured {units}",
+                                    )
+                                )
+                            elif accepted_kind != kind:
+                                errors.append(
+                                    issue(
+                                        "accepted_size_category_mismatch",
+                                        index_path,
+                                        root,
+                                        f"index accepts {accepted_kind} for {relative_leaf}; audit measured current {kind} size state",
+                                    )
+                                )
+                            elif row.review_status != "reviewed":
+                                errors.append(
+                                    issue(
+                                        "accepted_size_requires_review",
+                                        index_path,
+                                        root,
+                                        f"accepted size decision for {relative_leaf} must have content review status reviewed",
+                                    )
+                                )
+                            else:
+                                accepted = True
+                                accepted_exceptions.append(
+                                    {
+                                        "path": relative_leaf,
+                                        "kind": kind,
+                                        "content_units": units,
+                                        "reason": row.reason,
+                                    }
+                                )
+                        elif row.size_status not in expected_table_status(kind):
                             threshold_issue(
                                 kind,
                                 "index_size_status_mismatch",
@@ -592,85 +604,21 @@ def inspect_chunks(root: Path, minimum: int, maximum: int) -> dict:
                                 warnings,
                             )
 
-                    if kind == "normal":
-                        if registry_item is not None:
-                            warnings.append(
-                                issue(
-                                    "obsolete_chunk_exception",
-                                    leaf,
-                                    root,
-                                    "chunk is now within thresholds but still has a registered size exception",
-                                )
-                            )
-                    else:
-                        expected_accepted = f"accepted-{kind}"
-                        visible_acceptance = (
-                            row is not None
-                            and row.size_status == expected_accepted
-                            and bool(row.reason)
-                            and row.review_status == "reviewed"
+                    if kind != "normal" and not accepted and not accepted_row:
+                        code = (
+                            "undersized_chunk_without_exception"
+                            if kind == "under"
+                            else "oversized_chunk_without_exception"
                         )
-                        if visible_acceptance and registry_item is None:
-                            threshold_issue(
-                                kind,
-                                "acceptance_without_registry",
-                                leaf,
-                                root,
-                                "visible accepted size reason has no matching machine registry entry",
-                                errors,
-                                warnings,
-                            )
-                        elif registry_item is not None and not visible_acceptance:
-                            errors.append(
-                                issue(
-                                    "registry_table_status_mismatch",
-                                    leaf,
-                                    root,
-                                    "registry entry exists but the nearest index row is not the matching accepted status with a reason",
-                                )
-                            )
-                        elif visible_acceptance and registry_item is not None and registry is not None:
-                            expected_policy = {"min": minimum, "max": maximum, "units_algo": UNITS_ALGO}
-                            valid = (
-                                registry["policy"] == expected_policy
-                                and registry_item["kind"] == kind
-                                and registry_item["content_sha256"] == sha256_text(text)
-                                and registry_item["reason_sha256"] == sha256_text(row.reason.strip())
-                            )
-                            if valid:
-                                accepted_exceptions.append(
-                                    {
-                                        "path": relative_leaf,
-                                        "kind": kind,
-                                        "content_units": units,
-                                        "review_ref": registry_item["review_ref"],
-                                    }
-                                )
-                            else:
-                                threshold_issue(
-                                    kind,
-                                    "stale_chunk_exception",
-                                    leaf,
-                                    root,
-                                    "registered exception no longer matches policy, kind, normalized content, or visible reason",
-                                    errors,
-                                    warnings,
-                                )
-                        elif registry_item is None:
-                            code = (
-                                "undersized_chunk_without_exception"
-                                if kind == "under"
-                                else "oversized_chunk_without_exception"
-                            )
-                            threshold_issue(
-                                kind,
-                                code,
-                                leaf,
-                                root,
-                                f"leaf chunk has {units} content units and no accepted {kind} size exception",
-                                errors,
-                                warnings,
-                            )
+                        threshold_issue(
+                            kind,
+                            code,
+                            leaf,
+                            root,
+                            f"leaf chunk has {units} content units and no current reviewed {kind} size acceptance",
+                            errors,
+                            warnings,
+                        )
 
                     for target, resolved in local_link_targets(leaf, MARKDOWN_IMAGE_RE):
                         if not Path(target).is_absolute() and not resolved.exists():
@@ -731,7 +679,7 @@ def print_human(stats: dict) -> None:
     for item in stats["accepted_exceptions"]:
         print(
             f"accepted: {item['kind']}: {item['path']}: "
-            f"{item['content_units']} content units; review {item['review_ref']}"
+            f"{item['content_units']} content units; {item['reason']}"
         )
 
 

@@ -35,6 +35,7 @@ Follow the selected profile's credential requirements. Secret values and private
 ## Output Handling
 
 - Save the returned Markdown as `<intake-tmp-dir>/source.md`, even when the provider first returns ZIP-based side outputs.
+- Treat exit code `0` as “every requested item produced a current non-empty `source.md`.” `needs_review: true` may accompany exit `0`; review warnings do not make a usable extraction a command failure.
 - Record the MinerU profile, batch id or task id, model version, credential status as present or not required, warnings, missing content, and result URLs in the intake manifest or review notes.
 - Preserve returned source images under the same intake folder as `source.md`. Promote or delete them with that folder and record their paths or disposition. Keep other provider artifacts only when they are required for traceability or the user explicitly asks.
 - Follow the selected profile's error handling for file-size, page-count, format, queue, timeout, rate-limit, and parsing failures.

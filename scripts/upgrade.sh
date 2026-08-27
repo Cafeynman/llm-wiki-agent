@@ -31,14 +31,9 @@ esac
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 package_root="$(cd "$script_dir/.." && pwd -P)"
-manifest_path="$script_dir/upgrade-manifest.txt"
 inventory_path="$script_dir/package-files.txt"
-complete_inventory_marker="# inventory-format: complete"
+inventory_schema_marker="# inventory-schema: 1"
 
-if [[ ! -f "$manifest_path" ]]; then
-  echo "Upgrade manifest not found: $manifest_path" >&2
-  exit 1
-fi
 if [[ ! -f "$inventory_path" ]]; then
   echo "Package file inventory not found: $inventory_path" >&2
   exit 1
@@ -179,10 +174,6 @@ active_sources=()
 removed_owners=()
 removed_keys=()
 removed_paths=()
-new_directory_count=0
-old_directory_count=0
-new_inventory_mode="none"
-old_inventory_mode="none"
 
 lowercase_text() {
   local value="$1"
@@ -311,384 +302,88 @@ assert_package_source_path_safe() {
   done
 }
 
-read_ownership_metadata() {
+read_inventory() {
   local root_path="$1"
-  local metadata_manifest="$2"
-  local metadata_inventory="$3"
-  local require_source_files="$4"
-  local owner="$5"
-  local label="$6"
-  local inventory_mode="directories"
-  local manifest_inventory_mode="directories"
-  local inventory_directive_seen=0
-  local ownership_entry_seen=0
-  local complete_inventory_marker_seen=0
-  local manifest_direct_keys=()
-  local manifest_direct_paths=()
-  local manifest_directory_keys=()
-  local manifest_directory_paths=()
-  local manifest_removed_keys=()
-  local manifest_removed_paths=()
-  local manifest_explicit_keys=()
-  local inventory_states=()
-  local inventory_keys=()
-  local inventory_paths=()
-  local consumed_inventory_keys=()
+  local metadata_inventory="$2"
+  local require_source_files="$3"
+  local owner="$4"
+  local label="$5"
+  local schema_marker_seen=0
+  local self_owned=0
+  local seen_keys=()
+  local raw_line
   local line
   local kind
   local raw_relative
   local relative_path
   local key
+  local source_path
   local index
-  local manifest_index
-  local inventory_index
-  local active_index
-  local removed_index
-  local found
-  local declared_active
-  local declared_removed
-  local consumed_found
 
-  while IFS= read -r line || [[ -n "$line" ]]; do
-    line="${line%$'\r'}"
+  while IFS= read -r raw_line || [[ -n "$raw_line" ]]; do
+    line="${raw_line%$'\r'}"
     line="${line#$'\xEF\xBB\xBF'}"
     trim_text "$line"
     line="$REPLY"
-    if [[ "$line" == "$complete_inventory_marker" ]]; then
-      if [[ "$complete_inventory_marker_seen" -eq 1 ]]; then
-        echo "$label inventory contains a duplicate complete-format marker." >&2
+
+    if [[ "$line" == "$inventory_schema_marker" ]]; then
+      if [[ "$schema_marker_seen" -eq 1 ]]; then
+        echo "$label inventory contains a duplicate schema marker." >&2
         exit 1
       fi
-      complete_inventory_marker_seen=1
+      schema_marker_seen=1
+      continue
     fi
-  done < "$metadata_inventory"
-
-  if [[ -n "$metadata_manifest" ]]; then
-    while IFS= read -r line || [[ -n "$line" ]]; do
-      line="${line%$'\r'}"
-      line="${line#$'\xEF\xBB\xBF'}"
-      trim_text "$line"
-      line="$REPLY"
-      [[ -z "$line" || "$line" == \#* ]] && continue
-      if [[ "$line" != *[[:space:]]* ]]; then
-        echo "Invalid $label manifest line: $line" >&2
-        exit 1
-      fi
-      kind="${line%%[[:space:]]*}"
-      raw_relative="${line#"$kind"}"
-      trim_text "$raw_relative"
-      raw_relative="$REPLY"
-
-      if [[ "$kind" == "inventory" ]]; then
-        if [[ "$raw_relative" != "all" ]]; then
-          echo "Invalid $label inventory directive: $line" >&2
-          exit 1
-        fi
-        if [[ "$inventory_directive_seen" -eq 1 || "$ownership_entry_seen" -eq 1 ]]; then
-          echo "$label manifest must declare 'inventory all' exactly once before ownership entries." >&2
-          exit 1
-        fi
-        inventory_directive_seen=1
-        inventory_mode="all"
-        continue
-      fi
-
-      case "$kind" in
-        file|dir|remove) ;;
-        *)
-          echo "Invalid $label manifest entry kind: $kind" >&2
-          exit 1
-          ;;
-      esac
-
-      normalize_package_path "$raw_relative" "$label manifest"
-      relative_path="$REPLY"
-      lowercase_text "$relative_path"
-      key="$REPLY"
-      ownership_entry_seen=1
-
-      if [[ "$kind" == "file" || "$kind" == "remove" ]]; then
-        for ((index = 0; index < ${#manifest_explicit_keys[@]}; index++)); do
-          if [[ "${manifest_explicit_keys[$index]}" == "$key" ]]; then
-            echo "$label manifest contains a duplicate package path: $relative_path" >&2
-            exit 1
-          fi
-        done
-        manifest_explicit_keys+=("$key")
-      fi
-
-      case "$kind" in
-        file)
-          manifest_direct_keys+=("$key")
-          manifest_direct_paths+=("$relative_path")
-          ;;
-        dir)
-          for ((index = 0; index < ${#manifest_directory_keys[@]}; index++)); do
-            if [[ "${manifest_directory_keys[$index]}" == "$key" ]]; then
-              echo "$label manifest contains a duplicate directory entry: $relative_path" >&2
-              exit 1
-            fi
-          done
-          manifest_directory_keys+=("$key")
-          manifest_directory_paths+=("$relative_path")
-          ;;
-        remove)
-          if [[ "$key" == "scripts/upgrade-manifest.txt" || "$key" == "scripts/package-files.txt" ]]; then
-            echo "$label manifest cannot retire ownership metadata: $relative_path" >&2
-            exit 1
-          fi
-          manifest_removed_keys+=("$key")
-          manifest_removed_paths+=("$relative_path")
-          ;;
-      esac
-    done < "$metadata_manifest"
-  fi
-
-  manifest_inventory_mode="$inventory_mode"
-  if [[ "$require_source_files" -eq 1 && "$manifest_inventory_mode" != "all" ]]; then
-    echo "$label manifest must declare 'inventory all' before ownership entries." >&2
-    exit 1
-  fi
-  if [[ "$require_source_files" -eq 1 && "$complete_inventory_marker_seen" -eq 0 ]]; then
-    echo "$label inventory must declare '$complete_inventory_marker'." >&2
-    exit 1
-  fi
-  if [[ -z "$metadata_manifest" && "$complete_inventory_marker_seen" -eq 0 ]]; then
-    echo "$label ownership metadata is incomplete; a standalone inventory must declare '$complete_inventory_marker'." >&2
-    exit 1
-  fi
-  if [[ "$complete_inventory_marker_seen" -eq 1 ]]; then
-    inventory_mode="all"
-  elif [[ "$manifest_inventory_mode" == "all" ]]; then
-    echo "$label complete manifest is paired with an unmarked inventory; restore the matching ownership metadata pair and rerun." >&2
-    exit 1
-  fi
-
-  if [[ "$owner" == "new" ]]; then
-    new_directory_count="${#manifest_directory_paths[@]}"
-    new_inventory_mode="$inventory_mode"
-  else
-    old_directory_count="${#manifest_directory_paths[@]}"
-    old_inventory_mode="$inventory_mode"
-  fi
-
-  if [[ "$inventory_mode" == "directories" ]]; then
-    while IFS= read -r line || [[ -n "$line" ]]; do
-      line="${line%$'\r'}"
-      line="${line#$'\xEF\xBB\xBF'}"
-      trim_text "$line"
-      line="$REPLY"
-      [[ -z "$line" || "$line" == \#* ]] && continue
-      normalize_package_path "$line" "$label inventory"
-      relative_path="$REPLY"
-      lowercase_text "$relative_path"
-      key="$REPLY"
-      for ((index = 0; index < ${#inventory_keys[@]}; index++)); do
-        if [[ "${inventory_keys[$index]}" == "$key" ]]; then
-          echo "$label inventory contains a duplicate package path: $relative_path" >&2
-          exit 1
-        fi
-      done
-      inventory_keys+=("$key")
-      inventory_paths+=("$relative_path")
-    done < "$metadata_inventory"
-
-    for ((manifest_index = 0; manifest_index < ${#manifest_direct_paths[@]}; manifest_index++)); do
-      relative_path="${manifest_direct_paths[$manifest_index]}"
-      key="${manifest_direct_keys[$manifest_index]}"
-      add_active "$owner" "$key" "$relative_path" "$root_path/$relative_path"
-    done
-
-    for ((manifest_index = 0; manifest_index < ${#manifest_directory_paths[@]}; manifest_index++)); do
-      local directory_path="${manifest_directory_paths[$manifest_index]}"
-      local expanded_count=0
-      for ((inventory_index = 0; inventory_index < ${#inventory_paths[@]}; inventory_index++)); do
-        relative_path="${inventory_paths[$inventory_index]}"
-        [[ "$relative_path" == "$directory_path/"* ]] || continue
-        key="${inventory_keys[$inventory_index]}"
-        find_active "$owner" "$key"
-        active_index="$FOUND_INDEX"
-        find_removed "$owner" "$key"
-        removed_index="$FOUND_INDEX"
-        if [[ "$active_index" -ge 0 || "$removed_index" -ge 0 ]]; then
-          echo "$label manifest contains a duplicate package path: $relative_path" >&2
-          exit 1
-        fi
-        add_active "$owner" "$key" "$relative_path" "$root_path/$relative_path"
-        consumed_inventory_keys+=("$key")
-        expanded_count=$((expanded_count + 1))
-      done
-      if [[ "$expanded_count" -eq 0 ]]; then
-        echo "$label manifest directory has no files in its inventory: $directory_path" >&2
-        exit 1
-      fi
-    done
-
-    for ((manifest_index = 0; manifest_index < ${#manifest_removed_paths[@]}; manifest_index++)); do
-      relative_path="${manifest_removed_paths[$manifest_index]}"
-      key="${manifest_removed_keys[$manifest_index]}"
-      find_active "$owner" "$key"
-      active_index="$FOUND_INDEX"
-      find_removed "$owner" "$key"
-      removed_index="$FOUND_INDEX"
-      if [[ "$active_index" -ge 0 || "$removed_index" -ge 0 ]]; then
-        echo "$label manifest contains a duplicate package path: $relative_path" >&2
-        exit 1
-      fi
-      add_removed "$owner" "$key" "$relative_path"
-    done
-
-    for ((inventory_index = 0; inventory_index < ${#inventory_paths[@]}; inventory_index++)); do
-      relative_path="${inventory_paths[$inventory_index]}"
-      key="${inventory_keys[$inventory_index]}"
-      consumed_found=0
-      for ((index = 0; index < ${#consumed_inventory_keys[@]}; index++)); do
-        if [[ "${consumed_inventory_keys[$index]}" == "$key" ]]; then
-          consumed_found=1
-          break
-        fi
-      done
-      if [[ "$consumed_found" -eq 0 ]]; then
-        echo "$label inventory path is not owned by a manifest directory: $relative_path" >&2
-        exit 1
-      fi
-    done
-    return
-  fi
-
-  while IFS= read -r line || [[ -n "$line" ]]; do
-    line="${line%$'\r'}"
-    line="${line#$'\xEF\xBB\xBF'}"
-    trim_text "$line"
-    line="$REPLY"
-    [[ -z "$line" || "$line" == \#* ]] && continue
-    if [[ "$line" != *[[:space:]]* ]]; then
-      echo "Invalid $label complete inventory line: $line" >&2
+    if [[ "$line" == "# inventory-schema:"* ]]; then
+      echo "$label inventory uses an unsupported schema marker: $line" >&2
       exit 1
     fi
-    local inventory_state="${line%%[[:space:]]*}"
-    raw_relative="${line#"$inventory_state"}"
+    [[ -z "$line" || "$line" == \#* ]] && continue
+
+    kind="${line%%[[:space:]]*}"
+    raw_relative="${line#"$kind"}"
     trim_text "$raw_relative"
     raw_relative="$REPLY"
-    if [[ "$inventory_state" != "active" && "$inventory_state" != "remove" ]]; then
-      echo "Invalid $label complete inventory line: $line" >&2
+    if [[ "$kind" != "active" && "$kind" != "remove" ]]; then
+      echo "Invalid $label inventory line: $line" >&2
       exit 1
     fi
     normalize_package_path "$raw_relative" "$label inventory"
     relative_path="$REPLY"
     lowercase_text "$relative_path"
     key="$REPLY"
-    for ((index = 0; index < ${#inventory_keys[@]}; index++)); do
-      if [[ "${inventory_keys[$index]}" == "$key" ]]; then
+
+    for ((index = 0; index < ${#seen_keys[@]}; index++)); do
+      if [[ "${seen_keys[$index]}" == "$key" ]]; then
         echo "$label inventory contains a duplicate package path: $relative_path" >&2
         exit 1
       fi
     done
-    inventory_states+=("$inventory_state")
-    inventory_keys+=("$key")
-    inventory_paths+=("$relative_path")
-  done < "$metadata_inventory"
+    seen_keys+=("$key")
 
-  for ((inventory_index = 0; inventory_index < ${#inventory_paths[@]}; inventory_index++)); do
-    local inventory_state="${inventory_states[$inventory_index]}"
-    relative_path="${inventory_paths[$inventory_index]}"
-    key="${inventory_keys[$inventory_index]}"
-    declared_active=0
-    for ((index = 0; index < ${#manifest_direct_keys[@]}; index++)); do
-      if [[ "${manifest_direct_keys[$index]}" == "$key" ]]; then
-        declared_active=1
-        break
-      fi
-    done
-    if [[ "$declared_active" -eq 0 ]]; then
-      for ((index = 0; index < ${#manifest_directory_paths[@]}; index++)); do
-        if [[ "$relative_path" == "${manifest_directory_paths[$index]}/"* ]]; then
-          declared_active=1
-          break
-        fi
-      done
-    fi
-    declared_removed=0
-    for ((index = 0; index < ${#manifest_removed_keys[@]}; index++)); do
-      if [[ "${manifest_removed_keys[$index]}" == "$key" ]]; then
-        declared_removed=1
-        break
-      fi
-    done
-
-    if [[ "$require_source_files" -eq 1 ]]; then
-      if [[ "$declared_active" -eq 0 && "$declared_removed" -eq 0 ]]; then
-        echo "$label inventory path is not classified by the manifest: $relative_path" >&2
-        exit 1
-      fi
-      if [[ "$inventory_state" == "active" && ( "$declared_active" -eq 0 || "$declared_removed" -eq 1 ) ]]; then
-        echo "$label inventory classification does not match the manifest: active $relative_path" >&2
-        exit 1
-      fi
-      if [[ "$inventory_state" == "remove" && "$declared_removed" -eq 0 ]]; then
-        echo "$label inventory classification does not match the manifest: remove $relative_path" >&2
-        exit 1
-      fi
-    fi
-
-    if [[ "$inventory_state" == "active" ]]; then
+    if [[ "$kind" == "active" ]]; then
+      source_path="$root_path/$relative_path"
       if [[ "$require_source_files" -eq 1 ]]; then
         assert_package_source_path_safe "$root_path" "$relative_path" file "$label active inventory entry"
       fi
-      add_active "$owner" "$key" "$relative_path" "$root_path/$relative_path"
+      add_active "$owner" "$key" "$relative_path" "$source_path"
+      [[ "$key" == "scripts/package-files.txt" ]] && self_owned=1
     else
+      if [[ "$key" == "scripts/package-files.txt" ]]; then
+        echo "$label inventory cannot retire itself: $relative_path" >&2
+        exit 1
+      fi
       add_removed "$owner" "$key" "$relative_path"
     fi
-  done
+  done < "$metadata_inventory"
 
-  if [[ "$require_source_files" -eq 1 ]]; then
-    for ((manifest_index = 0; manifest_index < ${#manifest_direct_paths[@]}; manifest_index++)); do
-      relative_path="${manifest_direct_paths[$manifest_index]}"
-      key="${manifest_direct_keys[$manifest_index]}"
-      found=0
-      for ((inventory_index = 0; inventory_index < ${#inventory_keys[@]}; inventory_index++)); do
-        if [[ "${inventory_keys[$inventory_index]}" == "$key" && "${inventory_states[$inventory_index]}" == "active" ]]; then
-          found=1
-          break
-        fi
-      done
-      if [[ "$found" -eq 0 ]]; then
-        echo "$label inventory is missing active manifest path: $relative_path" >&2
-        exit 1
-      fi
-    done
-
-    for ((manifest_index = 0; manifest_index < ${#manifest_removed_paths[@]}; manifest_index++)); do
-      relative_path="${manifest_removed_paths[$manifest_index]}"
-      key="${manifest_removed_keys[$manifest_index]}"
-      found=0
-      for ((inventory_index = 0; inventory_index < ${#inventory_keys[@]}; inventory_index++)); do
-        if [[ "${inventory_keys[$inventory_index]}" == "$key" && "${inventory_states[$inventory_index]}" == "remove" ]]; then
-          found=1
-          break
-        fi
-      done
-      if [[ "$found" -eq 0 ]]; then
-        echo "$label inventory is missing retired manifest path: $relative_path" >&2
-        exit 1
-      fi
-    done
-
-    for ((manifest_index = 0; manifest_index < ${#manifest_directory_paths[@]}; manifest_index++)); do
-      local directory_path="${manifest_directory_paths[$manifest_index]}"
-      found=0
-      for ((inventory_index = 0; inventory_index < ${#inventory_paths[@]}; inventory_index++)); do
-        if [[ "${inventory_states[$inventory_index]}" == "active" && "${inventory_paths[$inventory_index]}" == "$directory_path/"* ]]; then
-          found=1
-          break
-        fi
-      done
-      if [[ "$found" -eq 0 ]]; then
-        echo "$label manifest directory has no active files in its inventory: $directory_path" >&2
-        exit 1
-      fi
-      assert_package_source_path_safe "$root_path" "$directory_path" directory "$label manifest directory entry"
-    done
+  if [[ "$schema_marker_seen" -eq 0 ]]; then
+    echo "$label inventory must declare '$inventory_schema_marker'." >&2
+    exit 1
+  fi
+  if [[ "$self_owned" -eq 0 ]]; then
+    echo "$label inventory must own scripts/package-files.txt as an active path." >&2
+    exit 1
   fi
 }
 
@@ -719,25 +414,15 @@ check_ownership_metadata_path_safe() {
   done
 }
 
-assert_package_source_path_safe "$package_root" "scripts/upgrade-manifest.txt" file "Upgrade manifest"
 assert_package_source_path_safe "$package_root" "scripts/package-files.txt" file "Package file inventory"
-read_ownership_metadata "$package_root" "$manifest_path" "$inventory_path" 1 new "New package"
-manifest_directory_count="$new_directory_count"
+read_inventory "$package_root" "$inventory_path" 1 new "New package"
 
-old_manifest="$target_path/scripts/upgrade-manifest.txt"
 old_inventory="$target_path/scripts/package-files.txt"
-check_ownership_metadata_path_safe "scripts/upgrade-manifest.txt"
 check_ownership_metadata_path_safe "scripts/package-files.txt"
 old_available=0
-if [[ -f "$old_manifest" && -f "$old_inventory" ]]; then
+if [[ -f "$old_inventory" ]]; then
   old_available=1
-  read_ownership_metadata "$target_path" "$old_manifest" "$old_inventory" 0 old "Old package"
-elif [[ ! -e "$old_manifest" && -f "$old_inventory" ]]; then
-  old_available=1
-  read_ownership_metadata "$target_path" "" "$old_inventory" 0 old "Old package"
-elif [[ -e "$old_manifest" || -e "$old_inventory" ]]; then
-  echo "Old package ownership metadata is incomplete; both scripts/upgrade-manifest.txt and scripts/package-files.txt are required." >&2
-  exit 1
+  read_inventory "$target_path" "$old_inventory" 0 old "Old package"
 fi
 
 safe_target_file_state() {
@@ -797,8 +482,7 @@ add_plan_record() {
   done
   plan_seen_keys+=("$key")
   local metadata_order=0
-  [[ "$key" == "scripts/upgrade-manifest.txt" ]] && metadata_order=1
-  [[ "$key" == "scripts/package-files.txt" ]] && metadata_order=2
+  [[ "$key" == "scripts/package-files.txt" ]] && metadata_order=1
   plan_rel+=("$relative_path")
   plan_source+=("$source_file")
   plan_target+=("$target_path/$relative_path")
@@ -851,7 +535,7 @@ if [[ "$old_available" -eq 1 ]]; then
     relative_path="${active_paths[$old_index]}"
     find_removed new "$key"
     if [[ "$FOUND_INDEX" -lt 0 ]]; then
-      add_plan_record "$relative_path" "" "CONFLICT" "old package-owned path is absent from the new manifest without an explicit remove entry"
+      add_plan_record "$relative_path" "" "CONFLICT" "old package-owned path is absent from the new inventory without an explicit remove entry"
       continue
     fi
     action="UNCHANGED"
@@ -867,6 +551,18 @@ if [[ "$old_available" -eq 1 ]]; then
     fi
     add_plan_record "$relative_path" "" "$action" "$reason"
   done < <(list_active_keys old | LC_ALL=C sort)
+
+  while IFS= read -r key; do
+    [[ -z "$key" ]] && continue
+    find_active new "$key"
+    [[ "$FOUND_INDEX" -ge 0 ]] && continue
+    find_removed new "$key"
+    [[ "$FOUND_INDEX" -ge 0 ]] && continue
+    find_removed old "$key"
+    old_index="$FOUND_INDEX"
+    relative_path="${removed_paths[$old_index]}"
+    add_plan_record "$relative_path" "" "CONFLICT" "old retired package path is absent from the new inventory; retain its remove entry or explicitly reactivate it"
+  done < <(list_removed_keys old | LC_ALL=C sort)
 fi
 
 while IFS= read -r key; do
@@ -1102,7 +798,16 @@ required_local_gitignore_lines=(
 )
 
 gitignore_contains_line() {
-  tr -d '\r' < "$1" | grep -Fxq "$2"
+  local file="$1"
+  local expected="$2"
+  local existing
+  while IFS= read -r existing || [[ -n "$existing" ]]; do
+    existing="${existing%$'\r'}"
+    if [[ "$existing" == "$expected" ]]; then
+      return 0
+    fi
+  done < "$file"
+  return 1
 }
 
 ensure_gitignore_line() {
@@ -1179,72 +884,18 @@ commit_metadata_file() {
   file_count=$((file_count + 1))
 }
 
-commit_inventory_checkpoint() {
-  local target_file="$old_inventory"
-  local target_directory
-  local target_name
-  local temporary_file
-  local index
-  target_directory="$(dirname "$target_file")"
-  target_name="$(basename "$target_file")"
-  mkdir -p "$target_directory"
-  temporary_file="$(mktemp "$target_directory/.$target_name.upgrade.XXXXXX")"
-  if ! {
-    printf '%s\n' \
-      '# Complete package-ownership activation inventory for upgrade-manifest.txt.' \
-      "$complete_inventory_marker" \
-      '# Every active file and retired path is listed; the final inventory is committed last.' \
-      '# Format: active <path> or remove <path>.'
-    if [[ "$old_inventory_mode" == "none" ]]; then
-      printf 'active %s\n' 'scripts/package-files.txt'
-    fi
-    for ((index = 0; index < ${#active_paths[@]}; index++)); do
-      if [[ "${active_owners[$index]}" == "old" ]]; then
-        printf 'active %s\n' "${active_paths[$index]}"
-      fi
-    done
-    for ((index = 0; index < ${#removed_paths[@]}; index++)); do
-      if [[ "${removed_owners[$index]}" == "old" ]]; then
-        printf 'remove %s\n' "${removed_paths[$index]}"
-      fi
-    done
-  } > "$temporary_file"; then
-    rm -f "$temporary_file"
-    echo "Failed to stage the ownership inventory checkpoint." >&2
-    return 1
-  fi
-  if ! chmod 644 "$temporary_file"; then
-    rm -f "$temporary_file"
-    echo "Failed to set package ownership metadata permissions: $temporary_file" >&2
-    return 1
-  fi
-  if ! mv -f "$temporary_file" "$target_file"; then
-    rm -f "$temporary_file"
-    echo "Failed to commit the ownership inventory checkpoint: $target_file" >&2
-    return 1
-  fi
-  file_count=$((file_count + 1))
-}
-
 if [[ "$same_root" -eq 0 ]]; then
-  if [[ "$old_inventory_mode" == "directories" || "$old_inventory_mode" == "none" ]]; then
-    commit_inventory_checkpoint
-  fi
-
-  for metadata_order in 1 2; do
-    for ((i = 0; i < ${#plan_rel[@]}; i++)); do
-      [[ "${plan_metadata_order[$i]}" -eq "$metadata_order" ]] || continue
-      action="${plan_action[$i]}"
-      if [[ "$action" != "CREATE" && "$action" != "REPLACE" ]]; then
-        continue
-      fi
-      commit_metadata_file "${plan_source[$i]}" "${plan_target[$i]}"
-    done
+  for ((i = 0; i < ${#plan_rel[@]}; i++)); do
+    [[ "${plan_metadata_order[$i]}" -eq 1 ]] || continue
+    action="${plan_action[$i]}"
+    if [[ "$action" != "CREATE" && "$action" != "REPLACE" ]]; then
+      continue
+    fi
+    commit_metadata_file "${plan_source[$i]}" "${plan_target[$i]}"
   done
 fi
 
 echo "Upgraded package files at: $target_path"
-echo "Merged manifest directories: $manifest_directory_count"
 echo "Copied package files: $file_count"
 echo "Removed retired package files: $removed_file_count"
 echo "Created missing runtime entries: $created_runtime_count"
