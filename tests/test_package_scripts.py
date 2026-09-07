@@ -12,9 +12,9 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-if os.name == "nt":
-    (ROOT / "tmp").mkdir(exist_ok=True)
-    tempfile.tempdir = str(ROOT / "tmp")
+# Keep fixture ancestors physical: macOS's default /var temp root is a symlink.
+(ROOT / "tmp").mkdir(exist_ok=True)
+tempfile.tempdir = str((ROOT / "tmp").resolve())
 USER_ADAPTER_CONTENT = "# User-owned adapter\n"
 REQUIRED_GITIGNORE_LINES = (
     ".env",
@@ -317,16 +317,7 @@ class PackageScriptTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp = Path(temp_dir)
             target = self.make_target(temp, with_sentinel=with_sentinel)
-            fake_bin = temp / "bin"
-            fake_bin.mkdir()
-            call_log = temp / "uv-calls.txt"
-            (fake_bin / "uv.cmd").write_text(
-                '@echo off\r\n>>"%UV_CALL_LOG%" echo %*\r\nexit /b 0\r\n',
-                encoding="ascii",
-            )
-            env = os.environ.copy()
-            env["PATH"] = str(fake_bin) + os.pathsep + env.get("PATH", "")
-            env["UV_CALL_LOG"] = str(call_log)
+            env, call_log = self.make_fake_uv(temp)
             command = [
                 shell,
                 "-NoLogo",
@@ -438,16 +429,7 @@ class PackageScriptTest(unittest.TestCase):
                 if existing_runtime:
                     self.seed_existing_runtime(target)
 
-                fake_bin = temp / "bin"
-                fake_bin.mkdir()
-                call_log = temp / "uv-calls.txt"
-                (fake_bin / "uv.cmd").write_text(
-                    '@echo off\r\n>>"%UV_CALL_LOG%" echo %*\r\nexit /b 0\r\n',
-                    encoding="ascii",
-                )
-                env = os.environ.copy()
-                env["PATH"] = str(fake_bin) + os.pathsep + env.get("PATH", "")
-                env["UV_CALL_LOG"] = str(call_log)
+                env, call_log = self.make_fake_uv(temp)
                 command = [
                     shell,
                     "-NoLogo",
@@ -466,6 +448,13 @@ class PackageScriptTest(unittest.TestCase):
                         capture_output=True,
                         text=True,
                     )
+                self.assertEqual(
+                    call_log.read_text(encoding="utf-8").splitlines(),
+                    [
+                        "lock --check --default-index https://pypi.org/simple",
+                        "sync --locked --default-index https://pypi.org/simple",
+                    ] * 2,
+                )
                 self.assert_gitignore_case(
                     target,
                     custom_policy=custom_policy,
@@ -871,7 +860,7 @@ class PackageScriptTest(unittest.TestCase):
         self.assertIn("/bin/bash -n scripts/init.sh scripts/upgrade.sh", workflow)
         self.assertIn("uv lock --check", workflow)
         self.assertIn("UV_DEFAULT_INDEX: https://pypi.org/simple", workflow)
-        self.assertIn("uv run --no-project python -m unittest", workflow)
+        self.assertIn("uv run --no-project --with pyyaml python -m unittest", workflow)
         self.assertNotIn("uv sync", workflow)
 
 

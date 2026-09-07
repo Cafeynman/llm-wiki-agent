@@ -36,7 +36,7 @@ jobs:
           UV_DEFAULT_INDEX: https://pypi.org/simple
       - name: Run package contract tests
         run: >-
-          uv run --no-project python -m unittest -v
+          uv run --no-project --with pyyaml python -m unittest -v
           tests.test_package_scripts
           tests.test_exam_wrong_question_audit
           tests.test_maintenance_feedback_contract
