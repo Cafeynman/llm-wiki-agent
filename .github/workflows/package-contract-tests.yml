@@ -38,6 +38,7 @@ jobs:
         run: >-
           uv run --no-project --with pyyaml python -m unittest -v
           tests.test_package_scripts
+          tests.test_build_release
           tests.test_exam_wrong_question_audit
           tests.test_maintenance_feedback_contract
           tests.test_wiki_quality_review_contract

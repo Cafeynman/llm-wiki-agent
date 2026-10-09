@@ -287,3 +287,27 @@ Not by default. The package default keeps local runtime directories private. If 
 - Preserve counterevidence and uncertainty for disputed claims.
 - Run **Maintain Wiki** periodically.
 - Put user-facing deliverables in `artifacts/` and durable knowledge in `wiki/`.
+
+## Building distribution archives
+
+From the Git source repository root (requires Git, uv and Python 3.12):
+
+```sh
+uv run --no-project python scripts/build_release.py --ref HEAD
+```
+
+Commit release changes first. The builder reads only the selected commit's
+`active` inventory files, plus its `PROJECT.md` and `.gitignore` templates.
+Local uncommitted content and runtime data are excluded. Use `--ref` to select a
+commit, branch or tag and `--output` to choose the output directory (default:
+`tmp/dist/`).
+
+Outputs are ZIP, TAR.GZ, per-file metadata JSON and SHA-256 checksums, named with
+the version and short commit SHA. Existing outputs are never overwritten.
+Missing files, unsafe paths, linked files and missing shell executable bits fail
+the build. Prefer TAR.GZ on Linux/macOS to preserve executable permissions.
+After extraction, enter the package root and follow the quick-start initialization.
+
+This command creates local artifacts. Before uploading them to a selected GitHub
+Release, pass package contract tests and initialization checks on the extracted
+package. Existing release tags remain unchanged.

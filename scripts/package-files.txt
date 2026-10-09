@@ -99,3 +99,4 @@ active scripts/init.sh
 active scripts/package-files.txt
 active scripts/upgrade.ps1
 active scripts/upgrade.sh
+active scripts/build_release.py
