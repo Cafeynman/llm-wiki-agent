@@ -12,7 +12,7 @@ description: Create and edit Obsidian Bases (.base files) with views, filters, f
 3. **Add formulas** (optional): Define computed properties in the `formulas` section
 4. **Configure views**: Add one or more views (`table`, `cards`, `list`, or `map`) with `order` specifying which properties to display
 5. **Validate**: Verify the file is valid YAML with no syntax errors. Check that all referenced properties and formulas exist. Common issues: unquoted strings containing special YAML characters, mismatched quotes in formula expressions, referencing `formula.X` without defining `X` in `formulas`
-6. **Test in Obsidian**: Open the `.base` file in Obsidian to confirm the view renders correctly. If it shows a YAML error, check quoting rules below
+6. **Check presentation when needed**: When Obsidian is available and rendering affects the requested result, open the `.base` file and inspect its views. Otherwise report that application rendering was not checked; static validation still applies.
 
 ## Schema
 

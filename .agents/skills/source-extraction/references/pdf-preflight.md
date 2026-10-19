@@ -22,9 +22,9 @@ If `PROJECT.md` says `Prefer MinerU when available: yes`, choose MinerU for supp
 
 ## Large PDFs
 
-Do not split a PDF automatically during preflight. If a selected provider mode cannot accept the whole file, report the limit and ask the user to approve a page-range or section split strategy.
+Preflight only detects limits. If the selected provider cannot accept the whole file, report the limit. For already authorized full extraction, split into consecutive page ranges when the provider/service, full-source scope, external-transmission destination, and cost boundary remain authorized. Ask only if one of those boundaries would change or a material choice remains unresolved.
 
-When the user approves splitting, split from the original PDF only. Each part may produce an intermediate Markdown file, but the final intake output for the original source must still be one merged `<intake-tmp-dir>/source.md`.
+Split from the original PDF only. Each part may produce an intermediate Markdown file, but the final intake output for the original source must still be one merged `<intake-tmp-dir>/source.md`.
 
 Merge the part Markdown files in original page order. Preserve page-range boundaries with concise headings or comments when they are needed for traceability, and record each part path, page range, provider mode, and merge decision in the intake manifest or review notes. The merged `source.md` remains the reviewable text for the original PDF; part Markdown files are side outputs, not separate sources.
 

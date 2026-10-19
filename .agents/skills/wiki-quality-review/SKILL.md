@@ -31,11 +31,10 @@ A review, audit, or health-check request is read-only unless the user also asks
 for fixes. Do not treat the review request itself as permission to rewrite wiki
 content, update indexes or logs, merge pages, or delete files.
 
-Return numbered findings and concrete proposed changes. A later approval names
-the findings that may be changed. If the original request also explicitly asks
-for fixes, follow the write boundary in `WIKI.md`: clear mechanical fixes may be
-made within the requested scope, while judgment-based changes still require an
-approved resolution.
+Return numbered findings and concrete proposed changes. When fixes are also
+authorized, apply resolutions supported by evidence and the confirmed target.
+Ask only about unresolved material judgments, scope changes, or permissions;
+reuse decisions and authorization already supplied by the user.
 
 Treat semantic findings as review judgments, not deterministic facts. Each
 finding must show enough local evidence for the user to evaluate it. Do not call
@@ -81,10 +80,8 @@ presence of a citation as proof that the citation supports the claim.
    clusters. Work in explicit batches when the corpus cannot be reviewed
    completely in one pass.
 7. **Finish according to the authorized scope.** For a review-only request,
-   report without writing. If the original request also asks for fixes, clear
-   mechanical findings inside that requested scope are authorized; report and
-   apply them, but leave judgment-based findings as proposals until the user
-   approves a specific resolution. In either branch, state the inspected scope,
+   report without writing. When fixes are authorized, apply them within scope;
+   leave only unresolved material decisions as proposals. In either branch, state the inspected scope,
    excluded or sampled scope, lint result, findings, changes if any, and
    remaining uncertainty. Do not create a persistent review file unless the
    user explicitly requests one.
@@ -184,9 +181,8 @@ review sampled only part of the corpus.
 
 ## Applying Authorized Findings
 
-Use this workflow for clear mechanical findings covered by an original fix
-request and for findings the user later approves by identifier. Judgment-based
-findings always require an approved resolution.
+Use this workflow for findings covered by the original fix request or a later
+approval. Follow the confirmed target and preserve unresolved user decisions.
 
 1. Re-read each affected file and its evidence. If it changed materially after
    the report, stop on that finding and propose an updated resolution.

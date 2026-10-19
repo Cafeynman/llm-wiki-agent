@@ -1,84 +1,49 @@
 # Maintainer Feedback Report Template
 
-Render the report in the user's requested or source language. Translate headings when useful, but preserve the field meanings and state values below. Remove instructional text from the delivered report.
+Render the report in the user's requested or source language. Keep the six core sections below concise; add optional details only when they help a maintainer act. Remove instructional placeholders from the delivered report.
 
 ```markdown
 # Wiki Maintenance Feedback: <concise title>
 
-## Summary
-- Report object: package root | initialized vault | external integration
-- Existing finding owner / identifier / severity: <original value or none>
-- Finding confirmation: confirmed | unconfirmed
-- Disposition snapshot: not-established | fixed-in-worktree | fixed-in-commit | mitigated | unresolved
-- Reproduction state: reproduced | observed-only | blocked
-- Root-cause confidence: confirmed | probable | unknown
-- Continuing tracking record: existing issue | knowledge question | user-specified tracker | none
-- Implementation evidence: diff | commit | pull request | none
-- Verification evidence: tests | deterministic check | inspection | none
-
-## Discovery Context
-- Original task and triggering operation:
-- Report-object version or commit, when known:
-- Relevant tool/runtime versions:
-- Existing owning-workflow fixture: <sanitized reference or none>
-- Discovery boundary:
-
-Do not copy the full conversation.
-
-## Expected And Actual
-- Observable contract:
-- Minimal input or precondition:
-- Expected result:
-- Actual result:
+## Problem
+<Expected and actual behavior, affected path/version, and confirmation basis.
+Identify an unconfirmed observation as such.>
 
 ## Impact
-- Confirmed:
-- Potential:
-- Unassessed:
+<Confirmed impact, potential impact, and material unassessed scope.>
 
-## Reproduction Or Blocking Evidence
-- Execution state: executed | not-executed | blocked
-- Evidence-producing owner / authorization, when applicable:
-- Executed steps and results:
-- Unexecuted steps:
-- Blocking reason:
-- Nearest verifiable observation:
+## Evidence
+<Existing observations, sanitized evidence references, and hypotheses clearly separated.
+Include reproduction steps only when already available; do not run them for this report.>
 
-For executed evidence, include sanitized prerequisites, commands, output summaries, and exit state. Execution state records whether an attempt ran: `executed` maps to `reproduced` only when the target failure was observed and otherwise maps to `observed-only`; `not-executed` (including no attempt) maps to `observed-only`; an attempt stopped by a missing prerequisite maps to `blocked`. Reproduction state does not by itself establish or negate finding confirmation; an independently confirmed finding must name that basis, and an unconfirmed finding remains unconfirmed.
-
-## Evidence And Cause
-- Confirmed facts:
-- Hypotheses:
-- Earliest confirmed owning boundary:
-
-## Disposition
-- Net current state:
-- Changes made in this task:
-- Pre-existing changes:
-- Mitigation or reversal history:
-- Intentionally unchanged scope:
+## Current Disposition
+<Net current state and changes, distinguishing task-owned and pre-existing work.
+Use not-established for an unconfirmed defect.>
 
 ## Verification
-- Before-change reproduction:
-- After-change result:
-- Focused checks:
-- Broader checks:
-- Unrun checks:
+<Checks actually run and their results; material unrun or blocked checks.>
 
-## Authorization Ledger
-- Repair authorization:
-- Persistence authorization:
-- Tracking create/update authorization:
-- External-transmission authorization (destination, audience, reviewed payload, attachments):
-
-## Next Action And Owner
-- Continuing owner or none:
-- First executable next action:
-
-## Redaction And Attachment Scope
-- Removed or replaced sensitive categories:
-- Allowed attachments:
-- Reviewed payload identifier or description:
+## Next Action
+<Concrete next step and existing tracking owner or none.
+State any unresolved decision or permission that blocks that step.>
 ```
 
-Add migration, recovery, rollback, compatibility, data-scan, external-dependency, attachment, or release-line sections only when relevant. A scope that was not verified is `unassessed`, not unaffected.
+Use the state definitions in `SKILL.md` when relevant. Finding confirmation is
+independent of reproduction; a static finding can be confirmed without a runtime
+reproduction. Do not add a second execution-state field alongside reproduction
+state. A reverted fix is reported by its net current disposition.
+
+Optional details:
+
+- Discovery or reproduction: relevant versions, minimal preconditions, existing
+  owning-workflow fixture reference, executed steps/results, or blocking reason.
+- Cause or recovery: confirmed boundary, hypotheses, mitigation/reversal history,
+  migration and compatibility limits.
+- Authorization: repair, persistence, tracking create/update, or external
+  transmission only when relevant to the requested next action. Reuse applicable
+  authorization; drafting alone does not authorize those actions.
+- Transmission: concrete destination, audience, reviewed payload, allowed
+  attachments, and redaction scope when a send action is authorized.
+
+No fixture, tracker, saved report, attachment, or new investigation is required
+to fill this template. Unknown scope stays unassessed rather than unaffected.

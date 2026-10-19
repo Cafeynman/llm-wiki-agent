@@ -26,8 +26,8 @@ An explicit user request can produce an `observed-only` or `blocked` report. Do 
 
 1. Confirm the `WIKI.md` route and report object. When the detailed route is not satisfied, return the brief disclosure required by `AGENTS.md` and stop this procedure.
 2. Collect only findings and evidence already present in the current workspace or explicitly supplied in the current context. Separate task-owned changes from pre-existing user changes.
-3. Record four independent permissions: repair, persistence, tracking create/update, and external transmission. Never derive one permission from another or from the report request.
-4. Classify finding confirmation, net disposition, reproduction state, and root-cause confidence using the definitions below.
+3. Check authorization only for actions actually requested: repair, persistence, tracking create/update, or external transmission. Reuse applicable prior authorization; do not derive one permission from another. Include a permission note only when it limits the next action.
+4. State the problem, impact, evidence, current disposition, verification, and next action. Use the state definitions below when those distinctions matter; optional fields need not appear in every report.
 5. Reuse one visible tracking owner when it already exists. Do not create a parallel report queue or use implementation evidence as continuing state.
 6. Read `references/report-template.md` and fill only supported facts. Reuse a fixture only when it was already created by the evidence-producing owning workflow. When none exists, record `none`. Mark missing knowledge as unknown or unassessed.
 7. Redact the draft before presenting, saving, attaching, or transmitting it.
@@ -68,11 +68,11 @@ The default delivery is response only. A detailed report is a snapshot, not cont
 - Continuing state belongs to one existing or authorized issue or user tracker. A `questions/` record qualifies only for a genuine knowledge investigation or pending decision. When no owner exists, record `none`.
 - A commit, pull request, diff, test result, report artifact, or operation log is evidence or history, not a tracking owner.
 - Saving into an initialized vault requires an approved source-language path under `artifacts/`. Saving from a package root must not initialize a vault just to create the report.
-- The skill must not silently overwrite an existing target file. Ask for an update mode or another path.
+- Update an existing report when that update is authorized. Otherwise preserve it and resolve a conflicting destination before writing.
 - Update `logs/wiki.md` only when the existing WIKI contract already requires it for an authorized initialized-vault write. A response-only report or package-code task does not create a log duty.
 - Do not add an index, dashboard, registry, numbering service, or backlog for these reports.
 
-When another agent needs the result and no authorized handoff mechanism exists, provide a short continuation block with at most three fields: report reference, tracking owner or `none`, and next action. For a response-only report, write `current response only; no persistent report reference` instead of inventing a resolvable reference. A cross-session handoff that needs the report body requires separately authorized persistence or an authorized tracker update.
+When another agent needs the result and no authorized handoff mechanism exists, provide a short continuation block: report reference, tracking owner or `none`, and next action. For a response-only report, write `current response only; no persistent report reference` instead of inventing a resolvable reference. A cross-session handoff that needs the report body requires separately authorized persistence or an authorized tracker update.
 
 ## Redaction And External Transmission
 
@@ -98,7 +98,7 @@ Before returning the package, verify that:
 - finding confirmation, net disposition, reproduction state, root-cause confidence, tracking owner, and evidence do not substitute for one another;
 - unrun checks are not reported as passed;
 - current-task and pre-existing changes are separated;
-- all four authorization fields are explicit;
+- any permission boundary affecting a proposed action is explicit;
 - no investigation or reproduction was performed by this reporting skill;
 - the output contains no secret, private absolute path, or unauthorized attachment;
 - no persistence, tracker update, overwrite, or external transmission occurred without its own authorization.

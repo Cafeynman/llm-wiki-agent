@@ -9,6 +9,9 @@ __pycache__/
 .obsidian/
 tmp/
 
+# Local repository maintenance plans, reviews, and history.
+/维护工作区/
+
 # Local wiki runtime content.
 /inbox/*
 !/inbox/.gitkeep

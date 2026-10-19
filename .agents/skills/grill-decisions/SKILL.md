@@ -58,7 +58,7 @@ Leave product, design, compatibility, risk, and priority decisions to the user. 
 
 ## Hold The Execution Boundary
 
-Do not implement, mutate files, publish artifacts, or execute the plan while the grilling session is active. Read-only research is allowed. A pre-closeout request to implement does not skip the closeout. Keep the session read-only until the closeout summary is presented. After the user has seen that summary, an explicit acceptance or request to implement it ends the grilling session and permits separate execution within ordinary authorization boundaries. If the user wants to defer decisions, record them as deferred in the summary.
+A grilling-only request is read-only. Complete the assessment and present its closeout before implementation. When the user also authorizes execution, reuse that authorization and continue after resolving material user decisions; no second acceptance is required. Honor an explicit instruction to wait. Deferred decisions block only the work that depends on them.
 
 ## Close The Session
 
@@ -73,6 +73,6 @@ When material decisions are resolved or deliberately deferred, summarize:
 - confirmed durable domain-context changes, when present;
 - the resulting success criteria and next action.
 
-Present the closeout summary and wait for the user's response. End the workflow when the user explicitly accepts it or asks to proceed with it. Ask a further confirmation question only when material decisions remain unresolved; do not add a ritual confirmation question when the summary is otherwise complete. Execution remains a separate next step.
+Present the closeout summary. Ask only about unresolved material decisions; otherwise finish a review-only request or continue already authorized implementation.
 
-After acceptance, hand confirmed domain-context changes to the `domain-modeling` skill only when it is available and ordinary authorization covers the destination write. Otherwise report the proposed destination and delta without claiming synchronization.
+When implementation is authorized, hand confirmed domain-context changes to the `domain-modeling` skill only when it is available and ordinary authorization covers the destination write. Otherwise report the proposed destination and delta without claiming synchronization.

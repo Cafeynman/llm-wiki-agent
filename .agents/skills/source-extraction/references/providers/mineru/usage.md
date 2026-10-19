@@ -39,7 +39,7 @@ Follow the selected profile's credential requirements. Secret values and private
 - Record the MinerU profile, batch id or task id, model version, credential status as present or not required, warnings, missing content, and result URLs in the intake manifest or review notes.
 - Preserve returned source images under the same intake folder as `source.md`. Promote or delete them with that folder and record their paths or disposition. Keep other provider artifacts only when they are required for traceability or the user explicitly asks.
 - Follow the selected profile's error handling for file-size, page-count, format, queue, timeout, rate-limit, and parsing failures.
-- Do not split PDFs automatically. If the selected mode cannot accept the whole file, ask the user to approve a page-range or section split strategy first.
+- When complete extraction is authorized and the service, scope, and cost boundary are unchanged, the agent may arrange consecutive page-range requests for an over-limit PDF and merge all parts in order. The CLI does not split PDFs automatically. Ask only when a material choice or authorization boundary remains unresolved.
 - If an approved split produces multiple Markdown files, merge them into the original source's `<intake-tmp-dir>/source.md` in page order. Keep per-part Markdown only as traceability side outputs, and record page ranges and part paths in the intake manifest or review notes.
 
 ## OCR and Images

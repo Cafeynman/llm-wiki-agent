@@ -232,9 +232,10 @@ source lifecycle or become hidden monitoring.
   topic page merely because the answer was wrong again.
 - Stage review artifacts summarize a period of work and propose plan
   adjustments. They belong under `artifacts/`.
-- Stage review outputs must write their current-state conclusions back to
-  `study-dashboard.md` and their schedule or priority changes back to
-  `study-plan.md`.
+- A stage review alone is read-only; return its conclusions and proposed changes.
+  Save a stage review artifact when requested. When updating learning state is
+  authorized, write current-state conclusions to `study-dashboard.md` and
+  schedule or priority changes to `study-plan.md`, reusing prior authorization.
 - The agent updates the dashboard and plan from user-reported progress, reviewed
   sources, wrong-question topic pages, question sample indexes, and stage
   reviews. Completed work, delayed work, and resolved review history belong in

@@ -44,3 +44,9 @@ jobs:
           tests.test_wiki_quality_review_contract
           tests.test_source_contracts
           tests.test_skill_creator
+      - name: Run source extraction behavior tests
+        run: uv run --no-project --with pyyaml python -m unittest discover -s .agents/skills/source-extraction/tests -v
+      - name: Run MinerU output safety tests
+        run: uv run --no-project --with requests python -m unittest discover -s .agents/skills/source-extraction/references/providers/mineru/tests -v
+      - name: Run Obsidian link behavior tests
+        run: uv run --no-project --with pyyaml python -m unittest discover -s .agents/skills/obsidian-wiki-lint/tests -v

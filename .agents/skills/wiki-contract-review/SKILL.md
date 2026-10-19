@@ -60,7 +60,7 @@ If the user gives a separate vault root, inspect that initialized vault as the w
 
 ## Review Plan
 
-Start every review by stating the target root, whether it is a package root or initialized vault, and the specific surfaces in scope. For full package reviews, use at least three independent repository scans before concluding. For scoped reviews, run the smallest set of scans that can prove or disprove the scoped risk and name any excluded surfaces.
+Start every review by stating the target root, whether it is a package root or initialized vault, and the specific surfaces in scope. For full package reviews, cover the following areas and retain evidence of coverage; combine overlapping searches and inspections. For scoped reviews, inspect only the areas needed to resolve the scoped risk and name exclusions.
 
 1. **Flow and simplicity scan:** trace input, owner, decision gates, state transitions, outputs, logs, cleanup, and next action. Flag unclosed states, duplicate routes, hidden side paths, and branches that exist only as speculative safety or historical residue.
 2. **Contract scan:** inventory package source files, hidden files, the current package inventory, a target's prior 1.0+ inventory when present, scripts, entrypoint docs, and package-managed skills.
@@ -70,7 +70,7 @@ Start every review by stating the target root, whether it is a package root or i
    scenario scopes.
 4. **Residue scan:** search for stale paths, conflicting wording, duplicated rules, obsolete workflow terms, local runtime artifacts, and generated files that should not be treated as package source.
 
-Do not stop after a single broad grep. Hidden directories are part of the review surface because `.agents/`, editor configuration, and tool workspaces can change how agents interpret the repository.
+Search matches require contextual inspection. Hidden directories are part of the review surface because `.agents/`, editor configuration, and tool workspaces can change how agents interpret the repository.
 
 ### 1. Flow and Simplicity Fit
 
@@ -133,7 +133,7 @@ For each skill:
 6. Check package suitability. Flag skill-specific README, `POST_INSTALL.md`, `_meta.json`, `package.json`, hooks, copied upstream docs, or examples when they are stale, redundant, or not needed for the package contract.
 7. Check source-control status. A skill inside an inventory-managed directory but untracked is pending local state, not confirmed package source, until the user decides to add it.
 
-Build a skill boundary matrix before reporting:
+Summarize inspected skills and ownership conflicts; use a matrix when comparison helps:
 
 | Skill | Role | Trigger owner | Depends on | Must not bypass | Status |
 | --- | --- | --- | --- | --- | --- |
@@ -212,7 +212,7 @@ Look for:
 
 For review-only requests, report contract cleanup opportunities, package deletion candidates, workflow ownership conflicts, and directory or category redesign needs as findings only. Do not ask for editing confirmation, start edits, or convert the review into a fix task. If the user later asks for fixes, treat that as a new fix task.
 
-If the user explicitly requested fixes, mechanical cleanup can be done directly when the correct fix is uniquely determined. For package-managed deletion, category or directory redesign, workflow ownership changes, or other contract decisions, report the conflict and ask for confirmation before editing.
+When fixes are authorized, implement the confirmed target within scope and verify affected contracts. Reuse existing decisions and permissions. Ask only when a material choice, destructive action, scope change, or host restriction remains unresolved; a change category alone does not require another approval.
 
 ## Output Format
 

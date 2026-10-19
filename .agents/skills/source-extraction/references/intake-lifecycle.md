@@ -35,7 +35,7 @@ Source-relative paths are traceability, not taxonomy. A collision between distin
 9. For `needs-review`, move the source artifact to `raw/needs-review/`, preserve useful review notes and the unresolved question, then delete the temporary folder and disposable side outputs.
 10. For `ignored`, move the source artifact to `raw/ignored/`, log the reason, then delete the temporary folder and side outputs.
 11. For `unsupported`, move the source artifact to `raw/unsupported/`, log the blocker, then delete the temporary folder and side outputs.
-12. Record every handled source in `intake/logs/YYYY-MM-DD.md`, including its complete identity, source path or submitted URL, final raw destination, and generated Markdown path. No handled source remains in `inbox/`, and no completed source leaves a folder under `intake/tmp/`. One writer owns a source transition; serialize writes to shared intake logs and wiki projections.
+12. Record one short event per handled source in `intake/logs/YYYY-MM-DD.md`: source identity, outcome, final raw and intake paths when present, and the canonical review link. Keep detailed acceptance reasons and quality judgments in the review record; normal batches may use a compact table. No handled source remains in `inbox/`, and no completed source leaves a folder under `intake/tmp/`. One writer owns a source transition; serialize writes to shared intake logs and wiki projections.
 
 ## Extraction Quality
 
@@ -61,7 +61,7 @@ Each lifecycle source receives one outcome:
 
 Use `digested` for readable, relevant material that adds reusable evidence, concepts, contradictions, decisions, examples, or stronger support. Use `needs-review` when value cannot be judged reliably. Use `ignored` only after the content can be judged. Use `unsupported` when the source cannot currently be extracted or trusted enough to review.
 
-Write decisions to `reviews/source-review/YYYY-MM-DD.md`. Source review does not update wiki knowledge pages.
+Write the detailed acceptance reason, quality judgment, limitations, and unresolved decisions once in `reviews/source-review/YYYY-MM-DD.md`. Other records link to this decision. Source review does not update wiki knowledge pages.
 
 ## Archives
 
@@ -88,7 +88,7 @@ manifest.md
 It may also contain `digest.md`, `chunks/`, and provider side outputs.
 
 - `source.md` is the Source Review Gate's canonical accepted Markdown extraction. Chunking, indexing, promotion, and rebuilding do not overwrite, truncate, or reorder it.
-- `summary.md` records acceptance, extraction reliability, caveats, and recommended ingest scope.
+- `summary.md` gives a concise content summary and recommended ingest scope, highlighting only limitations needed to use the text and linking to the canonical review for detailed acceptance and quality reasoning.
 - `manifest.md` is a thin traceability and replay directory. Record the canonical raw source link; original filename, kind, and byte size; submitted URL when applicable; provider, profile or mode, and only result-affecting options; OCR, transcription, and frame-OCR state; `source.md`, chunk index and count, and provider side-output paths or counts; Source Review outcome and canonical review link; resulting wiki, question, or artifact paths; and the intake-log link. Record a provider/model version or run/task ID only when it is available and affects reproducibility. Archive member inventory remains archive-specific.
 - `digest.md` is optional review support, not a second summary or result ledger.
 - `chunks/index.md` owns chunk navigation, source ranges, and visible reviewed size decisions; `large-source-chunking.md` owns its detailed structure.

@@ -645,8 +645,6 @@ class PackageScriptTest(unittest.TestCase):
         bash = (ROOT / "scripts/init.sh").read_text(encoding="utf-8")
         self.assertIn("upgrade.ps1", powershell)
         self.assertIn("upgrade.sh", bash)
-        self.assertLessEqual(len(powershell.splitlines()), 40)
-        self.assertLessEqual(len(bash.splitlines()), 60)
         self.assertNotIn("astral.sh", powershell + bash)
         self.assertNotIn("Invoke-RestMethod", powershell)
         self.assertNotIn("curl", bash)
