@@ -5,13 +5,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
-import shutil
 import sys
 import time
 import zipfile
 from pathlib import Path, PurePosixPath
 from typing import Any
+
+from output_transaction import staged_output, write_report
 
 from api_common import (
     api_headers,
@@ -159,11 +159,11 @@ def require_unique_output_basenames(file_paths: list[Path]) -> None:
     seen: dict[str, Path] = {}
     for file_path in file_paths:
         base_name = file_path.stem
-        if base_name in seen:
+        if base_name.casefold() in seen:
             raise RuntimeError(
                 f"duplicate original base filename {base_name}; split the batch so each output directory is unambiguous"
             )
-        seen[base_name] = file_path
+        seen[base_name.casefold()] = file_path
 
 
 def build_file_specs(args: argparse.Namespace, file_paths: list[Path]) -> list[dict[str, Any]]:
@@ -289,36 +289,6 @@ def item_output_dir(output_dir: Path, file_name: str, total: int) -> Path:
     return output_dir / Path(file_name).stem
 
 
-def clean_generated_outputs(output_dir: Path) -> None:
-    for relative_path in ("source.md", "full.md", "result.json", "result.zip"):
-        (output_dir / relative_path).unlink(missing_ok=True)
-    for relative_path in ("images", "extracted"):
-        path = output_dir / relative_path
-        if path.exists():
-            shutil.rmtree(path)
-    for path in output_dir.iterdir():
-        if not path.is_file():
-            continue
-        lowered = path.name.lower()
-        if (
-            lowered.endswith(".zip")
-            or lowered.endswith(".pdf")
-            or lowered in {"layout.json", "model.json", "middle.json"}
-            or lowered.startswith(("layout", "model", "content_list"))
-            or re.search(r"_(origin|layout|model|middle|content_list)(\.[^.]+)?$", lowered)
-        ):
-            path.unlink()
-
-
-def clean_batch_output_root(output_dir: Path, file_specs: list[dict[str, Any]]) -> None:
-    expected_names = {Path(str(spec["request"].get("name", ""))).stem for spec in file_specs}
-    for path in output_dir.iterdir():
-        if not path.is_dir() or path.name in expected_names:
-            continue
-        if re.match(r"^\d{3}-", path.name) or any((path / marker).exists() for marker in ("source.md", "full.md", "result.json")):
-            shutil.rmtree(path)
-
-
 def download_result_zip(*, zip_url: str, output_dir: Path, timeout: float) -> Path:
     zip_path = output_dir / "result.zip"
     zip_path.write_bytes(request_bytes(zip_url, timeout=timeout))
@@ -327,7 +297,7 @@ def download_result_zip(*, zip_url: str, output_dir: Path, timeout: float) -> Pa
 
 def zip_member_path(name: str) -> PurePosixPath:
     path = PurePosixPath(name)
-    if path.is_absolute() or ".." in path.parts:
+    if path.is_absolute() or ".." in path.parts or "\\" in name or any(":" in part for part in path.parts):
         raise RuntimeError(f"unsafe zip member path: {name}")
     return path
 
@@ -458,6 +428,7 @@ def write_batch_metadata(
     payload: dict[str, Any],
     items: list[dict[str, Any]],
     error: str = "",
+    staged: bool = False,
 ) -> None:
     metadata = {
         "batch_id": batch_id,
@@ -468,7 +439,10 @@ def write_batch_metadata(
     if error:
         metadata["error"] = error
         metadata["review_reasons"] = [error]
-    (output_dir / "batch.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
+    if staged:
+        (output_dir / "batch.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
+    else:
+        write_report(output_dir, "batch.json", metadata)
 
 
 def timeout_metadata_items(*, batch_id: str, payload: dict[str, Any], items: list[dict[str, Any]], error: str) -> list[dict[str, Any]]:
@@ -493,6 +467,7 @@ def timeout_metadata_items(*, batch_id: str, payload: dict[str, Any], items: lis
     ]
 
 
+@staged_output
 def process_results(
     *,
     output_dir: Path,
@@ -504,9 +479,6 @@ def process_results(
     keep_result_zip: bool,
     keep_all_extracted: bool,
 ) -> None:
-    (output_dir / "batch.json").unlink(missing_ok=True)
-    if len(file_specs) > 1:
-        clean_batch_output_root(output_dir, file_specs)
     if len(items) != len(file_specs):
         raise RuntimeError(f"batch result count mismatch: expected {len(file_specs)}, got {len(items)}")
 
@@ -547,7 +519,6 @@ def process_results(
             continue
         used_output_dirs.add(item_dir_key)
         item_dir.mkdir(parents=True, exist_ok=True)
-        clean_generated_outputs(item_dir)
 
         state = str(item.get("state", "")).strip().lower()
         if state != DONE_STATE:
@@ -575,8 +546,9 @@ def process_results(
             processed_items.append(metadata)
             failures.append(f"{file_name}: missing full_zip_url")
             continue
-        zip_path = download_result_zip(zip_url=zip_url, output_dir=item_dir, timeout=timeout)
+        zip_path = item_dir / "result.zip"
         try:
+            download_result_zip(zip_url=zip_url, output_dir=item_dir, timeout=timeout)
             _source_path, review_reasons, preserved_outputs = extract_full_markdown(
                 zip_path=zip_path,
                 output_dir=item_dir,
@@ -593,7 +565,7 @@ def process_results(
             )
             write_item_metadata(output_dir=item_dir, metadata=metadata)
             processed_items.append(metadata)
-        except RuntimeError as exc:
+        except (RuntimeError, OSError, zipfile.BadZipFile) as exc:
             metadata = build_item_metadata(
                 batch_id=batch_id,
                 item=item,
@@ -610,7 +582,7 @@ def process_results(
     extra_results = [item for item in items if id(item) not in consumed_ids]
     if extra_results:
         failures.append("batch returned unexpected extra result items")
-    write_batch_metadata(output_dir=output_dir, batch_id=batch_id, payload=payload, items=processed_items)
+    write_batch_metadata(output_dir=output_dir, batch_id=batch_id, payload=payload, items=processed_items, staged=True)
     if failures:
         raise RuntimeError("some files failed: " + "; ".join(failures))
 
@@ -673,13 +645,16 @@ def main(argv: list[str] | None = None) -> int:
         )
     except BatchTimeoutError as exc:
         error = str(exc)
-        write_batch_metadata(
-            output_dir=output_dir,
-            batch_id=exc.batch_id,
-            payload=payload,
-            items=timeout_metadata_items(batch_id=exc.batch_id, payload=payload, items=exc.items, error=error),
-            error=error,
-        )
+        try:
+            write_batch_metadata(
+                output_dir=output_dir,
+                batch_id=exc.batch_id,
+                payload=payload,
+                items=timeout_metadata_items(batch_id=exc.batch_id, payload=payload, items=exc.items, error=error),
+                error=error,
+            )
+        except (RuntimeError, OSError, ValueError) as report_error:
+            error += f"; timeout report could not be published: {report_error}"
         print(error, file=sys.stderr)
         if docs_url:
             print("docs_url_configured=true", file=sys.stderr)

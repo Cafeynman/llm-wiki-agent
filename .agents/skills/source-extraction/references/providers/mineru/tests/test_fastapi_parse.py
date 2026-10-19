@@ -211,7 +211,7 @@ class TestFastApiParse(unittest.TestCase):
         metadata = json.loads((output_dir / "result.json").read_text(encoding="utf-8"))
         self.assertEqual(metadata["content_list_count"], 1)
 
-    def test_batch_zip_response_writes_per_original_base_name_and_cleans_root_outputs(self):
+    def test_batch_zip_response_preserves_unowned_root_outputs(self):
         env_path = self.write_env()
         first = self.write_file("alpha.pdf")
         second = self.write_file("beta.pdf")
@@ -251,9 +251,9 @@ class TestFastApiParse(unittest.TestCase):
         self.assertTrue((output_dir / "alpha" / "result.json").exists())
         self.assertTrue((output_dir / "beta" / "result.json").exists())
         for name in ("source.md", "full.md", "result.json", "response.json", "result.zip", "batch-result.zip", "batch.json"):
-            self.assertFalse((output_dir / name).exists(), name)
-        self.assertFalse((output_dir / "images").exists())
-        self.assertFalse((output_dir / "extracted").exists())
+            self.assertTrue((output_dir / name).exists(), name)
+        self.assertTrue((output_dir / "images").exists())
+        self.assertTrue((output_dir / "extracted").exists())
 
     def test_partial_batch_failure_preserves_success_and_reports_missing_output(self):
         env_path = self.write_env()

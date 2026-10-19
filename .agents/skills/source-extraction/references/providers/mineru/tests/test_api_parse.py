@@ -419,8 +419,8 @@ class TestApiParse(unittest.TestCase):
         self.assertEqual((output_dir / "source.md").read_text(encoding="utf-8"), "# ResNet\n\nResidual learning.\n")
         self.assertEqual((output_dir / "full.md").read_text(encoding="utf-8"), "# ResNet\n\nResidual learning.\n")
         self.assertEqual((output_dir / "images" / "fig.png").read_bytes(), b"image-bytes")
-        self.assertFalse((output_dir / "result.zip").exists())
-        self.assertFalse((output_dir / "extracted").exists())
+        self.assertEqual((output_dir / "result.zip").read_bytes(), b"stale")
+        self.assertEqual((output_dir / "extracted" / "origin.pdf").read_bytes(), b"stale")
         self.assertFalse((output_dir / "layout.json").exists())
         self.assertFalse((output_dir / "origin.pdf").exists())
         batch_metadata = json.loads((output_dir / "batch.json").read_text(encoding="utf-8"))
@@ -803,7 +803,7 @@ class TestApiParse(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "configured 1e-06 MB file-size limit"):
             api_parse.build_file_specs(strict_args, [input_file])
 
-    def test_default_run_cleans_stale_generated_outputs(self):
+    def test_default_run_preserves_unowned_side_outputs(self):
         env_path = self.write_env("MINERU_TOKEN=test-token\n")
         input_file = self.write_file("demo.pdf")
         output_dir = self.root / "out"
@@ -870,14 +870,14 @@ class TestApiParse(unittest.TestCase):
 
         self.assertEqual(result, 0)
         self.assertEqual((output_dir / "source.md").read_text(encoding="utf-8"), "# Fresh\n")
-        self.assertFalse((output_dir / "images").exists())
-        self.assertFalse((output_dir / "extracted").exists())
-        self.assertFalse((output_dir / "result.zip").exists())
-        self.assertFalse((output_dir / "origin.pdf").exists())
-        self.assertFalse((output_dir / "layout.json").exists())
-        self.assertFalse((output_dir / "content_list.json").exists())
+        self.assertTrue((output_dir / "images").exists())
+        self.assertTrue((output_dir / "extracted").exists())
+        self.assertTrue((output_dir / "result.zip").exists())
+        self.assertTrue((output_dir / "origin.pdf").exists())
+        self.assertTrue((output_dir / "layout.json").exists())
+        self.assertTrue((output_dir / "content_list.json").exists())
 
-    def test_batch_run_cleans_stale_generated_subdirectories(self):
+    def test_batch_run_preserves_neighboring_source_results(self):
         env_path = self.write_env("MINERU_TOKEN=test-token\n")
         file_a = self.write_file("a.pdf")
         file_b = self.write_file("b.pdf")
@@ -954,7 +954,7 @@ class TestApiParse(unittest.TestCase):
             )
 
         self.assertEqual(result, 0)
-        self.assertFalse((output_dir / "001-old").exists())
+        self.assertEqual((output_dir / "001-old" / "source.md").read_text(encoding="utf-8"), "# old\n")
         self.assertTrue((output_dir / "unrelated" / "note.txt").exists())
 
     def test_missing_full_zip_url_writes_review_metadata(self):

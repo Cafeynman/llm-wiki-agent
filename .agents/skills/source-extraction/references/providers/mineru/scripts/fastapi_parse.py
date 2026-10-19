@@ -5,13 +5,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
-import shutil
 import sys
 import time
 import zipfile
 from pathlib import Path, PurePosixPath
 from typing import Any
+
+from output_transaction import staged_output, write_report
 
 import requests
 
@@ -23,8 +23,6 @@ RUNNING_STATES = {"pending", "queued", "running", "processing", "waiting", "wait
 COMPLETE_STATES = {"completed", "complete", "success", "succeeded", "done"}
 FAILED_STATES = {"failed", "error", "cancelled", "canceled"}
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tif", ".tiff"}
-GENERATED_FILES = {"source.md", "full.md", "result.json", "result.zip", "batch-result.zip", "response.json", "batch.json"}
-GENERATED_DIRS = {"images", "extracted"}
 WATERMARK_MARKERS = ("watermark", "水印")
 
 
@@ -102,9 +100,9 @@ def require_prechecks(args: argparse.Namespace, file_paths: list[Path]) -> None:
     seen: set[str] = set()
     for file_path in file_paths:
         base_name = file_path.stem
-        if base_name in seen:
+        if base_name.casefold() in seen:
             raise RuntimeError(f"duplicate original base filename {base_name}; split the batch")
-        seen.add(base_name)
+        seen.add(base_name.casefold())
         if args.max_file_mb > 0 and file_path.stat().st_size > int(args.max_file_mb * 1024 * 1024):
             raise RuntimeError(f"{file_path.name} exceeds the configured {args.max_file_mb:g} MB file-size limit")
 
@@ -206,23 +204,6 @@ def is_zip_response(response: requests.Response) -> bool:
 
 def is_json_response(response: requests.Response) -> bool:
     return "json" in response.headers.get("content-type", "").lower()
-
-
-def clean_generated_outputs(output_dir: Path) -> None:
-    for name in GENERATED_FILES:
-        (output_dir / name).unlink(missing_ok=True)
-    for name in GENERATED_DIRS:
-        path = output_dir / name
-        if path.exists():
-            shutil.rmtree(path)
-
-
-def clean_batch_output_root(output_dir: Path, file_paths: list[Path]) -> None:
-    clean_generated_outputs(output_dir)
-    for file_path in file_paths:
-        path = output_dir / file_path.stem
-        if path.exists():
-            shutil.rmtree(path)
 
 
 def safe_zip_member_path(member_name: str) -> PurePosixPath:
@@ -394,6 +375,7 @@ def normalize_markdown_output(
     return metadata
 
 
+@staged_output
 def process_zip_response(
     *,
     response: requests.Response,
@@ -407,12 +389,9 @@ def process_zip_response(
     keep_all_extracted: bool,
 ) -> list[dict[str, Any]]:
     output_dir.mkdir(parents=True, exist_ok=True)
-    if len(file_paths) > 1:
-        clean_batch_output_root(output_dir, file_paths)
     target_dirs = [output_dir] if len(file_paths) == 1 else [output_dir / file_path.stem for file_path in file_paths]
     for target_dir in target_dirs:
         target_dir.mkdir(parents=True, exist_ok=True)
-        clean_generated_outputs(target_dir)
 
     zip_path = output_dir / "result.zip" if len(file_paths) == 1 else output_dir / "batch-result.zip"
     zip_path.write_bytes(response.content)
@@ -439,7 +418,7 @@ def process_zip_response(
         with archive:
             try:
                 candidates = markdown_members(archive)
-            except RuntimeError as exc:
+            except (RuntimeError, zipfile.BadZipFile) as exc:
                 for file_path, target_dir in zip(file_paths, target_dirs):
                     metadata = build_result_metadata(
                         mode=mode,
@@ -482,7 +461,7 @@ def process_zip_response(
                         preserved_outputs=preserved,
                         extra={"zip_markdown_member": md_member},
                     )
-                except RuntimeError as exc:
+                except (RuntimeError, zipfile.BadZipFile) as exc:
                     metadata = build_result_metadata(
                         mode=mode,
                         file_path=file_path,
@@ -520,6 +499,7 @@ def result_for_file(payload: dict[str, Any], file_path: Path, *, total: int) -> 
     return None
 
 
+@staged_output
 def process_json_response(
     *,
     response: requests.Response,
@@ -535,13 +515,10 @@ def process_json_response(
     if not isinstance(payload, dict):
         raise RuntimeError("JSON response is not an object")
     output_dir.mkdir(parents=True, exist_ok=True)
-    if len(file_paths) > 1:
-        clean_batch_output_root(output_dir, file_paths)
     target_dirs = [output_dir] if len(file_paths) == 1 else [output_dir / file_path.stem for file_path in file_paths]
     processed: list[dict[str, Any]] = []
     for file_path, target_dir in zip(file_paths, target_dirs):
         target_dir.mkdir(parents=True, exist_ok=True)
-        clean_generated_outputs(target_dir)
         if keep_json_response and len(file_paths) == 1:
             write_json(target_dir / "response.json", payload)
         result = result_for_file(payload, file_path, total=len(file_paths))
@@ -603,7 +580,7 @@ def process_json_response(
 
 
 def write_batch_metadata(output_dir: Path, metadata: dict[str, Any]) -> None:
-    write_json(output_dir / "batch.json", metadata)
+    write_report(output_dir, "batch.json", metadata)
 
 
 def process_response(
