@@ -28,7 +28,7 @@ Source-relative paths are traceability, not taxonomy. A collision between distin
 2. Record the complete source path or submitted URL, exact filename, source kind or file type, size, and basic readability.
 3. Apply the OCR, transcription, or frame-OCR approval rule from `PROJECT.md` before enabling that operation.
 4. Extract or stage reviewable Markdown as `source.md` under the temporary intake folder. Stage a Defuddle capture unchanged and do not run Defuddle against it again. For ordinary extraction and provider-part assembly, `source.md` keeps the complete extracted text; only the Excerpt-Type contract below permits a narrower review surface.
-5. Run `audit_intake_file.py` against the new `source.md`. Resolve hard reviewability failures before continuing. When it reports `large_source`, use `large-source-chunking.md`; generate derived chunks without modifying `source.md`, run `audit_chunks.py`, and record an accepted size reason directly in the nearest index row only after explicit review. The chunk audit recomposes the hard reviewability checks against the current `source.md`, so a later placeholder, navigation stub, or empty replacement cannot pass the final chunk gate.
+5. Run `audit_intake_file.py` against the new `source.md`. Resolve hard reviewability failures before continuing. When it reports `large_source`, use `large-source-chunking.md`; generate derived chunks while preserving `source.md` prose and order, run `audit_chunks.py`, and record an accepted size reason directly in the nearest index row only after explicit review. The chunk audit recomposes the hard reviewability checks against the current `source.md`, so a later placeholder, navigation stub, or empty replacement cannot pass the final chunk gate.
 6. Classify extraction quality separately from source value. A provider exit code is not an acceptance decision.
 7. Run Source Review Gate against the temporary Markdown, chunks, optional `digest.md`, and relevant provider side outputs. An undersized warning remains visible until the reviewer improves the split or records an accepted reason; the audit does not decide mergeability. Unrelated warnings remain review evidence rather than automatic rejection.
 8. For `digested`, promote the complete temporary folder to `intake/processed/`, write `summary.md` and the thin `manifest.md` defined below, and run focused Obsidian lint against the final intake folder or each final changed Markdown file. Resolve broken links before moving the source artifact to `raw/digested/`, removing the temporary folder, and continuing to ingest.
@@ -75,6 +75,8 @@ Provider-returned images and attachments remain under the same intake folder as 
 
 Passive preservation does not authorize OCR, visual interpretation, summaries, or wiki knowledge derived from those files. Active use follows the configured `PROJECT.md` policy.
 
+Reuse existing project or batch authorization when reviewing images. Confirmed decorative icons with no information may be removed; preserve informative status, warning, operation, and legend symbols, and retain uncertain images. Record explicit image renaming or removal in the existing manifest and regenerate affected chunks consistently. The `build_chunks.py` procedure in `large-source-chunking.md` preserves surrounding prose and the lifecycle original, checks retained references before optional physical attachment deletion, and reports shared or uncertain attachments that remain. No per-image approval is needed when the existing authorization covers the decision.
+
 ## Accepted Intake Folder
 
 Every accepted folder contains:
@@ -87,7 +89,7 @@ manifest.md
 
 It may also contain `digest.md`, `chunks/`, and provider side outputs.
 
-- `source.md` is the Source Review Gate's canonical accepted Markdown extraction. Chunking, indexing, promotion, and rebuilding do not overwrite, truncate, or reorder it.
+- `source.md` is the Source Review Gate's canonical accepted Markdown extraction. Chunking, indexing, promotion, and rebuilding preserve its prose and order. Explicit image decisions below may update only affected image markup.
 - `summary.md` gives a concise content summary and recommended ingest scope, highlighting only limitations needed to use the text and linking to the canonical review for detailed acceptance and quality reasoning.
 - `manifest.md` is a thin traceability and replay directory. Record the canonical raw source link; original filename, kind, and byte size; submitted URL when applicable; provider, profile or mode, and only result-affecting options; OCR, transcription, and frame-OCR state; `source.md`, chunk index and count, and provider side-output paths or counts; Source Review outcome and canonical review link; resulting wiki, question, or artifact paths; and the intake-log link. Record a provider/model version or run/task ID only when it is available and affects reproducibility. Archive member inventory remains archive-specific.
 - `digest.md` is optional review support, not a second summary or result ledger.

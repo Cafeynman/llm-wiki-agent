@@ -1,0 +1,275 @@
+import hashlib
+from pathlib import Path
+import sys
+import tempfile
+import unittest
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT/'.agents/skills/source-extraction/scripts'))
+from build_chunks import build
+from chunk_contract import valid_chunk_component
+
+
+class BuildChunksTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.vault = Path(self.temp.name)
+        self.root = self.vault/'intake'/'tmp'/'example'
+        self.root.mkdir(parents=True)
+        self.source('First paragraph with meaningful content.\nSecond paragraph with meaningful content.\n')
+
+    def source(self, text):
+        (self.root/'source.md').write_text(text, encoding='utf-8')
+
+    def plan(self):
+        return {'source_sha256': hashlib.sha256((self.root/'source.md').read_bytes()).hexdigest(), 'chunks': [{'path':'01-主题.md','title':'主题','start':1,'end':2}]}
+
+    def test_complete_build_keeps_source_and_recovery(self):
+        before = (self.root/'source.md').read_bytes()
+        result = build(self.root, self.plan(), self.vault)
+        self.assertEqual(before, (self.root/'source.md').read_bytes())
+        self.assertIsNone(result['recovery_copy'])
+        self.assertFalse(list(self.root.parent.glob('.*-previous')))
+        self.assertIn('Second paragraph', (self.root/'chunks/01-主题.md').read_text(encoding='utf-8'))
+
+    def test_missing_overlapping_reversed_ranges_leave_old(self):
+        for ranges in [[(1,1)], [(1,1),(1,2)], [(2,2),(1,1)]]:
+            with self.subTest(ranges=ranges):
+                plan = self.plan()
+                plan['chunks'] = [{'path':f'{i+1:02d}-主题.md', 'title':'主题', 'start':a, 'end':b} for i,(a,b) in enumerate(ranges)]
+                with self.assertRaisesRegex(ValueError, 'range|uncovered'):
+                    build(self.root, plan, self.vault)
+                self.assertFalse((self.root/'chunks').exists())
+
+    def test_insert_preserves_existing_paths_and_index_order(self):
+        plan = self.plan()
+        plan['chunks'] = [{'path':'20-开篇.md','title':'开篇','start':1,'end':1}, {'path':'10-结尾.md','title':'结尾','start':2,'end':2}]
+        build(self.root, plan, self.vault)
+        index = (self.root/'chunks/index.md').read_text(encoding='utf-8')
+        self.assertLess(index.index('[20-开篇]'), index.index('[10-结尾]'))
+        self.assertTrue(valid_chunk_component('02'))
+        self.assertTrue(valid_chunk_component('20-开篇'))
+        self.assertFalse(valid_chunk_component('20-不合法?'))
+
+    def test_authorized_delete_shared_attachment_retained(self):
+        self.source('Paragraph text. ![icon](images/a.png)\nOther meaning ![warning](images/a.png)\n')
+        (self.root/'images').mkdir()
+        (self.root/'images/a.png').write_bytes(b'fixture image')
+        plan = self.plan()
+        plan['images'] = [{'file':'source.md','occurrence':1,'expected':'images/a.png','action':'delete','authorized':True,'reason':'Decorative mark only'}]
+        result = build(self.root, plan, self.vault)
+        text = (self.root/'source.md').read_text(encoding='utf-8')
+        self.assertNotIn('![icon]', text)
+        self.assertIn('![warning]', text)
+        self.assertTrue((self.root/'images/a.png').exists())
+        self.assertTrue(result['retained_original_attachments'])
+
+    def test_wrong_target_unauthorized_delete_and_unsupported_fail(self):
+        self.source('Paragraph ![icon](a.png)\nMore text.\n')
+        (self.root/'a.png').write_bytes(b'image')
+        for expected, authorized in [('wrong.png',True), ('a.png',False)]:
+            plan = self.plan()
+            plan['images'] = [{'file':'source.md','occurrence':1,'expected':expected,'action':'delete','authorized':authorized,'reason':'decorative'}]
+            with self.assertRaises(ValueError):
+                build(self.root, plan, self.vault)
+            self.assertIn('![icon]', (self.root/'source.md').read_text())
+        self.source('Paragraph ![[a.png]]\nMore text.\n')
+        with self.assertRaisesRegex(ValueError,'unsupported image'):
+            build(self.root, self.plan(), self.vault)
+
+    def test_rename_copies_target_and_rebases_chunk(self):
+        self.source('Paragraph ![icon](a.png)\nMore text.\n')
+        (self.root/'a.png').write_bytes(b'image')
+        plan = self.plan()
+        plan['images'] = [{'file':'source.md','occurrence':1,'expected':'a.png','action':'rename','to':'images/流程.png'}]
+        build(self.root, plan, self.vault)
+        self.assertEqual(b'image',(self.root/'images/流程.png').read_bytes())
+        self.assertIn('../images/流程.png', (self.root/'chunks/01-主题.md').read_text(encoding='utf-8'))
+
+    def test_nested_group_order_and_no_gap_requirement(self):
+        self.source('First body.\nSecond body.\nThird body.\n')
+        plan = self.plan()
+        plan['chunks'] = [
+            {'path':'30-开头.md','title':'开头','start':1,'end':1},
+            {'path':'10-分组/40-中段.md','title':'中段','start':2,'end':2},
+            {'path':'20-结尾.md','title':'结尾','start':3,'end':3}]
+        build(self.root,plan,self.vault)
+        index=(self.root/'chunks/index.md').read_text(encoding='utf-8')
+        self.assertLess(index.index('[30-开头]'),index.index('[10-分组]'))
+        self.assertLess(index.index('[10-分组]'),index.index('[20-结尾]'))
+
+    def test_equal_size_change_does_not_inherit_exception(self):
+        plan=self.plan()
+        plan['chunks'][0].update(reviewed=True,size_reason='Independent topic')
+        build(self.root,plan,self.vault)
+        build(self.root,self.plan(),self.vault)
+        self.assertIn('accepted-under', (self.root/'chunks/index.md').read_text(encoding='utf-8'))
+        self.source((self.root/'source.md').read_text().replace('First','Third'))
+        build(self.root,self.plan(),self.vault)
+        self.assertNotIn('accepted-under', (self.root/'chunks/index.md').read_text(encoding='utf-8'))
+
+    def test_image_edit_preserves_crlf_and_other_bytes(self):
+        original=b'Paragraph ![icon](a.png)\r\nOther prose.\r\n'
+        (self.root/'source.md').write_bytes(original)
+        (self.root/'a.png').write_bytes(b'image')
+        plan=self.plan()
+        plan['images']=[{'file':'source.md','occurrence':1,'expected':'a.png','action':'delete','authorized':True,'reason':'decoration'}]
+        build(self.root,plan,self.vault)
+        self.assertEqual(original.replace(b'![icon](a.png)',b''),(self.root/'source.md').read_bytes())
+
+    def test_missing_local_image_rejected_before_publication(self):
+        self.source('Text ![missing](absent.png)\nSecond body.\n')
+        with self.assertRaisesRegex(ValueError,'missing or outside'):
+            build(self.root,self.plan(),self.vault)
+        self.assertFalse((self.root/'chunks').exists())
+
+    def test_old_numeric_name_in_prose_does_not_block(self):
+        build(self.root,self.plan(),self.vault)
+        (self.vault/'note.md').write_text('The 01-主题 wording is ordinary prose.', encoding='utf-8')
+        plan=self.plan(); plan['chunks'][0]['path']='03-新名.md'
+        build(self.root,plan,self.vault)
+        self.assertTrue((self.root/'chunks/03-新名.md').exists())
+
+    def test_explicit_physical_delete_and_shared_alias_protection(self):
+        for retained in [False, True]:
+            with self.subTest(retained=retained):
+                self.source('Paragraph ![icon](a.png)\nOther prose.\n')
+                (self.root/'a.png').write_bytes(b'image')
+                note=self.vault/'.private'/'note.md'
+                if retained:
+                    note.parent.mkdir(exist_ok=True)
+                    note.write_text('![[a.png|warning]]',encoding='utf-8')
+                plan=self.plan()
+                plan['images']=[{'file':'source.md','occurrence':1,'expected':'a.png','action':'delete','authorized':True,'reason':'decoration','delete_file':True}]
+                result=build(self.root,plan,self.vault)
+                self.assertEqual(retained,(self.root/'a.png').exists())
+                self.assertEqual(not retained,result['attachment_actions'][0]['deleted'])
+
+    def test_concurrent_writer_is_rejected(self):
+        lock=self.root.parent/('.'+self.root.name+'-build.lock')
+        lock.write_text('fixture owner')
+        with self.assertRaisesRegex(ValueError,'another build'):
+            build(self.root,self.plan(),self.vault)
+        self.assertEqual('fixture owner',lock.read_text())
+
+    def test_removed_old_basename_wikilink_blocks_rebuild(self):
+        plan=self.plan(); plan['chunks'][0]['path']='01-old.md'
+        build(self.root,plan,self.vault)
+        (self.vault/'note.md').write_text('[[01-old|cited evidence]]',encoding='utf-8')
+        plan=self.plan(); plan['chunks'][0]['path']='02-new.md'
+        with self.assertRaisesRegex(ValueError,'reference to changed chunk'):
+            build(self.root,plan,self.vault)
+        self.assertTrue((self.root/'chunks/01-old.md').exists())
+
+    def test_titled_external_link_retains_asset(self):
+        self.source('Paragraph ![icon](a.png)\nOther prose.\n')
+        (self.root/'a.png').write_bytes(b'image')
+        (self.vault/'note.md').write_text('[diagram](intake/tmp/example/a.png "Diagram title")',encoding='utf-8')
+        plan=self.plan()
+        plan['images']=[{'file':'source.md','occurrence':1,'expected':'a.png','action':'delete','authorized':True,'reason':'decoration','delete_file':True}]
+        result=build(self.root,plan,self.vault)
+        self.assertTrue((self.root/'a.png').exists())
+        self.assertIn('unsupported',result['attachment_actions'][0]['reason'])
+
+    def test_titled_source_link_rejected_before_moving(self):
+        self.source('Paragraph [diagram](a.png "Diagram title")\nOther prose.\n')
+        (self.root/'a.png').write_bytes(b'image')
+        with self.assertRaisesRegex(ValueError,'unsupported inline link'):
+            build(self.root,self.plan(),self.vault)
+        self.assertFalse((self.root/'chunks').exists())
+
+    def test_old_chunk_asset_is_preserved(self):
+        self.source('Paragraph ![diagram](chunks/assets/a.png)\nOther prose.\n')
+        (self.root/'chunks/assets').mkdir(parents=True)
+        (self.root/'chunks/assets/a.png').write_bytes(b'original attachment')
+        build(self.root,self.plan(),self.vault)
+        self.assertEqual(b'original attachment',(self.root/'chunks/assets/a.png').read_bytes())
+        self.assertIn('../chunks/assets/a.png',(self.root/'chunks/01-主题.md').read_text(encoding='utf-8'))
+
+    def test_system_ancestor_alias_is_allowed(self):
+        import build_chunks
+        with patch.object(build_chunks,'linked_boundary',side_effect=lambda p:p==self.vault.parent):
+            build(self.root,self.plan(),self.vault)
+        self.assertTrue((self.root/'chunks').exists())
+
+    def test_windows_names_and_bracket_label(self):
+        self.assertFalse(valid_chunk_component('01-bad"name'))
+        self.assertFalse(valid_chunk_component('01-bad|name'))
+        plan=self.plan(); plan['chunks'][0]['path']='01-合法]标题.md'
+        build(self.root,plan,self.vault)
+        self.assertTrue((self.root/'chunks/01-合法]标题.md').exists())
+        index=(self.root/'chunks/index.md').read_text(encoding='utf-8')
+        self.assertIn('&#93;',index)
+        self.assertIn('[source.md](../source.md)',index)
+        self.assertIn('inclusive source-line ranges',index)
+
+    def test_code_image_examples_are_not_missing_assets(self):
+        self.source('Real body text.\n```markdown\n![sample](missing.png)\n```\nInline `![sample](also-missing.png)` example.\n')
+        plan=self.plan(); plan['chunks'][0]['end']=5
+        result=build(self.root,plan,self.vault)
+        self.assertEqual('warn',result['audit'])
+
+    def test_absolute_image_is_rejected_and_root_link_is_not_rebased(self):
+        self.source('Text ![outside](/outside.png)\nOther prose.\n')
+        with self.assertRaisesRegex(ValueError,'missing or outside'):
+            build(self.root,self.plan(),self.vault)
+        self.source('Text [root note](/note.md)\nOther prose.\n')
+        build(self.root,self.plan(),self.vault)
+        self.assertIn('[root note](/note.md)',(self.root/'chunks/01-主题.md').read_text(encoding='utf-8'))
+
+    def test_source_headings_have_a_content_description(self):
+        self.source('# Source heading\nFirst prose.\n## Second heading\nSecond prose.\n')
+        plan=self.plan(); plan['chunks'][0]['end']=4
+        build(self.root,plan,self.vault)
+        self.assertIn('Complete source lines 1-4',(self.root/'chunks/index.md').read_text(encoding='utf-8'))
+
+    def test_removed_group_index_reference_blocks(self):
+        plan=self.plan(); plan['chunks'][0]['path']='01-group/01-old.md'
+        build(self.root,plan,self.vault)
+        (self.vault/'note.md').write_text('[[intake/tmp/example/chunks/01-group/index|group evidence]]',encoding='utf-8')
+        with self.assertRaisesRegex(ValueError,'reference to changed chunk'):
+            build(self.root,self.plan(),self.vault)
+        self.assertTrue((self.root/'chunks/01-group/index.md').exists())
+
+    def test_canvas_reference_retains_physical_asset(self):
+        self.source('Paragraph ![icon](a.png)\nOther prose.\n')
+        (self.root/'a.png').write_bytes(b'image')
+        (self.vault/'diagram.canvas').write_text('{"nodes":[{"type":"file","file":"intake/tmp/example/a.png"}]}',encoding='utf-8')
+        plan=self.plan()
+        plan['images']=[{'file':'source.md','occurrence':1,'expected':'a.png','action':'delete','authorized':True,'reason':'decoration','delete_file':True}]
+        result=build(self.root,plan,self.vault)
+        self.assertTrue((self.root/'a.png').exists())
+        self.assertIn('non-Markdown',result['attachment_actions'][0]['reason'])
+
+    def test_linked_ancestor_rejected_before_read(self):
+        import build_chunks
+        ancestor=self.root.parent
+        with patch.object(build_chunks,'linked_boundary',side_effect=lambda p:p==ancestor):
+            with self.assertRaisesRegex(ValueError,'junction'):
+                build(self.root,self.plan(),self.vault)
+
+    def test_replacement_failure_restores_previous(self):
+        original = Path.rename
+        def interrupted(path, to):
+            if '-build-' in path.name and not path.name.endswith('-previous'):
+                raise OSError('simulated interrupted publication')
+            return original(path, to)
+        with patch.object(Path,'rename',interrupted):
+            with self.assertRaises(OSError):
+                build(self.root,self.plan(),self.vault)
+        self.assertTrue((self.root/'source.md').exists())
+        self.assertFalse((self.root/'chunks').exists())
+
+    def test_changed_cited_chunk_blocks_and_old_remains(self):
+        build(self.root,self.plan(),self.vault)
+        (self.vault/'note.md').write_text('[[intake/tmp/example/chunks/01-主题]]', encoding='utf-8')
+        plan=self.plan(); plan['chunks'][0]['path']='03-新名.md'
+        with self.assertRaisesRegex(ValueError,'note.md'):
+            build(self.root,plan,self.vault)
+        self.assertTrue((self.root/'chunks/01-主题.md').exists())
+
+
+if __name__ == '__main__':
+    unittest.main()

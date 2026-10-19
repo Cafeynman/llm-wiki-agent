@@ -50,8 +50,8 @@ Intake first stages Markdown files or extracts non-Markdown originals into tempo
         |   |-- digest.md
         |   `-- chunks/
         |       |-- index.md
-        |       |-- 01.md
-        |       `-- 02.md
+        |       |-- 01-概述.md
+        |       `-- 02-方法.md
         |-- notes/
         |   `-- source.md
         |-- bundle/
@@ -64,7 +64,7 @@ Intake first stages Markdown files or extracts non-Markdown originals into tempo
             `-- source.md
 ```
 
-After each `source.md` is created, run the source-extraction intake file audit on that file. Human output is quiet for normal files; JSON mode always returns schema 2. Empty, placeholder, navigation-stub, and no-reviewable-text inputs stop before Source Review Gate. If the audit reports `large_source`, create semantic `chunks/` before Source Review Gate when reliable source boundaries exist, without modifying canonical `source.md`. Chunk paths use numeric components such as `01.md`; exact source titles and order tokens remain in headings and the canonical five-column local indexes. Every non-empty leaf below 2000 units warns, without an automated mergeability decision; every leaf above 10000 is a hard error. A reviewer may persist a decision directly in the nearest index row as `accepted-under — reason` or `accepted-over — reason` with status `reviewed`; the audit recomputes the units and category on every scan. When chunks are created, run the chunk audit on the temporary intake folder; resolve hard errors before promotion and carry unresolved warnings into review notes.
+After each `source.md` is created, run the source-extraction intake file audit on that file. Human output is quiet for normal files; JSON mode always returns schema 2. Empty, placeholder, navigation-stub, and no-reviewable-text inputs stop before Source Review Gate. If the audit reports `large_source`, create semantic `chunks/` before Source Review Gate when reliable source boundaries exist, while preserving canonical `source.md` prose and order; explicitly authorized image-markup changes follow `intake-lifecycle.md`. New chunk paths use stable order-and-title names such as `01-概述.md`; indexes own reading order and preserve exact source titles and order tokens. Existing numeric paths remain readable; inserting a chunk does not force renaming unrelated chunks. Every non-empty leaf below 2000 units warns, without an automated mergeability decision; every leaf above 10000 is a hard error. A reviewer may persist a decision directly in the nearest index row as `accepted-under — reason` or `accepted-over — reason` with status `reviewed`; the audit recomputes the units and category on every scan. When chunks are created, run the chunk audit on the temporary intake folder; resolve hard errors before promotion and carry unresolved warnings into review notes.
 
 After a `digested` folder reaches its final `intake/processed/` path, run focused Obsidian lint on that folder or on each final changed Markdown file. Resolve broken links there before ingest. A unique truncated filename prefix may be repaired with the reviewed dry-run fixer; ambiguous or fuzzy candidates stay reported.
 
@@ -128,8 +128,8 @@ After accepted files are ingested:
 |   |   |   |-- digest.md
 |   |   |   `-- chunks/
 |   |   |       |-- index.md
-|   |   |       |-- 01.md
-|   |   |       `-- 02.md
+|   |   |       |-- 01-概述.md
+|   |   |       `-- 02-方法.md
 |   |   |-- notes/
 |   |   |   |-- source.md
 |   |   |   |-- summary.md

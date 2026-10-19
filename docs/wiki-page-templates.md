@@ -61,6 +61,8 @@ For a Defuddle live-URL capture, keep the raw capture wikilink as the first sour
 
 ## Citation Placement
 
+Use concise, accurate display aliases for long internal paths in body prose. Keep full targets and heading locators; short clear titles need no alias. Escape the alias separator inside Markdown tables. Frontmatter sources retain quoted full wikilinks.
+
 Use a direct wikilink when it keeps the supporting source clear, for example `This claim follows [[wiki/sources/Source A#Relevant section|Source A]]`.
 
 When multiple passages rely on the same evidence scope, they may reuse one footnote label:

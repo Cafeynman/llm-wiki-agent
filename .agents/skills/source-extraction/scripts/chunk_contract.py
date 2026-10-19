@@ -196,3 +196,14 @@ def parse_index_text(text: str) -> tuple[list[IndexRow], list[ParseProblem]]:
             )
         )
     return rows, problems
+
+
+def valid_chunk_component(name: str, *, semantic: bool = False) -> bool:
+    """One parser for stable new names and existing numeric names."""
+    match = re.fullmatch(r'([0-9]{2,})(?:-([^"|<>:\\/?*\x00-\x1f]+))?', name)
+    if not match:
+        return False
+    number, title = match.groups()
+    return (int(number) > 0 and number == f"{int(number):02d}"
+            and (not semantic or bool(title))
+            and (not title or (title.strip() == title and not title.endswith("."))))

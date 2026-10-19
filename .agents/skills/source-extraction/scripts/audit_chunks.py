@@ -19,8 +19,13 @@ from audit_intake_file import (
 from chunk_contract import (
     DEFAULT_SMALL_CHUNK_THRESHOLD,
     IndexRow,
+    valid_chunk_component,
     parse_index_text,
 )
+
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'obsidian-wiki-lint' / 'scripts'))
+from markdown_code import mask_markdown_code
 
 
 SCHEMA_VERSION = 2
@@ -28,7 +33,6 @@ MARKDOWN_IMAGE_RE = re.compile(r"!\[[^\]]*\]\(([^)]+)\)")
 NUMBERED_CHILD_RE = re.compile(r"(?<!\d)(\d+)\.(\d+(?:\.\d+)*)")
 NUMBERED_PARENT_RE = re.compile(r"(?<!\d)(\d+)(?![\d.])")
 EXTERNAL_TARGET_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*:")
-CHUNK_PATH_COMPONENT_RE = re.compile(r"^\d{2,}$")
 GENERIC_HEADING_RE = re.compile(
     r"^(?:(?:chunk|part|section|块|分块)\s*)?\d+(?:[._-]\d+)*$|^(?:续|continued)\s*\d+$",
     re.IGNORECASE,
@@ -73,7 +77,7 @@ def is_external_or_anchor(target: str) -> bool:
 def local_link_targets(markdown_path: Path, pattern: re.Pattern) -> list[tuple[str, Path]]:
     text = markdown_path.read_text(encoding="utf-8")
     targets: list[tuple[str, Path]] = []
-    for match in pattern.finditer(text):
+    for match in pattern.finditer(mask_markdown_code(text)):
         target = link_target(match.group(1))
         if is_external_or_anchor(target):
             continue
@@ -185,12 +189,12 @@ def chunk_path_group_errors(directory: Path, root: Path) -> list[dict]:
         ]
 
     names = [chunk_child_name(child) for child in children]
+    if len({name.casefold() for name in names}) != len(names):
+        return [issue("duplicate_chunk_path_component", directory, root, "file and group names must be unique")]
     invalid_names = [
         name
         for name in names
-        if CHUNK_PATH_COMPONENT_RE.fullmatch(name) is None
-        or int(name) < 1
-        or name != f"{int(name):02d}"
+        if not valid_chunk_component(name)
     ]
     if invalid_names:
         return [
@@ -198,23 +202,11 @@ def chunk_path_group_errors(directory: Path, root: Path) -> list[dict]:
                 "invalid_chunk_path_component",
                 directory,
                 root,
-                "direct chunk files and directories must use canonical numeric path components: "
+                "direct chunk files and directories must use canonical numeric or numeric-semantic path components: "
                 + ", ".join(invalid_names[:5]),
             )
         ]
 
-    ordinals = sorted(int(name) for name in names)
-    expected = list(range(1, len(names) + 1))
-    if ordinals != expected:
-        return [
-            issue(
-                "non_sequential_chunk_path_components",
-                directory,
-                root,
-                "direct chunk files and directories must form one sequence starting at 01; found: "
-                + ", ".join(names[:5]),
-            )
-        ]
 
     return []
 

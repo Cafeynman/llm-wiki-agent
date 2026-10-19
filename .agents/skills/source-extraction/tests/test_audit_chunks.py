@@ -281,7 +281,7 @@ class TestAuditChunks(unittest.TestCase):
         self.assertEqual(result, 0)
         self.assertEqual(stats["status"], "pass")
 
-    def test_non_numeric_chunk_paths_fail(self):
+    def test_missing_numeric_prefix_fails_while_semantic_name_is_valid(self):
         self.write("source.md", "# Source\n\nSee [chunks](chunks/index.md).\n")
         self.write(
             "chunks/index.md",
@@ -293,6 +293,9 @@ class TestAuditChunks(unittest.TestCase):
         result, stats = self.run_json()
 
         self.assertEqual(result, 1)
+        diagnostic = next(item for item in stats["errors"] if item["code"] == "invalid_chunk_path_component")
+        self.assertIn("overview", diagnostic["message"])
+        self.assertNotIn("02-scope", diagnostic["message"])
         self.assertIn(
             "invalid_chunk_path_component",
             [item["code"] for item in stats["errors"]],
@@ -325,7 +328,7 @@ class TestAuditChunks(unittest.TestCase):
         self.assertEqual(result, 0)
         self.assertEqual(stats["status"], "pass")
 
-    def test_gapped_numeric_chunk_paths_fail(self):
+    def test_gapped_numeric_chunk_paths_remain_stable(self):
         self.write("source.md", "# Source\n\nSee [chunks](chunks/index.md).\n")
         self.write(
             "chunks/index.md",
@@ -336,8 +339,8 @@ class TestAuditChunks(unittest.TestCase):
 
         result, stats = self.run_json()
 
-        self.assertEqual(result, 1)
-        self.assertIn(
+        self.assertEqual(result, 0)
+        self.assertNotIn(
             "non_sequential_chunk_path_components",
             [item["code"] for item in stats["errors"]],
         )
@@ -374,7 +377,7 @@ class TestAuditChunks(unittest.TestCase):
 
         self.assertEqual(result, 1)
         self.assertIn(
-            "non_sequential_chunk_path_components",
+            "duplicate_chunk_path_component",
             [item["code"] for item in stats["errors"]],
         )
 
