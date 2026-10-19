@@ -112,3 +112,15 @@ Restart from the lifecycle source in its current raw state. When a source become
 5. Update navigation only when it changed, then append one `logs/wiki.md` operation entry.
 
 `raw/needs-review/` is an active queue. A resolved item finishes as `digested`, `ignored`, or `unsupported` rather than remaining in two states.
+
+## Scoped Closeout and Delegation
+
+After the final source transition and, for `digested`, ingest, run the read-only `.agents/skills/source-extraction/scripts/audit_source_closeout.py` on that one final raw path:
+
+```powershell
+uv run --no-project .agents/skills/source-extraction/scripts/audit_source_closeout.py raw/digested/manual.pdf --vault . --json
+```
+
+The checker verifies the selected source's raw state, inbox and temporary residue, accepted files and source card, and outbound wikilinks and inline Markdown links from the accepted intake folder and source card; it reuses intake and chunk audits. Page-level lint applies to authored summaries, manifests, digests, chunk indexes, and the source card; preserved source text and chunk leaves retain source fidelity. It reads no unrelated source content and makes no repairs. A structural pass does not establish semantic completeness, acceptance reasoning, or operation-log accuracy: the source owner still verifies these against the existing review and log. Keep diagnostics in the response or task's temporary work; do not create a second completion ledger. JSON uses schema 1; exit 0 means no structural errors, 1 means unfinished or inconsistent output, and 2 means invalid or unreadable input. Warnings remain visible for the existing review. Reference-style Markdown and HTML links require manual checking. Same-stem sources in different states remain an ownership warning; two digested sources sharing one intake path are an error.
+
+Delegate only independently checkable units when that helps. Different sources may have different writers. For one large source, delegates review complete chapters or produce disjoint temporary range plans; one source owner reconciles full coverage and publishes. Give each delegate the root, canonical `AGENTS.md` entrypoint, relevant local references, exact input/output scope, and authorization boundary. Delegates return paths, completed scope, checks, and unresolved issues instead of pasting the source into the main conversation. The source owner verifies integration and performs the final transition; serialize writes to each shared manifest, attachment, log, index, or cross-source page while independent source folders remain parallel. Simple work stays direct, and a failed unit does not authorize cleanup of another unit's files.

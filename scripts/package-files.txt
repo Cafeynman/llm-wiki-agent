@@ -105,3 +105,4 @@ active .agents/skills/source-extraction/scripts/build_chunks.py
 
 active .agents/skills/source-extraction/references/providers/mineru/scripts/output_transaction.py
 active .agents/skills/source-extraction/references/providers/mineru/tests/test_output_transaction.py
+active .agents/skills/source-extraction/scripts/audit_source_closeout.py

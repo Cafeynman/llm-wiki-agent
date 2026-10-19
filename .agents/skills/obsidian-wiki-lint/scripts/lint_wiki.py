@@ -14,7 +14,7 @@ from urllib.parse import unquote
 from markdown_code import mask_inline_code, mask_markdown_code
 from obsidian_links import WIKILINK_RE, split_wikilink
 
-MD_LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
+MD_LINK_RE = re.compile(r"\[[^\]]*\]\(((?:<[^>\r\n]*>|[^()<\r\n]|\([^()\r\n]*\))+)\)")
 FOOTNOTE_REF_RE = re.compile(r"(?<!\\)\[\^([^\]\r\n]+)\]")
 FOOTNOTE_DEF_RE = re.compile(r"^[ \t]{0,3}\[\^([^\]\r\n]+)\]:")
 FRONTMATTER_RE = re.compile(r"\A---\r?\n(.*?)\r?\n---", re.DOTALL)
@@ -517,6 +517,16 @@ def resolve_markdown_target(
     target: str,
     all_files: set[str],
 ) -> tuple[str, bool] | None:
+    # Strip only an optional Markdown title, before URI decoding or fragment removal.
+    target = target.strip()
+    titled = re.fullmatch(r'''(?s)(.*?)\s+(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\([^)]*\))''', target)
+    if titled:
+        target = titled.group(1).strip()
+    if target.startswith("<") and target.endswith(">"):
+        target = target[1:-1]
+    target = target.split("#", 1)[0]
+    if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", target):
+        return None
     explicit_directory = is_explicit_directory_target(target)
     target = unquote(target.strip()).replace("\\", "/")
     if not target:
@@ -604,7 +614,7 @@ def lint(vault: Path, scope: str) -> int:
                 broken[resolved].append(rel)
 
         for match in MD_LINK_RE.finditer(link_content):
-            raw_target = match.group(1).split("#", 1)[0].strip()
+            raw_target = match.group(1).strip()
             if not raw_target or raw_target.startswith(("http://", "https://", "mailto:")):
                 continue
             resolution = resolve_markdown_target(vault, rel, raw_target, all_files)

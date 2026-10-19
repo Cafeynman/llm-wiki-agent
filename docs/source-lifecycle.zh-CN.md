@@ -162,3 +162,13 @@ Intake 先暂存 Markdown 文件，或将非 Markdown 原始文件提取为临�
 关键不变量是：来源审查发生在提取之后，因为审查对象应当是可读 Markdown 或 digest 输出。原始文件只在提取和审查产生最终决定后移动。
 
 `raw/needs-review/` 中的文件会保持待处理状态，直到对应审查问题被解决。它们不会更新 wiki 页面，也不会作为已接受来源出现，直到后续审查将其标记为 `digested`。
+
+## 检查一个已完成来源
+
+来源处理完成后，以最终 raw 路径运行只读收尾检查：
+
+```powershell
+uv run --no-project .agents/skills/source-extraction/scripts/audit_source_closeout.py raw/digested/manual.pdf --vault . --json
+```
+
+检查组合来源状态、已有 intake 与 chunk 审计和相关链接，不修复文件，也不因其他来源尚未完成而阻塞当前来源。通过只说明结构检查没有发现错误，不代表提取完整性或知识质量已获确认。收尾检查的边界与按来源、章节委托的写入责任，见 source-extraction 的 `references/intake-lifecycle.md`。

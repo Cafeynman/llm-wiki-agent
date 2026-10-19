@@ -37,6 +37,22 @@ class TestLintWiki(unittest.TestCase):
             
         self.assertEqual(result, 0, "Lint should not report broken links for existing attachments.")
 
+    def test_empty_alt_markdown_image_is_checked(self):
+        (self.vault / 'wiki/note.md').write_text('![](missing.png)', encoding='utf-8')
+        with patch('builtins.print'):
+            self.assertEqual(lint_wiki.lint(self.vault, 'wiki/note.md'), 1)
+        (self.vault / 'wiki/missing.png').touch()
+        with patch('builtins.print'):
+            self.assertEqual(lint_wiki.lint(self.vault, 'wiki/note.md'), 0)
+
+    def test_markdown_destination_titles_and_angle_brackets(self):
+        (self.vault / 'wiki/source file.md').write_text('# Source', encoding='utf-8')
+        targets = ['<source file.md> "source title"', "<source file.md> 'source title'", '<source file.md>', 'source%20file.md "title # marker"', '<source file.md#Heading> "title"', 'source%20file.md (title)', '<https://example.test> "external title"']
+        for target in targets:
+            with self.subTest(target=target):
+                (self.vault / 'wiki/note.md').write_text(f'[Source]({target})', encoding='utf-8')
+                with patch('builtins.print') as output:
+                    self.assertEqual(lint_wiki.lint(self.vault, 'wiki/note.md'), 0, output.call_args_list)
     def test_broken_link_flagged(self):
         note_path = self.vault / "wiki" / "note.md"
         note_path.write_text("See [[missing.pdf]]", encoding="utf-8")

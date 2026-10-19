@@ -162,3 +162,13 @@ After accepted files are ingested:
 The important invariant is that source review happens after extraction, because review should judge readable Markdown or digest output. Original files are moved only after extraction and review produce a final decision.
 
 Files in `raw/needs-review/` remain pending until their review question is resolved. They do not update wiki pages, appear as accepted sources, or move to `intake/processed/` until a later review marks them `digested`.
+
+## Check one completed source
+
+After source handling is complete, run the scoped read-only check with the final raw path:
+
+```powershell
+uv run --no-project .agents/skills/source-extraction/scripts/audit_source_closeout.py raw/digested/manual.pdf --vault . --json
+```
+
+The check combines lifecycle structure, existing intake and chunk audits, and relevant links without repairing files or blocking on another source's unfinished work. A pass is structural evidence, not a judgment of extraction completeness or knowledge quality. See source-extraction's `references/intake-lifecycle.md` for closeout limits and source/chapter delegation ownership.

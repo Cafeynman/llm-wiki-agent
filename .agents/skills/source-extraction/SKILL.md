@@ -29,7 +29,7 @@ Use this skill before any wiki intake step that turns original material into rev
 6. Write or stage `source.md` at the path defined by `references/intake-lifecycle.md`, preserving source-derived names and content.
 7. For reviewed line-range plans, use `build_chunks.py` as documented in `large-source-chunking.md`; it supports stable semantic paths and explicit image decisions with staged validation. Run `audit_intake_file.py`; resolve hard reviewability failures. When it reports `large_source`, preserve `source.md` prose and order, applying only the explicitly authorized image-markup changes defined in `intake-lifecycle.md`, and follow the chunk construction, audit, warning disposition, and visible reviewed-size decision procedure in `large-source-chunking.md`.
 8. Keep provider-returned side outputs with the same temporary intake folder and record warnings, missing content, and relevant audit findings.
-9. Continue through the outcome, movement, cleanup, final-path focused lint, and logging steps in `references/intake-lifecycle.md`. The provider does not choose the Source Review Gate outcome.
+9. Continue through the outcome, movement, cleanup, final-path focused lint, and logging steps in `references/intake-lifecycle.md`. The provider does not choose the Source Review Gate outcome. After final placement and ingest when applicable, use the scoped closeout check in that reference; its structural result does not replace source review.
 
 ## Security Rules
 
