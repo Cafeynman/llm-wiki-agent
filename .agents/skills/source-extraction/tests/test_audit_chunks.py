@@ -664,6 +664,27 @@ class TestAuditChunks(unittest.TestCase):
         self.assertEqual(stats["accepted_exceptions"][0]["path"], "01.md")
         self.assertEqual(stats["accepted_exceptions"][0]["reason"], reason)
 
+    def test_under_acceptance_drift_is_soft_but_cannot_accept_oversize(self):
+        self.write("source.md", "# Source\nCanonical source text remains here.\n")
+        for size, minimum, maximum in (("under", 100, 1000), ("normal", 1, 1000), ("over", 1, 2)):
+            with self.subTest(size=size):
+                text = "# Terminology\n\nMeaningful short text.\n"
+                units = audit_chunks.content_units(text)
+                self.write("chunks/01.md", text)
+                self.write_index("chunks/index.md", [("01.md", "Terminology", "—",
+                                 f"{units - 1} · accepted-under — Independent section", "reviewed")])
+                before = (self.root / "chunks/index.md").read_bytes()
+                result, stats = self.run_json("--min-threshold", str(minimum), "--threshold", str(maximum))
+                self.assertEqual(result, 1 if size == "over" else 0)
+                if size != "over":
+                    code = "accepted_size_measurement_mismatch" if size == "under" else "stale_under_size_acceptance"
+                    self.assertIn(code, [row["code"] for row in stats["warnings"]])
+                if size == "under":
+                    self.assertEqual(stats["accepted_exceptions"][0]["content_units"], units)
+                else:
+                    self.assertEqual(stats["accepted_exceptions"], [])
+                self.assertEqual(before, (self.root / "chunks/index.md").read_bytes())
+
     def test_under_acceptance_requires_reviewed_status(self):
         reason = "本章虽短但语义独立。"
         text = "# Terminology\n\nShort text.\n"

@@ -31,7 +31,7 @@ submitted URL
 
 ## 临时提取
 
-Intake 先暂存 Markdown 文件，或将非 Markdown 原始文件提取为临时 Markdown。提供方返回的附件保存在同一临时来源目录中，并随该目录一起推进或删除：
+Intake 先暂存 Markdown 文件，或将非 Markdown 原始文件提取为临时 Markdown。提供方返回的附件保存在同一临时来源目录中，并随该目录推进、保留待审或在终态清理：
 
 ```text
 .
@@ -96,7 +96,7 @@ Intake 先暂存 Markdown 文件，或将非 Markdown 原始文件提取为临�
 | `paper.pdf` | `intake/tmp/paper/source.md`, chunks, digest | `digested` | 推进到 `intake/processed/`，原件移动到 `raw/digested/`，清理 `intake/tmp/`，更新 wiki |
 | `notes.md` | `intake/tmp/notes/source.md` | `digested` | 推进到 `intake/processed/`，原件移动到 `raw/digested/`，清理 `intake/tmp/`，更新 wiki |
 | `bundle/report.pdf` | `intake/tmp/bundle/report/source.md` | `digested` | 推进到 `intake/processed/bundle/report/`，原件移动到 `raw/digested/bundle/report.pdf`，创建 `wiki/sources/bundle/report.md` |
-| `slides.pptx` | `intake/tmp/slides/source.md`, digest | `needs-review` | 原件移动到 `raw/needs-review/`，记录待审问题，清理 `intake/tmp/` |
+| `slides.pptx` | `intake/tmp/slides/source.md`, digest | `needs-review` | 原件移动到 `raw/needs-review/`，记录待审问题，保留有用的 `intake/tmp/` 输出 |
 | `duplicate.html` | `intake/tmp/duplicate/source.md` | `ignored` | 原件移动到 `raw/ignored/`，记录忽略理由，清理 `intake/tmp/` |
 | `corrupted.pdf` | extraction failure | `unsupported` | 原件移动到 `raw/unsupported/`，记录阻碍原因 |
 
@@ -120,6 +120,10 @@ Intake 先暂存 Markdown 文件，或将非 Markdown 原始文件提取为临�
 |   `-- unsupported/
 |       `-- corrupted.pdf
 |-- intake/
+|   |-- tmp/
+|   |   `-- slides/
+|   |       |-- source.md
+|   |       `-- digest.md
 |   |-- processed/
 |   |   |-- paper/
 |   |   |   |-- source.md
@@ -161,7 +165,7 @@ Intake 先暂存 Markdown 文件，或将非 Markdown 原始文件提取为临�
 
 关键不变量是：来源审查发生在提取之后，因为审查对象应当是可读 Markdown 或 digest 输出。原始文件只在提取和审查产生最终决定后移动。
 
-`raw/needs-review/` 中的文件会保持待处理状态，直到对应审查问题被解决。它们不会更新 wiki 页面，也不会作为已接受来源出现，直到后续审查将其标记为 `digested`。
+`raw/needs-review/` 中的文件会保持待处理状态，直到对应审查问题被解决。有用的提取结果和附件可保留在对应 `intake/tmp/` 目录中，确认其属于当前原件后继续使用；没有可用提取结果时不要求存在临时目录。它们不会更新 wiki 页面，也不会作为已接受来源出现，直到后续审查将其标记为 `digested`。
 
 ## 检查一个已完成来源
 

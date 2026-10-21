@@ -86,6 +86,32 @@ class CloseoutTest(unittest.TestCase):
         self.write('intake/tmp/资料/报告/source.md', '临时')
         self.assertTrue({'inbox_residue', 'temporary_residue'} <= self.codes())
 
+    def test_pending_output_is_optional_and_terminal_states_reject_residue(self):
+        for state in ('needs-review', 'ignored', 'unsupported'):
+            source = f'raw/{state}/pending.pdf'
+            self.write(source, b'original')
+            self.assertEqual(audit.inspect_closeout(self.vault, source)['status'], 'pass')
+            temporary = self.write('intake/tmp/pending/source.md', 'Retained review evidence')
+            result = audit.inspect_closeout(self.vault, source)
+            self.assertEqual('temporary_residue' in {row['code'] for row in result['errors']}, state != 'needs-review')
+            self.assertEqual(temporary.read_text(), 'Retained review evidence')
+            temporary.unlink(); temporary.parent.rmdir()
+            (self.vault/source).unlink()
+
+    def test_terminal_source_does_not_claim_pending_sibling_temporary_output(self):
+        for state in ('digested', 'ignored', 'unsupported'):
+            with self.subTest(state=state):
+                name = '资料/报告' if state == 'digested' else f'{state}-report'
+                source = f'raw/{state}/{name}.pdf'
+                self.write(source, b'original')
+                self.write(f'raw/needs-review/{name}.docx', b'pending original')
+                self.write(f'intake/tmp/{name}/source.md', 'Pending review evidence')
+                before = {p.relative_to(self.vault): p.read_bytes() for p in self.vault.rglob('*') if p.is_file()}
+                result = audit.inspect_closeout(self.vault, source)
+                self.assertEqual(result['errors'], [], result)
+                self.assertIn('temporary_output_ownership_uncertain', {row['code'] for row in result['warnings']})
+                self.assertEqual(before, {p.relative_to(self.vault): p.read_bytes() for p in self.vault.rglob('*') if p.is_file()})
+
     def test_broken_result_link(self):
         self.write(self.accepted + 'manifest.md', '[[wiki/claims/missing]]')
         self.assertIn('broken_result_link', self.codes())

@@ -49,7 +49,7 @@ Create only the directories needed by confirmed work. Detailed source records be
 2. **Lifecycle source truth.** User-submitted files enter through `inbox/` unchanged. Generated live-URL captures follow the deterministic rule in `source-extraction`. Lifecycle source artifacts under `inbox/` and `raw/` remain unedited unless the user explicitly requests a source edit.
 3. **One final raw state.** Every handled source ends under exactly one of `raw/digested/`, `raw/needs-review/`, `raw/ignored/`, or `raw/unsupported/`. `raw/needs-review/` is an active queue.
 4. **Traceable paths.** Preserve the source-relative parent path and the original source-language base filename under `intake/tmp/`, `intake/processed/`, and `wiki/sources/`. Omit only the original extension. Processing dates belong in records, not intake path components.
-5. **Temporary output closes.** Agent-generated extraction, normalization, chunk, and summary files stay under `intake/`; completed handling leaves no source folder in `intake/tmp/`.
+5. **Temporary output follows review state.** Agent-generated extraction, normalization, chunk, and summary files stay under `intake/`. `needs-review` may retain its matching `intake/tmp/` folder for continued review; `digested`, `ignored`, and `unsupported` leave no temporary source folder.
 6. **Evidence-backed knowledge.** Factual wiki claims cite an original source, accepted intake output, substantive source card, another evidence-bearing wiki page, or a confirmed reflection record. Unsupported but useful claims remain questions or low-confidence claims.
 7. **Text-first intake.** Material becomes reviewable Markdown before entering `intake/processed/` or `wiki/`. Passive provider attachments travel with their intake folder; active OCR, transcription, or visual interpretation follows `PROJECT.md`.
 8. **Stable names.** Preserve source-derived language and text. New chunk files and groups use stable order-and-title names; the nearest index owns reading order, so inserting a chunk does not require renaming existing paths. Exact source titles and order tokens remain in headings and indexes. Project-specific cross-source naming follows `PROJECT.md`.
@@ -97,13 +97,13 @@ The stable lifecycle is:
 2. Produce reviewable Markdown under `intake/tmp/` with the provider and approval policy from `PROJECT.md`.
 3. Run the intake-file audit and, when needed, semantic chunking and chunk audit.
 4. Run Source Review Gate against readable temporary output, not the filename or provider exit code.
-5. Apply one outcome, move the lifecycle source to its matching raw state, record the decision, and close temporary output.
+5. Apply one outcome, move the lifecycle source to its matching raw state, record the decision, and retain or close temporary output according to that outcome.
 6. For `digested`, promote the intake folder and continue to ingest.
 
 | Outcome | Raw state | Next action |
 | --- | --- | --- |
 | `digested` | `raw/digested/` | Promote accepted intake output and ingest. |
-| `needs-review` | `raw/needs-review/` | Record the concrete question and await resolution. |
+| `needs-review` | `raw/needs-review/` | Record the concrete question, retain useful temporary output when available, and await resolution. |
 | `ignored` | `raw/ignored/` | Record the reviewed reason and stop. |
 | `unsupported` | `raw/unsupported/` | Record the processing blocker and stop. |
 
@@ -159,4 +159,4 @@ A review, audit, or health-check request is read-only unless the user also asks 
 
 ## Completion
 
-A completed write has traceable evidence, valid Markdown, closed temporary state, updated canonical records, only the projections whose displayed state changed, and one concise operation-log entry. Report failed or unrun checks and remaining uncertainty plainly.
+A completed write has traceable evidence, valid Markdown, temporary state consistent with its review outcome, updated canonical records, only the projections whose displayed state changed, and one concise operation-log entry. Report failed or unrun checks and remaining uncertainty plainly.

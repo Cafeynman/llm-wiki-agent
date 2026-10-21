@@ -548,6 +548,17 @@ def inspect_chunks(root: Path, minimum: int, maximum: int) -> dict:
                                 # The parser owns this primary syntax diagnostic. Keeping
                                 # the row addressable avoids dependent unlisted/threshold noise.
                                 pass
+                            elif accepted_kind == "under" and kind in {"under", "normal"} and row.review_status == "reviewed":
+                                if row.units != units or kind == "normal":
+                                    warnings.append(issue(
+                                        "accepted_size_measurement_mismatch" if kind == "under" else "stale_under_size_acceptance",
+                                        index_path, root,
+                                        f"index records {row.units} units for {relative_leaf}; audit measured {units} ({kind})",
+                                    ))
+                                accepted = kind == "under"
+                                if accepted:
+                                    accepted_exceptions.append({"path": relative_leaf, "kind": kind,
+                                                                "content_units": units, "reason": row.reason})
                             elif row.units != units:
                                 errors.append(
                                     issue(

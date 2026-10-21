@@ -21,7 +21,7 @@ Use `--use-plugins` only for installed, selected plugins. Use `--keep-data-uris`
 ## Output Handling
 
 - Keep provider-returned side outputs under the same intake folder as `source.md`.
-- Promote accepted side outputs with that intake folder or delete them with the temporary folder for non-accepted outcomes.
+- Follow `intake-lifecycle.md` for promotion, pending-review retention, and terminal cleanup of that folder.
 - Record preserved side outputs in `manifest.md` for accepted sources or in review/log records before temporary cleanup for other outcomes.
 - Record missing figures, scans, screenshots, embedded media, or audio when they affect reviewability.
 - If important non-text content was not processed, route the source to `needs-review` through the normal WIKI process.

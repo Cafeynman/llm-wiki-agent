@@ -32,10 +32,10 @@ Source-relative paths are traceability, not taxonomy. A collision between distin
 6. Classify extraction quality separately from source value. A provider exit code is not an acceptance decision.
 7. Run Source Review Gate against the temporary Markdown, chunks, optional `digest.md`, and relevant provider side outputs. An undersized warning remains visible until the reviewer improves the split or records an accepted reason; the audit does not decide mergeability. Unrelated warnings remain review evidence rather than automatic rejection.
 8. For `digested`, promote the complete temporary folder to `intake/processed/`, write `summary.md` and the thin `manifest.md` defined below, and run focused Obsidian lint against the final intake folder or each final changed Markdown file. The focused lint and final closeout share the same page-rule boundary: preserved source text, chunk leaves, and provider text are checked for links; authored summaries, manifests, digests, and chunk indexes also receive page-level rules. Closeout additionally checks frontmatter intake traceability links that focused lint excludes from navigation diagnostics. Keep this pre-ingest check and the post-ingest closeout: they detect failures at different stages. Resolve broken links before moving the source artifact to `raw/digested/`, removing the temporary folder, and continuing to ingest.
-9. For `needs-review`, move the source artifact to `raw/needs-review/`, preserve useful review notes and the unresolved question, then delete the temporary folder and disposable side outputs.
+9. For `needs-review`, move the source artifact to `raw/needs-review/`, preserve useful review notes and the unresolved question, and keep useful extraction, chunks, and side outputs in the matching temporary folder for continued review. A temporary folder is optional when extraction produced nothing useful.
 10. For `ignored`, move the source artifact to `raw/ignored/`, log the reason, then delete the temporary folder and side outputs.
 11. For `unsupported`, move the source artifact to `raw/unsupported/`, log the blocker, then delete the temporary folder and side outputs.
-12. Record one short event per handled source in `intake/logs/YYYY-MM-DD.md`: source identity, outcome, final raw and intake paths when present, and the canonical review link. Keep detailed acceptance reasons and quality judgments in the review record; normal batches may use a compact table. No handled source remains in `inbox/`, and no completed source leaves a folder under `intake/tmp/`. One writer owns a source transition; serialize writes to shared intake logs and wiki projections.
+12. Record one short event per handled source in `intake/logs/YYYY-MM-DD.md`: source identity, outcome, final raw and intake paths when present, and the canonical review link. Keep detailed acceptance reasons and quality judgments in the review record; normal batches may use a compact table. No handled source remains in `inbox/`, and only `needs-review` may retain its matching folder under `intake/tmp/`. One writer owns a source transition; serialize writes to shared intake logs and wiki projections.
 
 ## Extraction Quality
 
@@ -55,7 +55,7 @@ Each lifecycle source receives one outcome:
 | Outcome | Raw destination | Intake result |
 | --- | --- | --- |
 | `digested` | `raw/digested/<source-relative-path>` | Promote accepted Markdown and ingest. |
-| `needs-review` | `raw/needs-review/<source-relative-path>` | Preserve the question and useful review notes. |
+| `needs-review` | `raw/needs-review/<source-relative-path>` | Preserve the question, useful review notes, and useful temporary output when available. |
 | `ignored` | `raw/ignored/<source-relative-path>` | Preserve the decision; no accepted intake output. |
 | `unsupported` | `raw/unsupported/<source-relative-path>` | Preserve the blocker; no accepted intake output. |
 
@@ -71,7 +71,7 @@ For `digested`, keep the full listing in `manifest.md`. For other outcomes, pres
 
 ## Provider Side Outputs
 
-Provider-returned images and attachments remain under the same intake folder as `source.md`, normally under `images/`. Promote them with a `digested` intake folder or delete them with every other temporary outcome, and record the accepted path or deleted disposition on the durable record for that outcome.
+Provider-returned images and attachments remain under the same intake folder as `source.md`, normally under `images/`. Promote them with a `digested` intake folder, retain useful output with `needs-review`, and delete temporary output for `ignored` or `unsupported`. Record the retained path or deleted disposition on the existing review or intake record.
 
 Passive preservation does not authorize OCR, visual interpretation, summaries, or wiki knowledge derived from those files. Active use follows the configured `PROJECT.md` policy.
 
@@ -103,7 +103,7 @@ Use excerpt form only when bounded evidence, rather than the full extraction, is
 
 ## Reprocessing
 
-Restart from the lifecycle source in its current raw state. When a source becomes `digested` after an earlier `ignored`, `unsupported`, or `needs-review` state:
+Use the lifecycle source in its current raw state as the identity. For `needs-review`, continue from useful existing output in its matching temporary folder after checking that it belongs to the current original and addresses the pending question. Re-extract only when output is absent, invalid, or insufficient for the resolved review scope. When a source becomes `digested` after an earlier `ignored`, `unsupported`, or `needs-review` state:
 
 1. Close the old raw state so the same source-relative path exists in only one state.
 2. Append the new intake log and source-review decision.
@@ -121,6 +121,6 @@ After the final source transition and, for `digested`, ingest, run the read-only
 uv run --no-project .agents/skills/source-extraction/scripts/audit_source_closeout.py raw/digested/manual.pdf --vault . --json
 ```
 
-The checker verifies the selected source's raw state, inbox and temporary residue, accepted files and source card, and outbound wikilinks and inline Markdown links from the accepted intake folder and source card; it reuses intake and chunk audits. Page-level lint applies to authored summaries, manifests, digests, chunk indexes, and the source card; preserved source text and chunk leaves retain source fidelity. It reads no unrelated source content and makes no repairs. A structural pass does not establish semantic completeness, acceptance reasoning, or operation-log accuracy: the source owner still verifies these against the existing review and log. Keep diagnostics in the response or task's temporary work; do not create a second completion ledger. JSON uses schema 1; exit 0 means no structural errors, 1 means unfinished or inconsistent output, and 2 means invalid or unreadable input. Warnings remain visible for the existing review. Reference-style Markdown and HTML links require manual checking. Same-stem sources in different states remain an ownership warning; two digested sources sharing one intake path are an error.
+The checker verifies the selected source's raw state, inbox and temporary residue, accepted files and source card, and outbound wikilinks and inline Markdown links from the accepted intake folder and source card; it reuses intake and chunk audits. Page-level lint applies to authored summaries, manifests, digests, chunk indexes, and the source card; preserved source text and chunk leaves retain source fidelity. It reads no unrelated source content and makes no repairs. A structural pass does not establish semantic completeness, acceptance reasoning, or operation-log accuracy: the source owner still verifies these against the existing review and log. Keep diagnostics in the response or task's temporary work; do not create a second completion ledger. JSON uses schema 1; exit 0 means no structural errors, 1 means unfinished or inconsistent output, and 2 means invalid or unreadable input. Warnings remain visible for the existing review. Reference-style Markdown and HTML links are outside this checker. Check such links when they carry evidence actually used in new knowledge or target files being moved or removed; do not require a whole-source syntax cleanup. A same-stem pending original makes temporary-output ownership uncertain; confirm ownership before cleaning that folder. Same-stem sources in different states remain an ownership warning; two digested sources sharing one intake path are an error.
 
 Delegate only independently checkable units when that helps. Different sources may have different writers. For one large source, delegates review complete chapters or produce disjoint temporary range plans; one source owner reconciles full coverage and publishes. Give each delegate the root, canonical `AGENTS.md` entrypoint, relevant local references, exact input/output scope, and authorization boundary. Delegates return paths, completed scope, checks, and unresolved issues instead of pasting the source into the main conversation. The source owner verifies integration and performs the final transition; serialize writes to each shared manifest, attachment, log, index, or cross-source page while independent source folders remain parallel. Simple work stays direct, and a failed unit does not authorize cleanup of another unit's files.

@@ -98,6 +98,7 @@ def inspect_closeout(vault: Path, source: str) -> dict:
             add("inbox_residue", inbox.relative_to(vault).as_posix(), "handled source remains in inbox")
         # Only two accepted originals prove an intake/card identity conflict.
         digested_sibling = False
+        pending_sibling = False
         for base in [vault / "inbox", *(vault / "raw" / name for name in STATES)]:
             parent = safe_path(vault, base / relative.parent)
             if parent.is_dir():
@@ -105,13 +106,18 @@ def inspect_closeout(vault: Path, source: str) -> dict:
                     if not sibling.is_dir() and sibling.name != relative.name and sibling.stem == relative.stem:
                         is_digested = base == vault / "raw/digested"
                         digested_sibling = digested_sibling or is_digested
+                        pending_sibling = pending_sibling or base == vault / "raw/needs-review"
                         add("source_identity_collision", sibling.relative_to(vault).as_posix(),
                             "different originals map to the same intake/card path; manually confirm ownership before accepting another source",
                             warning=not (state == "digested" and is_digested))
         stem = relative.with_suffix("")
         temporary = safe_path(vault, vault / "intake/tmp" / stem)
-        if temporary.exists():
-            add("temporary_residue", temporary.relative_to(vault).as_posix(), "completed source retains temporary intake output")
+        if state != "needs-review" and temporary.exists():
+            if pending_sibling:
+                add("temporary_output_ownership_uncertain", temporary.relative_to(vault).as_posix(),
+                    "a needs-review same-stem original also exists; confirm ownership before cleaning temporary output", warning=True)
+            else:
+                add("temporary_residue", temporary.relative_to(vault).as_posix(), "completed source retains temporary intake output")
         accepted = safe_path(vault, vault / "intake/processed" / stem)
         card = safe_path(vault, vault / "wiki/sources" / stem.parent / (stem.name + ".md"))
         if state != "digested":

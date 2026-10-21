@@ -45,22 +45,24 @@ class BuildChunksTests(unittest.TestCase):
         build(self.root, self.plan(), self.vault)
         before = (self.root/'chunks/01-主题.md').read_bytes()
         (self.vault/'unrelated.md').write_bytes(b'\xff')
-        plan = self.plan(); plan['chunks'][0]['title'] = 'Changed title'
+        self.source('Changed evidence with meaningful content.\nSecond paragraph with meaningful content.\n')
+        plan = self.plan()
         with self.assertRaises(UnicodeError):
             build(self.root, plan, self.vault)
         self.assertEqual(before, (self.root/'chunks/01-主题.md').read_bytes())
 
-    def test_physical_delete_still_requires_complete_scan(self):
+    def test_physical_delete_retains_asset_when_scan_incomplete(self):
         self.source('Paragraph ![icon](a.png)\nOther prose.\n')
         (self.root/'a.png').write_bytes(b'image')
         (self.vault/'unrelated.md').write_bytes(b'\xff')
         plan = self.plan()
         plan['images'] = [{'file':'source.md', 'occurrence':1, 'expected':'a.png', 'action':'delete',
                            'authorized':True, 'reason':'decoration', 'delete_file':True}]
-        with self.assertRaises(UnicodeError):
-            build(self.root, plan, self.vault)
+        result = build(self.root, plan, self.vault)
         self.assertTrue((self.root/'a.png').is_file())
-        self.assertIn('![icon]', (self.root/'source.md').read_text())
+        self.assertNotIn('![icon]', (self.root/'source.md').read_text())
+        self.assertFalse(result['attachment_actions'][0]['deleted'])
+        self.assertIn('incomplete reference scan', result['attachment_actions'][0]['reason'])
 
     def test_unrelated_footnote_allows_rebuild_but_its_inbound_link_protects(self):
         build(self.root, self.plan(), self.vault)
@@ -70,7 +72,8 @@ class BuildChunksTests(unittest.TestCase):
         build(self.root, plan, self.vault)
         before = (self.root/'chunks/01-主题.md').read_bytes()
         note.write_text('A fact[^1].\n\n[^1]: [Evidence](<intake/tmp/example/chunks/01-主题.md> "Evidence")\n', encoding='utf-8')
-        plan['chunks'][0]['title'] = 'Another title'
+        self.source('Changed evidence.\nSecond meaningful paragraph.\n')
+        plan = self.plan()
         with self.assertRaisesRegex(ValueError, 'reference to changed chunk'):
             build(self.root, plan, self.vault)
         self.assertEqual(before, (self.root/'chunks/01-主题.md').read_bytes())
@@ -90,10 +93,61 @@ class BuildChunksTests(unittest.TestCase):
     def test_titled_inbound_link_still_protects_changed_chunk(self):
         build(self.root, self.plan(), self.vault)
         (self.vault/'note.md').write_text('[Evidence](<intake/tmp/example/chunks/01-主题.md> "Evidence")', encoding='utf-8')
-        plan = self.plan(); plan['chunks'][0]['title'] = 'Changed title'
+        self.source('Changed evidence.\nSecond meaningful paragraph.\n')
+        plan = self.plan()
         with self.assertRaisesRegex(ValueError, 'reference to changed chunk'):
             build(self.root, plan, self.vault)
         self.assertNotIn('Changed title', (self.root/'chunks/01-主题.md').read_text(encoding='utf-8'))
+
+    def test_title_change_with_incoming_heading_anchor_preserves_old_chunk(self):
+        build(self.root, self.plan(), self.vault)
+        before = (self.root/'chunks/01-主题.md').read_bytes()
+        (self.vault/'reference.md').write_text('[[intake/tmp/example/chunks/01-主题#主题]]', encoding='utf-8')
+        plan = self.plan(); plan['chunks'][0]['title'] = 'Updated heading'
+        with self.assertRaisesRegex(ValueError, 'reference to changed chunk'):
+            build(self.root, plan, self.vault)
+        self.assertEqual(before, (self.root/'chunks/01-主题.md').read_bytes())
+
+    def test_removed_chunk_with_unknown_reference_stays_protected(self):
+        build(self.root, self.plan(), self.vault)
+        (self.vault/'note.md').write_text('<a href="intake/tmp/example/chunks/01-主题.md">source</a>')
+        plan = self.plan(); plan['chunks'][0]['path'] = '02-new.md'
+        with self.assertRaisesRegex(ValueError, 'unsupported reference syntax'):
+            build(self.root, plan, self.vault)
+        self.assertTrue((self.root/'chunks/01-主题.md').exists())
+
+    def test_remote_markup_preserved_and_local_link_rebased(self):
+        text = ('Prose [site](https://example.com "Site title") ![remote](https://example.com/a.png "Title")\n'
+                '<img src="https://example.com/a.png" alt="Figure"> and [local](file.txt)\n'
+                '[angle](<https://example.com> "Title") ![angle image](<https://example.com/a.png> "Title")\n')
+        self.source(text)
+        (self.root/'file.txt').write_text('target')
+        plan = self.plan(); plan['chunks'][0]['end'] = 3
+        build(self.root, plan, self.vault)
+        body = (self.root/'chunks/01-主题.md').read_text(encoding='utf-8')
+        self.assertIn(text.splitlines()[0], body)
+        self.assertIn(text.splitlines()[2], body)
+        self.assertIn('<img src="https://example.com/a.png" alt="Figure">', body)
+        self.assertIn('[local](<../file.txt>)', body)
+        self.assertEqual(text, (self.root/'source.md').read_text(encoding='utf-8'))
+
+    def test_local_html_image_remains_actionable(self):
+        for tag in ('<img src="local.png">', '<img src="https://example.com/a.png" srcset="local.png 2x">'):
+            self.source('Meaningful prose ' + tag + '\nMore prose.\n')
+            with self.subTest(tag=tag), self.assertRaisesRegex(ValueError, 'unsupported image syntax'):
+                build(self.root, self.plan(), self.vault)
+
+    def test_same_chunk_footnote_works_and_split_dependency_fails(self):
+        text = 'A meaningful fact[^a].\n\n[^a]: Complete supporting explanation.\n'
+        self.source(text)
+        plan = self.plan(); plan['chunks'][0]['end'] = 3
+        build(self.root, plan, self.vault)
+        self.assertIn(text, (self.root/'chunks/01-主题.md').read_text(encoding='utf-8'))
+        plan['chunks'] = [dict(path='01-主题.md', title='主题', start=1, end=2),
+                          dict(path='02-说明.md', title='说明', start=3, end=3)]
+        with self.assertRaisesRegex(ValueError, 'reference and definition in the same chunk'):
+            build(self.root, plan, self.vault)
+        self.assertIn(text, (self.root/'chunks/01-主题.md').read_text(encoding='utf-8'))
 
     def test_complete_build_keeps_source_and_recovery(self):
         before = (self.root/'source.md').read_bytes()

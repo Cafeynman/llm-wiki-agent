@@ -31,7 +31,7 @@ The capture under `inbox/web/` is the lifecycle source artifact. It leaves `inbo
 
 ## Temporary Extraction
 
-Intake first stages Markdown files or extracts non-Markdown originals into temporary Markdown. Provider-returned attachments stay under the same temporary source folder and are promoted or deleted with it:
+Intake first stages Markdown files or extracts non-Markdown originals into temporary Markdown. Provider-returned attachments stay under the same temporary source folder and follow its promotion, pending-review retention, or terminal cleanup:
 
 ```text
 .
@@ -96,7 +96,7 @@ Then run Source Review Gate on the temporary Markdown and optional digests:
 | `paper.pdf` | `intake/tmp/paper/source.md`, chunks, digest | `digested` | Promote to `intake/processed/`, move original to `raw/digested/`, clean `intake/tmp/`, update wiki |
 | `notes.md` | `intake/tmp/notes/source.md` | `digested` | Promote to `intake/processed/`, move original to `raw/digested/`, clean `intake/tmp/`, update wiki |
 | `bundle/report.pdf` | `intake/tmp/bundle/report/source.md` | `digested` | Promote to `intake/processed/bundle/report/`, move original to `raw/digested/bundle/report.pdf`, create `wiki/sources/bundle/report.md` |
-| `slides.pptx` | `intake/tmp/slides/source.md`, digest | `needs-review` | Move original to `raw/needs-review/`, record the question, clean `intake/tmp/` |
+| `slides.pptx` | `intake/tmp/slides/source.md`, digest | `needs-review` | Move original to `raw/needs-review/`, record the question, retain useful `intake/tmp/` output |
 | `duplicate.html` | `intake/tmp/duplicate/source.md` | `ignored` | Move original to `raw/ignored/`, log the reason, clean `intake/tmp/` |
 | `corrupted.pdf` | extraction failure | `unsupported` | Move original to `raw/unsupported/`, log the blocker |
 
@@ -120,6 +120,10 @@ After accepted files are ingested:
 |   `-- unsupported/
 |       `-- corrupted.pdf
 |-- intake/
+|   |-- tmp/
+|   |   `-- slides/
+|   |       |-- source.md
+|   |       `-- digest.md
 |   |-- processed/
 |   |   |-- paper/
 |   |   |   |-- source.md
@@ -161,7 +165,7 @@ After accepted files are ingested:
 
 The important invariant is that source review happens after extraction, because review should judge readable Markdown or digest output. Original files are moved only after extraction and review produce a final decision.
 
-Files in `raw/needs-review/` remain pending until their review question is resolved. They do not update wiki pages, appear as accepted sources, or move to `intake/processed/` until a later review marks them `digested`.
+Files in `raw/needs-review/` remain pending until their review question is resolved. Useful extraction and side outputs may remain in the matching `intake/tmp/` folder and be reused after confirming they belong to the current original. A pending source need not have temporary output. They do not update wiki pages, appear as accepted sources, or move to `intake/processed/` until a later review marks them `digested`.
 
 ## Check one completed source
 

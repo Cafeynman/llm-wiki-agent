@@ -38,7 +38,7 @@ For provider CLIs, exit code `0` means every requested item produced its current
 
 For the initial live-URL flow, Defuddle instead returns structured Markdown and page metadata to the caller, which serializes the lifecycle source capture under `inbox/web/`. Intake then stages that capture unchanged as `source.md`; it does not run Defuddle a second time.
 
-Provider-returned images and attachments may be stored under the same intake folder as `source.md`, normally under `images/`. They are passive source side outputs, not first-class wiki knowledge. Promote them with an accepted intake folder or delete them with temporary output for every other outcome. Record accepted paths in `manifest.md`; record relevant disposition in source review or intake logs before deleting non-accepted output.
+Provider-returned images and attachments may be stored under the same intake folder as `source.md`, normally under `images/`. They are passive source side outputs, not first-class wiki knowledge. Handle their promotion, pending-review retention, or cleanup with the intake folder according to `intake-lifecycle.md`. Record accepted paths in `manifest.md`; record relevant disposition in source review or intake logs before deleting non-accepted output.
 
 Providers must preserve source-derived text and labels as content. Do not remove or normalize punctuation, YAML indicator characters, Markdown control characters, or filename characters from extracted titles, headings, paths, or body text. When provider metadata or source-derived strings are later written into YAML frontmatter, Markdown tables, wikilinks, or command examples, the writer must quote, escape, or encode them for that target syntax without changing the underlying value.
 

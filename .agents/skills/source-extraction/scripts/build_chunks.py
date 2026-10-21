@@ -19,7 +19,7 @@ from chunk_contract import INDEX_COLUMNS, parse_index_text, valid_chunk_componen
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'obsidian-wiki-lint' / 'scripts'))
 from markdown_code import mask_markdown_code
 from obsidian_links import WIKILINK_RE, parse_wikilink_inner
-from lint_wiki import MD_LINK_RE, build_lookup, resolve_target, resolve_markdown_target
+from lint_wiki import MD_LINK_RE, build_lookup, resolve_target, resolve_markdown_target, lint_footnote_references
 
 INLINE_LINK = re.compile(r'!?\[([^\]\n]*)\]\((<[^>\n]+>|[^\s()]+)\)')
 
@@ -105,13 +105,29 @@ def safe_relative(value):
     return path
 
 
+def mask_external_links(text):
+    """Mask location-independent forms without changing the copied source text."""
+    spans = [m.span() for m in MD_LINK_RE.finditer(text)
+             if re.match(r'^[a-zA-Z][\w+.-]*:', m.group(1).strip().strip('<>'))]
+    # Only a plain remote src is proved independent of the chunk location.
+    for match in re.finditer(r'<img\b[^>]*>', text, re.I):
+        tag = match.group()
+        if not re.search(r'\bsrcset\s*=', tag, re.I) and re.search(
+                r"\ssrc\s*=\s*([\"'])https?://[^\"']+\1", tag, re.I):
+            spans.append(match.span())
+    result = list(text)
+    for start, end in spans:
+        result[start:end] = ' ' * (end - start)
+    return ''.join(result)
+
+
 def images(text, name):
     masked = mask_markdown_code(text)
     matches = list(IMAGE.finditer(masked))
     rest = list(masked)
     for match in matches:
         rest[match.start():match.end()] = ' ' * (match.end()-match.start())
-    if re.search(r'!\[|<img\b|<picture\b', ''.join(rest), re.I):
+    if re.search(r'!\[|<img\b|<picture\b', mask_external_links(''.join(rest)), re.I):
         fail(f'{name}: unsupported image syntax; use simple inline Markdown images before building')
     return matches
 
@@ -169,7 +185,7 @@ def chunk_body(text, start, end, title, depth):
         replacement = '![' + match.group(1) + '](<' + '../' * depth + value + '>)'
         body = body[:match.start()] + replacement + body[match.end():]
     # Reject unparsed inline forms (e.g. optional titles) before moving text.
-    masked = mask_markdown_code(body)
+    masked = mask_external_links(mask_markdown_code(body))
     remainder = list(masked)
     for match in INLINE_LINK.finditer(masked):
         remainder[match.start():match.end()] = ' ' * (match.end()-match.start())
@@ -183,8 +199,11 @@ def chunk_body(text, start, end, title, depth):
             continue
         replacement = '[' + match.group(1) + '](<' + '../' * depth + value + '>)'
         body = body[:match.start()] + replacement + body[match.end():]
-    if re.search(r'(?m)^\s*\[[^]\n]+\]:', masked):
+    if re.search(r'(?m)^\s*\[(?!\^)[^]\n]+\]:', masked):
         fail(f'lines {start}-{end}: reference-style links require explicit normalization before chunking')
+    missing_footnotes = lint_footnote_references(body, f'lines {start}-{end}')
+    if missing_footnotes:
+        fail(missing_footnotes[0] + '; keep the reference and definition in the same chunk')
     return f'# {title}\n\n<!-- source-lines: {start}-{end} -->\n\n' + body
 
 
@@ -383,10 +402,15 @@ def _build(root, plan, vault):
             for old_index in old_chunks.rglob('index.md'):
                 if not (stage/'chunks'/old_index.relative_to(old_chunks)).exists():
                     changed_old.add(old_index)
-        references, unsupported = {}, []
+        references, unsupported, incomplete_scan = {}, [], ''
         if changed_old or any(record.get('delete_file') is True for record in records):
-            documents = vault_documents(vault, root, stage)
-            references, unsupported = reference_paths(vault, documents)
+            try:
+                documents = vault_documents(vault, root, stage)
+                references, unsupported = reference_paths(vault, documents)
+            except (OSError, UnicodeError, ValueError) as error:
+                if changed_old:
+                    raise
+                incomplete_scan = f'incomplete reference scan: {error}'
         for old in changed_old:
             incoming = [path for path in references.get(old.resolve(), []) if not path.is_relative_to(old_chunks)]
             if incoming:
@@ -407,7 +431,7 @@ def _build(root, plan, vault):
             if not staged_asset.is_relative_to(stage):
                 fail(f'physical deletion outside source folder: {asset}')
             incoming = references.get(original_asset, [])
-            reason = ('retained reference: ' + str(incoming[0])) if incoming else ('unsupported reference syntax: ' + str(unsupported[0])) if unsupported else ''
+            reason = ('retained reference: ' + str(incoming[0])) if incoming else ('unsupported reference syntax: ' + str(unsupported[0])) if unsupported else incomplete_scan
             if not reason:
                 asset_name = Path(asset).name
                 forms = [asset_name.casefold(), quote(asset_name).casefold(), json.dumps(asset_name, ensure_ascii=True)[1:-1].casefold()]
