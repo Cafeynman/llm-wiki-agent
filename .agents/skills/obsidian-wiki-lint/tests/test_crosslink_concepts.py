@@ -108,6 +108,31 @@ class TestCrosslinkConcepts(unittest.TestCase):
             )
             self.assertIn("]]. Target Term.", updated)
 
+    def test_noncanonical_vault_path_produces_vault_relative_links(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            vault = Path(tmp)
+            concepts_dir = Path("wiki/concepts")
+            concepts_abs = vault / concepts_dir
+            concepts_abs.mkdir(parents=True)
+            (concepts_abs / "target.md").write_text("# Target\n", encoding="utf-8")
+            source = concepts_abs / "source.md"
+            source.write_text("See target.\n", encoding="utf-8")
+            # An existing path with '..' exercises normalization on every OS,
+            # including hosts without permission to create directory symlinks.
+            vault_alias = vault / "wiki" / ".."
+
+            with self.subTest(operation="build_concepts"):
+                concepts = crosslink_concepts.build_concepts(vault_alias, concepts_dir, {})
+                self.assertIn(Concept("target", "wiki/concepts/target"), concepts)
+
+            with self.subTest(operation="crosslink"), patch("builtins.print"):
+                result = crosslink_concepts.crosslink(vault_alias, concepts_dir, None, 2, True)
+                self.assertEqual(result, 0)
+                self.assertEqual(
+                    source.read_text(encoding="utf-8"),
+                    "See [[wiki/concepts/target|target]].\n",
+                )
+
     def test_duplicate_concept_term_is_reported_and_skipped(self):
         with tempfile.TemporaryDirectory() as tmp:
             vault = Path(tmp)

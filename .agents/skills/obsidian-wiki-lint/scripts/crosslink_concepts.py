@@ -42,6 +42,7 @@ def load_aliases(alias_file: Path | None) -> dict[str, str]:
 
 
 def build_concepts(vault: Path, concepts_dir: Path, aliases: dict[str, str]) -> list[Concept]:
+    vault = vault.resolve()
     concepts_abs = (vault / concepts_dir).resolve()
     by_title: dict[str, set[str]] = defaultdict(set)
     by_target: set[str] = set()
@@ -156,6 +157,7 @@ def crosslink_file(
 
 
 def crosslink(vault: Path, concepts_dir: Path, alias_file: Path | None, max_per_concept: int, write: bool) -> int:
+    vault = vault.resolve()
     aliases = load_aliases(alias_file)
     concepts = build_concepts(vault, concepts_dir, aliases)
     concepts_abs = (vault / concepts_dir).resolve()
