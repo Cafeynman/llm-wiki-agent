@@ -26,6 +26,75 @@ class BuildChunksTests(unittest.TestCase):
     def plan(self):
         return {'source_sha256': hashlib.sha256((self.root/'source.md').read_bytes()).hexdigest(), 'chunks': [{'path':'01-主题.md','title':'主题','start':1,'end':2}]}
 
+    def test_first_build_and_unchanged_rebuild_ignore_unrelated_invalid_utf8(self):
+        (self.vault/'unrelated.md').write_bytes(b'\xff')
+        build(self.root, self.plan(), self.vault)
+        before = (self.root/'chunks/01-主题.md').read_bytes()
+        build(self.root, self.plan(), self.vault)
+        self.assertEqual(before, (self.root/'chunks/01-主题.md').read_bytes())
+
+    def test_first_build_ignores_unrelated_linked_document(self):
+        import build_chunks
+        note = self.vault/'unrelated.md'
+        note.write_text('Unrelated text', encoding='utf-8')
+        with patch.object(build_chunks, 'linked_boundary', side_effect=lambda p: p == note):
+            build(self.root, self.plan(), self.vault)
+        self.assertTrue((self.root/'chunks/01-主题.md').is_file())
+
+    def test_changed_chunk_still_requires_readable_vault(self):
+        build(self.root, self.plan(), self.vault)
+        before = (self.root/'chunks/01-主题.md').read_bytes()
+        (self.vault/'unrelated.md').write_bytes(b'\xff')
+        plan = self.plan(); plan['chunks'][0]['title'] = 'Changed title'
+        with self.assertRaises(UnicodeError):
+            build(self.root, plan, self.vault)
+        self.assertEqual(before, (self.root/'chunks/01-主题.md').read_bytes())
+
+    def test_physical_delete_still_requires_complete_scan(self):
+        self.source('Paragraph ![icon](a.png)\nOther prose.\n')
+        (self.root/'a.png').write_bytes(b'image')
+        (self.vault/'unrelated.md').write_bytes(b'\xff')
+        plan = self.plan()
+        plan['images'] = [{'file':'source.md', 'occurrence':1, 'expected':'a.png', 'action':'delete',
+                           'authorized':True, 'reason':'decoration', 'delete_file':True}]
+        with self.assertRaises(UnicodeError):
+            build(self.root, plan, self.vault)
+        self.assertTrue((self.root/'a.png').is_file())
+        self.assertIn('![icon]', (self.root/'source.md').read_text())
+
+    def test_unrelated_footnote_allows_rebuild_but_its_inbound_link_protects(self):
+        build(self.root, self.plan(), self.vault)
+        note = self.vault/'note.md'
+        note.write_text('A fact[^1].\n\n[^1]: Supporting explanation.\n', encoding='utf-8')
+        plan = self.plan(); plan['chunks'][0]['title'] = 'Changed title'
+        build(self.root, plan, self.vault)
+        before = (self.root/'chunks/01-主题.md').read_bytes()
+        note.write_text('A fact[^1].\n\n[^1]: [Evidence](<intake/tmp/example/chunks/01-主题.md> "Evidence")\n', encoding='utf-8')
+        plan['chunks'][0]['title'] = 'Another title'
+        with self.assertRaisesRegex(ValueError, 'reference to changed chunk'):
+            build(self.root, plan, self.vault)
+        self.assertEqual(before, (self.root/'chunks/01-主题.md').read_bytes())
+        for reference in ('[ref]: https://example.test', '[Evidence][ref]'):
+            note.write_text(reference, encoding='utf-8')
+            with self.subTest(reference=reference), self.assertRaisesRegex(ValueError, 'unsupported reference syntax'):
+                build(self.root, plan, self.vault)
+            self.assertEqual(before, (self.root/'chunks/01-主题.md').read_bytes())
+
+    def test_unrelated_titled_external_link_allows_changed_chunk(self):
+        build(self.root, self.plan(), self.vault)
+        (self.vault/'note.md').write_text('[Help](<https://example.test/help> "Help title")', encoding='utf-8')
+        plan = self.plan(); plan['chunks'][0]['title'] = 'Changed title'
+        build(self.root, plan, self.vault)
+        self.assertIn('Changed title', (self.root/'chunks/01-主题.md').read_text(encoding='utf-8'))
+
+    def test_titled_inbound_link_still_protects_changed_chunk(self):
+        build(self.root, self.plan(), self.vault)
+        (self.vault/'note.md').write_text('[Evidence](<intake/tmp/example/chunks/01-主题.md> "Evidence")', encoding='utf-8')
+        plan = self.plan(); plan['chunks'][0]['title'] = 'Changed title'
+        with self.assertRaisesRegex(ValueError, 'reference to changed chunk'):
+            build(self.root, plan, self.vault)
+        self.assertNotIn('Changed title', (self.root/'chunks/01-主题.md').read_text(encoding='utf-8'))
+
     def test_complete_build_keeps_source_and_recovery(self):
         before = (self.root/'source.md').read_bytes()
         result = build(self.root, self.plan(), self.vault)
@@ -171,7 +240,7 @@ class BuildChunksTests(unittest.TestCase):
         plan['images']=[{'file':'source.md','occurrence':1,'expected':'a.png','action':'delete','authorized':True,'reason':'decoration','delete_file':True}]
         result=build(self.root,plan,self.vault)
         self.assertTrue((self.root/'a.png').exists())
-        self.assertIn('unsupported',result['attachment_actions'][0]['reason'])
+        self.assertIn('retained reference',result['attachment_actions'][0]['reason'])
 
     def test_titled_source_link_rejected_before_moving(self):
         self.source('Paragraph [diagram](a.png "Diagram title")\nOther prose.\n')

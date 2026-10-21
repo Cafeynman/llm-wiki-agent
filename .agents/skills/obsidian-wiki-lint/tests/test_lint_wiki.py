@@ -20,6 +20,42 @@ class TestLintWiki(unittest.TestCase):
     def tearDown(self):
         self.temp_dir.cleanup()
         
+    def test_intake_preserves_source_text_but_checks_authored_records(self):
+        source_text = 'Original example: raw/digested/example.pdf and footnote[^missing].'
+        folder = self.vault/'intake/processed/parent/manual'
+        folder.mkdir(parents=True)
+        (folder/'source.md').write_text(source_text, encoding='utf-8')
+        for name in ('source.md', 'chunks/01-body.md', 'provider/output.md'):
+            page = folder/name
+            page.parent.mkdir(parents=True, exist_ok=True)
+            page.write_text(source_text, encoding='utf-8')
+            with self.subTest(name=name), patch('builtins.print'):
+                self.assertEqual(lint_wiki.lint(self.vault, page.relative_to(self.vault).as_posix()), 0)
+        for name in ('summary.md', 'manifest.md', 'digest.md', 'chunks/index.md', 'chunks/01-group/index.md'):
+            page = folder/name
+            page.parent.mkdir(parents=True, exist_ok=True)
+            page.write_text(source_text, encoding='utf-8')
+            with self.subTest(name=name), patch('builtins.print'):
+                self.assertEqual(lint_wiki.lint(self.vault, page.relative_to(self.vault).as_posix()), 1)
+
+    def test_intake_source_and_provider_links_remain_checked(self):
+        folder = self.vault/'intake/processed/manual'
+        folder.mkdir(parents=True)
+        (folder/'source.md').write_text('Source text', encoding='utf-8')
+        for name in ('source.md', 'provider.md'):
+            page = folder/name
+            page.write_text('[Missing](missing.png)', encoding='utf-8')
+            with self.subTest(name=name), patch('builtins.print'):
+                self.assertEqual(lint_wiki.lint(self.vault, page.relative_to(self.vault).as_posix()), 1)
+
+    def test_incomplete_intake_and_ordinary_pages_keep_page_rules(self):
+        for name in ('intake/processed/missing/provider.md', 'intake/processed/missing/manifest.md', 'docs/source.md', 'wiki/source.md'):
+            page = self.vault/name
+            page.parent.mkdir(parents=True, exist_ok=True)
+            page.write_text('Original example: raw/digested/example.pdf', encoding='utf-8')
+            with self.subTest(name=name), patch('builtins.print'):
+                self.assertEqual(lint_wiki.lint(self.vault, page.relative_to(self.vault).as_posix()), 1)
+
     def test_attachment_not_flagged_broken(self):
         # Create a note
         note_path = self.vault / "wiki" / "note.md"

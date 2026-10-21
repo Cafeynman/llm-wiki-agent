@@ -171,4 +171,6 @@ Intake 先暂存 Markdown 文件，或将非 Markdown 原始文件提取为临�
 uv run --no-project .agents/skills/source-extraction/scripts/audit_source_closeout.py raw/digested/manual.pdf --vault . --json
 ```
 
+保留 ingest 前的局部 intake lint 和 ingest 后的收尾检查。两者统一的是页面规则边界：保留来源原文语法，对编写的 intake 维护记录应用页面规则。收尾检查还会核对 frontmatter 中的 intake 溯源链接；局部 lint 的导航诊断会排除这些链接。
+
 检查组合来源状态、已有 intake 与 chunk 审计和相关链接，不修复文件，也不因其他来源尚未完成而阻塞当前来源。通过只说明结构检查没有发现错误，不代表提取完整性或知识质量已获确认。收尾检查的边界与按来源、章节委托的写入责任，见 source-extraction 的 `references/intake-lifecycle.md`。

@@ -19,7 +19,7 @@ from chunk_contract import INDEX_COLUMNS, parse_index_text, valid_chunk_componen
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'obsidian-wiki-lint' / 'scripts'))
 from markdown_code import mask_markdown_code
 from obsidian_links import WIKILINK_RE, parse_wikilink_inner
-from lint_wiki import build_lookup, resolve_target, resolve_markdown_target
+from lint_wiki import MD_LINK_RE, build_lookup, resolve_target, resolve_markdown_target
 
 INLINE_LINK = re.compile(r'!?\[([^\]\n]*)\]\((<[^>\n]+>|[^\s()]+)\)')
 
@@ -53,8 +53,8 @@ def reference_paths(vault, documents):
                 for candidate in by_stem[Path(value).stem]:
                     references.setdefault((vault/candidate).resolve(), []).append(path)
             spans.append(match.span())
-        for match in INLINE_LINK.finditer(masked):
-            value = unquote(match.group(2).strip('<>')).split('#', 1)[0]
+        for match in MD_LINK_RE.finditer(masked):
+            value = match.group(1).strip()
             if value and not re.match(r'^[a-zA-Z][\w+.-]*:', value):
                 resolution = resolve_markdown_target(vault, rel, value, all_files)
                 if resolution:
@@ -63,7 +63,9 @@ def reference_paths(vault, documents):
         remainder = list(masked)
         for start, end in spans:
             remainder[start:end] = ' ' * (end-start)
-        if re.search(r'!?\[[^\n\]]+\]\s*(?:\[[^\n]*\]|:)|\]\s*\(|!\[|<(?:img|a|picture)\b', ''.join(remainder), re.I):
+        # Footnote labels are not link definitions; keep their body for reference checks.
+        remaining = re.sub(r'(?m)^[ \t]{0,3}\[\^[^\]\n]+\]:', '', ''.join(remainder))
+        if re.search(r'!?\[[^\n\]]+\]\s*(?:\[[^\n]*\]|:)|\]\s*\(|!\[|<(?:img|a|picture)\b', remaining, re.I):
             unsupported.append(path)
     return references, unsupported
 
@@ -381,8 +383,10 @@ def _build(root, plan, vault):
             for old_index in old_chunks.rglob('index.md'):
                 if not (stage/'chunks'/old_index.relative_to(old_chunks)).exists():
                     changed_old.add(old_index)
-        documents = vault_documents(vault, root, stage)
-        references, unsupported = reference_paths(vault, documents)
+        references, unsupported = {}, []
+        if changed_old or any(record.get('delete_file') is True for record in records):
+            documents = vault_documents(vault, root, stage)
+            references, unsupported = reference_paths(vault, documents)
         for old in changed_old:
             incoming = [path for path in references.get(old.resolve(), []) if not path.is_relative_to(old_chunks)]
             if incoming:

@@ -152,7 +152,7 @@ def inspect_closeout(vault: Path, source: str) -> dict:
             lookup = None
             for path, content in texts.items():
                 rel = path.relative_to(vault).as_posix()
-                maintained = path == card or path in {accepted / name for name in ("summary.md", "manifest.md", "digest.md")} or (path.name == "index.md" and path.is_relative_to(accepted / "chunks"))
+                maintained = lint.uses_page_contract(vault, path)
                 if maintained:
                     for check in (lint.lint_frontmatter_sources, lint.lint_frontmatter_tags, lint.lint_table_wikilink_aliases, lint.lint_bare_traceability_paths, lint.lint_footnote_references, lint.lint_source_card_placeholders):
                         for message in check(content, rel):

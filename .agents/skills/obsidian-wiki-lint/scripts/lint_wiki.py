@@ -558,6 +558,23 @@ def resolve_markdown_target(
     return normalized, False
 
 
+def uses_page_contract(vault: Path, path: Path) -> bool:
+    """Preserved intake text keeps source syntax; authored records use page rules."""
+    relative = path.relative_to(vault)
+    if relative.parts[:2] != ("intake", "processed"):
+        return True
+    intake_base = vault / Path(*relative.parts[:2])
+    for folder in path.parents:
+        if folder == intake_base:
+            break
+        if (folder / "source.md").is_file():
+            local = path.relative_to(folder)
+            return (local.as_posix() in {"summary.md", "manifest.md", "digest.md"}
+                    or (local.parts[0] == "chunks" and local.name == "index.md"))
+    # Incomplete or unrecognized intake folders get the ordinary checks.
+    return True
+
+
 def lint(vault: Path, scope: str) -> int:
     markdown_files = iter_markdown_files(vault)
     all_files, by_stem = build_lookup(markdown_files, vault)
@@ -586,12 +603,13 @@ def lint(vault: Path, scope: str) -> int:
             continue
         link_content = mask_markdown_code(content)
         ignored_frontmatter_intake_links = frontmatter_intake_source_link_spans(content)
-        frontmatter_source_errors.extend(lint_frontmatter_sources(content, rel))
-        frontmatter_tag_errors.extend(lint_frontmatter_tags(content, rel))
-        table_wikilink_errors.extend(lint_table_wikilink_aliases(content, rel))
-        traceability_path_errors.extend(lint_bare_traceability_paths(content, rel))
-        footnote_reference_errors.extend(lint_footnote_references(content, rel))
-        source_card_placeholder_errors.extend(lint_source_card_placeholders(content, rel))
+        if uses_page_contract(vault, vault / rel):
+            frontmatter_source_errors.extend(lint_frontmatter_sources(content, rel))
+            frontmatter_tag_errors.extend(lint_frontmatter_tags(content, rel))
+            table_wikilink_errors.extend(lint_table_wikilink_aliases(content, rel))
+            traceability_path_errors.extend(lint_bare_traceability_paths(content, rel))
+            footnote_reference_errors.extend(lint_footnote_references(content, rel))
+            source_card_placeholder_errors.extend(lint_source_card_placeholders(content, rel))
         for match in WIKILINK_RE.finditer(link_content):
             if match.span() in ignored_frontmatter_intake_links:
                 continue

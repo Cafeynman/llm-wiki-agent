@@ -40,6 +40,18 @@ class CloseoutTest(unittest.TestCase):
     def codes(self):
         return {issue['code'] for issue in self.inspect()['errors']}
 
+    def test_pre_ingest_and_closeout_share_preserved_text_boundary(self):
+        original = '# Source\nOriginal example raw/digested/example.pdf and footnote[^missing].\n'
+        self.write(self.accepted + 'source.md', original * 8)
+        self.write(self.accepted + 'provider/part.md', original)
+        with patch('builtins.print'):
+            self.assertEqual(audit.lint.lint(self.vault, self.accepted.rstrip('/')), 0)
+        self.assertEqual(self.inspect()['status'], 'pass')
+        self.write(self.accepted + 'manifest.md', original)
+        with patch('builtins.print'):
+            self.assertEqual(audit.lint.lint(self.vault, self.accepted.rstrip('/')), 1)
+        self.assertIn('markdown_contract', self.codes())
+
     def test_complete_source_passes_without_mutation(self):
         before = {p.relative_to(self.vault): p.read_bytes() for p in self.vault.rglob('*') if p.is_file()}
         result = self.inspect()

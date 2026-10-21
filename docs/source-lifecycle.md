@@ -171,4 +171,6 @@ After source handling is complete, run the scoped read-only check with the final
 uv run --no-project .agents/skills/source-extraction/scripts/audit_source_closeout.py raw/digested/manual.pdf --vault . --json
 ```
 
+Keep the focused intake lint before ingest and this closeout after ingest. They share the page-rule boundary: preserve source syntax and apply page rules to authored intake records. Closeout additionally verifies frontmatter intake traceability links that focused lint excludes from navigation diagnostics.
+
 The check combines lifecycle structure, existing intake and chunk audits, and relevant links without repairing files or blocking on another source's unfinished work. A pass is structural evidence, not a judgment of extraction completeness or knowledge quality. See source-extraction's `references/intake-lifecycle.md` for closeout limits and source/chapter delegation ownership.
