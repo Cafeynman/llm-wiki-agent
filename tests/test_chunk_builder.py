@@ -110,7 +110,7 @@ class BuildChunksTests(unittest.TestCase):
 
     def test_removed_chunk_with_unknown_reference_stays_protected(self):
         build(self.root, self.plan(), self.vault)
-        (self.vault/'note.md').write_text('<a href="intake/tmp/example/chunks/01-主题.md">source</a>')
+        (self.vault/'note.md').write_text('<a href="intake/tmp/example/chunks/01-主题.md">source</a>', encoding='utf-8')
         plan = self.plan(); plan['chunks'][0]['path'] = '02-new.md'
         with self.assertRaisesRegex(ValueError, 'unsupported reference syntax'):
             build(self.root, plan, self.vault)

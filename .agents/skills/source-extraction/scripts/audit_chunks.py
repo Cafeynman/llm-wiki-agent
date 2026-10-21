@@ -327,7 +327,11 @@ def inspect_chunks(root: Path, minimum: int, maximum: int) -> dict:
         if not root_index.is_file():
             errors.append(issue("missing_chunks_index", root_index, root, "chunks/index.md is required"))
         else:
-            leaf_files = sorted(path for path in chunks_dir.rglob("*.md") if path.name != "index.md")
+            leaf_files = sorted(
+                path
+                for path in chunks_dir.rglob("*")
+                if path.is_file() and path.suffix.lower() == ".md" and path.name != "index.md"
+            )
             if not leaf_files:
                 errors.append(
                     issue(
