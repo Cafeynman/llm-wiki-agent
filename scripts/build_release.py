@@ -139,7 +139,7 @@ def main():
         output = args.output
         if output is None:
             try:
-                entered = input(f'保存目录（留空使用当前目录 {Path.cwd()}）：').strip()
+                entered = input(f'Output directory (blank uses current directory {Path.cwd()}): ').strip()
             except EOFError:
                 raise ValueError('No output directory input; pass --output PATH for non-interactive use') from None
             output = Path(entered) if entered else Path.cwd()

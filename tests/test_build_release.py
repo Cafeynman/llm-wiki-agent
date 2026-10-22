@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -98,6 +99,8 @@ class ReleaseBuildTest(unittest.TestCase):
     def test_cli_output_prompt_and_explicit_directory(self):
         script = self.root / 'scripts/build_release.py'
         script.write_bytes((ROOT / 'scripts/build_release.py').read_bytes())
+        # Exercise redirected Windows-style output even on UTF-8 developer hosts.
+        environment = dict(os.environ, PYTHONIOENCODING='cp1252')
         for case, args, entered, directory in (
             ('blank', [], '\n', '.'),
             ('entered', [], 'chosen directory\n', 'chosen directory'),
@@ -107,11 +110,11 @@ class ReleaseBuildTest(unittest.TestCase):
                 caller = Path(self.temporary.name) / case
                 caller.mkdir()
                 result = subprocess.run([sys.executable, str(script), *args], cwd=caller,
-                                        input=entered, capture_output=True, text=True)
+                                        input=entered, capture_output=True, encoding='cp1252', env=environment)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(len(list((caller / directory).glob('llm-wiki-agent-*'))), 4)
         result = subprocess.run([sys.executable, str(script)], cwd=self.root,
-                                input='', capture_output=True, text=True)
+                                input='', capture_output=True, encoding='cp1252', env=environment)
         self.assertEqual(result.returncode, 1)
         self.assertIn('pass --output PATH', result.stderr)
 
