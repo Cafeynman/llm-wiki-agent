@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+from html import escape, unescape
+from html.parser import HTMLParser
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -10,7 +12,7 @@ import re
 import shutil
 import sys
 import tempfile
-from urllib.parse import unquote, quote
+from urllib.parse import unquote, quote, urlsplit
 
 from audit_chunks import inspect_chunks, size_kind
 from audit_intake_file import content_units, extract_headings, DEFAULT_LARGE_SOURCE_THRESHOLD
@@ -22,6 +24,47 @@ from obsidian_links import WIKILINK_RE, parse_wikilink_inner
 from lint_wiki import MD_LINK_RE, build_lookup, resolve_target, resolve_markdown_target, lint_footnote_references
 
 INLINE_LINK = re.compile(r'!?\[([^\]\n]*)\]\((<[^>\n]+>|[^\s()]+)\)')
+HTML_ATTRIBUTE = re.compile(r'''([^\s/=>]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?''')
+HTML_WHITESPACE = ' \t\n\r\f'
+
+
+class ImageTags(HTMLParser):
+    """Locate src values without serializing or normalizing HTML."""
+    def __init__(self, text, name):
+        super().__init__(convert_charrefs=False)
+        self.name, self.tags = name, []
+        self.line_offsets = [0]
+        self.line_offsets.extend(match.end() for match in re.finditer('\n', text))
+        self.feed(text)
+        self.close()
+
+    def handle_starttag(self, tag, attrs):
+        if tag != 'img':
+            return
+        raw = self.get_starttag_text()
+        line, column = self.getpos()
+        offset = self.line_offsets[line-1] + column
+        if any(key == 'srcset' for key, _ in attrs):
+            fail(f'{self.name}:{line}: img srcset is unsupported; resolve its image candidates before building')
+        sources = [m for m in HTML_ATTRIBUTE.finditer(raw, 4) if m.group(1).lower() == 'src']
+        if len(sources) != 1:
+            fail(f'{self.name}:{line}: img requires one nonempty src')
+        match = sources[0]
+        group = next((i for i in (2, 3, 4) if match.group(i) is not None), None)
+        value = unescape(match.group(group)).strip(HTML_WHITESPACE) if group else ''
+        if not value:
+            fail(f'{self.name}:{line}: img requires one nonempty src')
+        self.tags.append((offset, offset+len(raw), offset+match.start(group),
+                          offset+match.end(group), value))
+
+
+def html_images(text, name):
+    return ImageTags(mask_markdown_code(text), name).tags
+
+
+def local_html_path(value):
+    url = urlsplit(value)
+    return unquote(url.path) if not url.scheme and not url.netloc and url.path else None
 
 
 def linked_boundary(path):
@@ -60,6 +103,15 @@ def reference_paths(vault, documents):
                 if resolution:
                     references.setdefault((vault/resolution[0]).resolve(), []).append(path)
             spans.append(match.span())
+        try:
+            tags = html_images(masked, rel)
+        except ValueError:
+            tags = []  # Keep unsupported markup visible to the conservative scan below.
+        for start, end, _, _, value in tags:
+            local = local_html_path(value)
+            if local:
+                references.setdefault((path.parent/local).resolve(), []).append(path)
+            spans.append((start, end))
         remainder = list(masked)
         for start, end in spans:
             remainder[start:end] = ' ' * (end-start)
@@ -109,12 +161,6 @@ def mask_external_links(text):
     """Mask location-independent forms without changing the copied source text."""
     spans = [m.span() for m in MD_LINK_RE.finditer(text)
              if re.match(r'^[a-zA-Z][\w+.-]*:', m.group(1).strip().strip('<>'))]
-    # Only a plain remote src is proved independent of the chunk location.
-    for match in re.finditer(r'<img\b[^>]*>', text, re.I):
-        tag = match.group()
-        if not re.search(r'\bsrcset\s*=', tag, re.I) and re.search(
-                r"\ssrc\s*=\s*([\"'])https?://[^\"']+\1", tag, re.I):
-            spans.append(match.span())
     result = list(text)
     for start, end in spans:
         result[start:end] = ' ' * (end - start)
@@ -123,11 +169,15 @@ def mask_external_links(text):
 
 def images(text, name):
     masked = mask_markdown_code(text)
-    matches = list(IMAGE.finditer(masked))
     rest = list(masked)
+    for start, end, _, _, _ in html_images(masked, name):
+        rest[start:end] = ' ' * (end-start)
+    matches = list(IMAGE.finditer(''.join(rest)))
     for match in matches:
         rest[match.start():match.end()] = ' ' * (match.end()-match.start())
-    if re.search(r'!\[|<img\b|<picture\b', mask_external_links(''.join(rest)), re.I):
+    # HTMLParser ignores comments; commented tags are not unsupported live images.
+    remaining = re.sub(r'<!--.*?-->', '', ''.join(rest), flags=re.S)
+    if re.search(r'!\[|<img\b|<picture\b', mask_external_links(remaining), re.I):
         fail(f'{name}: unsupported image syntax; use simple inline Markdown images before building')
     return matches
 
@@ -138,6 +188,13 @@ def target(match):
 
 def rewrite_images(text, name, changes, root, location, record):
     edits = []
+    for _, _, start, _, value in html_images(text, name):
+        local = local_html_path(value)
+        if local:
+            resolved = (location/local).resolve()
+            if not resolved.is_relative_to(root) or not resolved.is_file():
+                line = text.count('\n', 0, start)+1
+                fail(f'{name}:{line}: img src missing or outside source folder: {value}')
     for occurrence, match in enumerate(images(text, name), 1):
         old = target(match)
         if not re.match(r'^[a-zA-Z][\w+.-]*:', old) and not old.startswith('#'):
@@ -184,8 +241,19 @@ def chunk_body(text, start, end, title, depth):
             continue
         replacement = '![' + match.group(1) + '](<' + '../' * depth + value + '>)'
         body = body[:match.start()] + replacement + body[match.end():]
+    for _, _, value_start, value_end, value in reversed(html_images(body, f'lines {start}-{end}')):
+        if local_html_path(value) and not value.startswith('/'):
+            replacement = escape('../' * depth + value, quote=True)
+            # Entity-encode whitespace so an originally unquoted src stays valid.
+            replacement = re.sub(r'[ \t\n\r\f]', lambda m: f'&#{ord(m.group())};', replacement)
+            body = body[:value_start] + replacement + body[value_end:]
     # Reject unparsed inline forms (e.g. optional titles) before moving text.
     masked = mask_external_links(mask_markdown_code(body))
+    # HTML attributes can contain Markdown-like text; only src moves.
+    html_mask = list(masked)
+    for tag_start, tag_end, _, _, _ in html_images(body, f'lines {start}-{end}'):
+        html_mask[tag_start:tag_end] = ' ' * (tag_end-tag_start)
+    masked = ''.join(html_mask)
     remainder = list(masked)
     for match in INLINE_LINK.finditer(masked):
         remainder[match.start():match.end()] = ' ' * (match.end()-match.start())

@@ -131,11 +131,139 @@ class BuildChunksTests(unittest.TestCase):
         self.assertIn('[local](<../file.txt>)', body)
         self.assertEqual(text, (self.root/'source.md').read_text(encoding='utf-8'))
 
-    def test_local_html_image_remains_actionable(self):
-        for tag in ('<img src="local.png">', '<img src="https://example.com/a.png" srcset="local.png 2x">'):
-            self.source('Meaningful prose ' + tag + '\nMore prose.\n')
-            with self.subTest(tag=tag), self.assertRaisesRegex(ValueError, 'unsupported image syntax'):
+    def test_html_table_images_rebase_nested_chunks_without_normalizing(self):
+        (self.root/'images').mkdir()
+        (self.root/'images/示意 & 图.png').write_bytes(b'image')
+        for attribute in ('SRC="images/示意%20&amp;%20图.png?size=1&amp;x=2#figure"',
+                          "src='images/示意%20&amp;%20图.png'",
+                          'src=images/示意%20&amp;%20图.png'):
+            text = '<table><tr><td><IMG width="200" '+attribute+' alt="x > y"></td></tr></table>\nMore prose.\n'
+            self.source(text)
+            plan = self.plan(); plan['chunks'][0]['path'] = '01-组/01-主题.md'
+            with self.subTest(attribute=attribute):
+                build(self.root, plan, self.vault)
+                body = (self.root/'chunks/01-组/01-主题.md').read_text(encoding='utf-8')
+                self.assertTrue(body.endswith(text.replace('images/', '../../images/')))
+                self.assertEqual(text, (self.root/'source.md').read_text(encoding='utf-8'))
+
+    def test_multiline_html_tag_and_remote_or_code_samples(self):
+        text = ('<img\n src="local.png" width="20"/>\n'
+                '<img src="//example.test/a.png"><img src="data:image/png;base64,abc">\n'
+                '`<img src="missing.png">`\n```html\n<img src="missing.png">\n```\n')
+        self.source(text); (self.root/'local.png').write_bytes(b'image')
+        plan = self.plan(); plan['chunks'][0]['end'] = len(text.splitlines())
+        build(self.root, plan, self.vault)
+        body = (self.root/'chunks/01-主题.md').read_text(encoding='utf-8')
+        self.assertTrue(body.endswith(text.replace('src="local.png"', 'src="../local.png"')))
+
+    def test_commented_remote_html_image_stays_verbatim(self):
+        text = '<!-- <img src="https://example.com/a.png"> -->\nMeaningful prose.\n'
+        self.source(text)
+        build(self.root, self.plan(), self.vault)
+        self.assertTrue((self.root/'chunks/01-主题.md').read_text(encoding='utf-8').endswith(text))
+        self.assertEqual(text, (self.root/'source.md').read_text(encoding='utf-8'))
+
+    def test_html_src_surrounding_whitespace_uses_same_path_for_check_and_rebase(self):
+        for depth, chunk in ((1, '01-主题.md'), (2, '01-组/01-主题.md')):
+            for attribute in ('src=" a b.png "', "src='\t a b.png\t '",
+                              'src=&#32;a&#32;b.png&#32;',
+                              'src="&#32;a b.png?x=1&amp;y=2&#32;"'):
+                with self.subTest(depth=depth, attribute=attribute):
+                    text = '<img width="20" '+attribute+' alt="Keep > this">\nProse.\n'
+                    self.source(text); (self.root/'a b.png').write_bytes(b'image')
+                    plan = self.plan(); plan['chunks'][0]['path'] = chunk
+                    build(self.root, plan, self.vault)
+                    body = (self.root/'chunks'/chunk).read_text(encoding='utf-8')
+                    from build_chunks import html_images, local_html_path
+                    tags = html_images(body, 'fixture')
+                    self.assertEqual(len(tags), 1)
+                    _, _, start, end, value = tags[0]
+                    self.assertEqual(local_html_path(value), '../'*depth+'a b.png')
+                    self.assertNotIn(' ', body[start:end])
+                    self.assertIn('width="20"', body)
+                    self.assertIn('alt="Keep > this"', body)
+                    if '?x=' in attribute:
+                        self.assertTrue(value.endswith('?x=1&y=2'))
+                    self.assertEqual(text, (self.root/'source.md').read_text(encoding='utf-8'))
+
+    def test_html_whitespace_wrapped_missing_src_retains_old_result(self):
+        build(self.root, self.plan(), self.vault)
+        before = (self.root/'chunks/01-主题.md').read_bytes()
+        for attribute in ('src=" missing.png "', 'src=&#32;missing.png&#32;'):
+            self.source('<img '+attribute+'>\nProse.\n')
+            with self.subTest(attribute=attribute), self.assertRaisesRegex(ValueError, 'img src missing or outside'):
                 build(self.root, self.plan(), self.vault)
+            self.assertEqual(before, (self.root/'chunks/01-主题.md').read_bytes())
+
+    def test_html_missing_or_outside_image_preserves_previous_chunks(self):
+        build(self.root, self.plan(), self.vault)
+        before = (self.root/'chunks/01-主题.md').read_bytes()
+        (self.vault/'outside.png').write_bytes(b'image')
+        for value in ('missing.png', '../../../outside.png'):
+            self.source('Prose <img src="'+value+'">\nMore prose.\n')
+            with self.subTest(value=value), self.assertRaisesRegex(ValueError, 'source.md:1: img src missing or outside'):
+                build(self.root, self.plan(), self.vault)
+            self.assertEqual(before, (self.root/'chunks/01-主题.md').read_bytes())
+
+    def test_html_srcset_and_invalid_src_are_actionable(self):
+        for tag, diagnostic in (
+                ('<img src="https://example.com/a.png" srcset="local.png 2x">', 'img srcset'),
+                ('<img src="">', 'one nonempty src'),
+                ('<img src="one.png" src="two.png">', 'one nonempty src')):
+            self.source('Meaningful prose ' + tag + '\nMore prose.\n')
+            with self.subTest(tag=tag), self.assertRaisesRegex(ValueError, diagnostic):
+                build(self.root, self.plan(), self.vault)
+            self.assertFalse((self.root/'chunks').exists())
+
+    def test_html_preserves_markdown_occurrences_and_protects_shared_attachment(self):
+        self.source('<img src="a.png"> ![first](a.png) ![second](b.png)\nOther prose.\n')
+        for name in ('a.png', 'b.png'):
+            (self.root/name).write_bytes(b'image')
+        plan = self.plan()
+        plan['images'] = [dict(file='source.md', occurrence=1, expected='a.png', action='delete',
+                               authorized=True, reason='decoration', delete_file=True),
+                          dict(file='source.md', occurrence=2, expected='b.png', action='rename', to='renamed.png')]
+        result = build(self.root, plan, self.vault)
+        body = (self.root/'chunks/01-主题.md').read_text(encoding='utf-8')
+        self.assertIn('<img src="../a.png">', body)
+        self.assertIn('![second](<../renamed.png>)', body)
+        self.assertNotIn('![first]', body)
+        self.assertFalse(result['attachment_actions'][0]['deleted'])
+        self.assertIn('retained reference', result['attachment_actions'][0]['reason'])
+
+    def test_html_allows_changed_chunk_but_retains_inbound_protection(self):
+        self.source('<img src="a.png">\nMeaningful prose.\n')
+        (self.root/'a.png').write_bytes(b'image')
+        build(self.root, self.plan(), self.vault)
+        self.source('<img src="a.png">\nChanged meaningful prose.\n')
+        build(self.root, self.plan(), self.vault)
+        before = (self.root/'chunks/01-主题.md').read_bytes()
+        (self.vault/'note.md').write_text('[[intake/tmp/example/chunks/01-主题]]', encoding='utf-8')
+        plan = self.plan(); plan['chunks'][0]['title'] = 'Changed title'
+        with self.assertRaisesRegex(ValueError, 'reference to changed chunk'):
+            build(self.root, plan, self.vault)
+        self.assertEqual(before, (self.root/'chunks/01-主题.md').read_bytes())
+
+    def test_unknown_html_in_other_notes_keeps_existing_scan_protection(self):
+        build(self.root, self.plan(), self.vault)
+        before = (self.root/'chunks/01-主题.md').read_bytes()
+        plan = self.plan(); plan['chunks'][0]['title'] = 'Changed title'
+        for markup in ('<img>', '<img src="a.png" srcset="b.png 2x">'):
+            (self.vault/'note.md').write_text(markup, encoding='utf-8')
+            with self.subTest(markup=markup), self.assertRaisesRegex(ValueError, 'unsupported reference syntax'):
+                build(self.root, plan, self.vault)
+            self.assertEqual(before, (self.root/'chunks/01-主题.md').read_bytes())
+
+    def test_unknown_html_retains_physical_asset_without_blocking_first_build(self):
+        self.source('Paragraph ![icon](a.png)\nOther prose.\n')
+        (self.root/'a.png').write_bytes(b'image')
+        (self.vault/'note.md').write_text('<img src="a.png" srcset="b.png 2x">', encoding='utf-8')
+        plan = self.plan()
+        plan['images'] = [dict(file='source.md', occurrence=1, expected='a.png', action='delete',
+                               authorized=True, reason='decoration', delete_file=True)]
+        result = build(self.root, plan, self.vault)
+        self.assertTrue((self.root/'a.png').is_file())
+        self.assertIn('unsupported reference syntax', result['attachment_actions'][0]['reason'])
 
     def test_same_chunk_footnote_works_and_split_dependency_fails(self):
         text = 'A meaningful fact[^a].\n\n[^a]: Complete supporting explanation.\n'
