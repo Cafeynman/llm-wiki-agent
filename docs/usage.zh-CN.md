@@ -283,7 +283,9 @@ uv run --no-project python scripts/build_release.py --ref HEAD
 先提交准备发布的改动，再运行此命令。脚本只读取指定 Git 提交的
 `package-files.txt` 中的 `active` 文件，以及该提交的 `PROJECT.md` 和
 `.gitignore` 模板。它不读取本地未提交内容或运行数据。可用 `--ref` 指定
-提交、分支或标签，用 `--output` 指定输出目录；默认写入 `tmp/dist/`。
+提交、分支或标签。未传 `--output` 时，脚本提示输入保存目录；直接回车
+使用当前工作目录。相对路径也以当前工作目录为起点。传入 `--output 路径`
+可直接指定目录，适用于自动化命令。
 
 输出包含带版本号和提交短 SHA 的 ZIP、TAR.GZ、逐文件元数据 JSON 和
 SHA-256 校验文件。脚本拒绝覆盖同名输出，缺失文件、非法路径、链接文件和

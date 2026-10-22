@@ -12,6 +12,12 @@ tmp/
 # Local repository maintenance plans, reviews, and history.
 /维护工作区/
 
+# Distribution artifacts saved in the repository root.
+/llm-wiki-agent-*.zip
+/llm-wiki-agent-*.tar.gz
+/llm-wiki-agent-*.json
+/llm-wiki-agent-*.sha256
+
 # Local wiki runtime content.
 /inbox/*
 !/inbox/.gitkeep

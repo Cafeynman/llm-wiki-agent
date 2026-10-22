@@ -133,10 +133,17 @@ def build(root, ref, output):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--ref', default='HEAD', help='Git commit, branch or tag (default: HEAD)')
-    parser.add_argument('--output', type=Path, default=Path('tmp/dist'), help='Output directory (default: tmp/dist)')
+    parser.add_argument('--output', type=Path, help='Output directory; omitted: prompt (blank uses current directory)')
     args = parser.parse_args()
     try:
-        for path in build(Path(__file__).resolve().parents[1], args.ref, args.output):
+        output = args.output
+        if output is None:
+            try:
+                entered = input(f'保存目录（留空使用当前目录 {Path.cwd()}）：').strip()
+            except EOFError:
+                raise ValueError('No output directory input; pass --output PATH for non-interactive use') from None
+            output = Path(entered) if entered else Path.cwd()
+        for path in build(Path(__file__).resolve().parents[1], args.ref, output.expanduser()):
             print(path)
     except (ValueError, OSError, KeyError, UnicodeError, subprocess.CalledProcessError, tarfile.TarError) as error:
         parser.exit(1, f'Build failed: {error}\n')

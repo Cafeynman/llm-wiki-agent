@@ -299,8 +299,10 @@ uv run --no-project python scripts/build_release.py --ref HEAD
 Commit release changes first. The builder reads only the selected commit's
 `active` inventory files, plus its `PROJECT.md` and `.gitignore` templates.
 Local uncommitted content and runtime data are excluded. Use `--ref` to select a
-commit, branch or tag and `--output` to choose the output directory (default:
-`tmp/dist/`).
+commit, branch or tag. Without `--output`, the script prompts for a save directory;
+press Enter to use the current working directory. Relative paths resolve from
+that directory. Pass `--output PATH` to select a directory without prompting,
+including in automated commands.
 
 Outputs are ZIP, TAR.GZ, per-file metadata JSON and SHA-256 checksums, named with
 the version and short commit SHA. Existing outputs are never overwritten.
